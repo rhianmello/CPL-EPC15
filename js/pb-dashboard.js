@@ -16,6 +16,7 @@
   let photosWeek = null;
   let photosUnitKey = '';
   let photosPhaseKey = '';
+  let photosPhaseFallback = false;
   let photoReplaceTarget = null;
   let metricGroupAll = true;
   const metricSelectedGroups = new Set();
@@ -1187,7 +1188,15 @@
       return photos;
     }
     try{
-      const rows=await window.CloudSync.listCoordinationPhotos(week,scope.unitKey,scope.phaseKey);
+      let rows=await window.CloudSync.listCoordinationPhotos(week,scope.unitKey,scope.phaseKey);
+      photosPhaseFallback=false;
+      if(!rows.length){
+        const phaseRows=await window.CloudSync.listCoordinationPhotos(week,'',scope.phaseKey);
+        if(phaseRows.length){
+          rows=phaseRows;
+          photosPhaseFallback=true;
+        }
+      }
       photos=rows;
       photosWeek=week;
       photosUnitKey=scope.unitKey;
@@ -1197,6 +1206,7 @@
     } catch(error){
       console.error('Falha ao carregar registro fotográfico da fase',error);
       photos=[];
+      photosPhaseFallback=false;
       photosWeek=week;
       photosUnitKey=scope.unitKey;
       photosPhaseKey=scope.phaseKey;
@@ -1317,13 +1327,16 @@
     );
     const items=remote.concat(pending);
     const info=paged(items,'lookahead');
-    if(count) count.textContent=items.length+(items.length===1?' foto':' fotos');
+    if(count) count.textContent=items.length+(items.length===1?' foto':' fotos')+(photosPhaseFallback?' na fase':'');
     renderPager('pb-lookahead-pager','lookahead',info);
     if(!items.length){
       host.innerHTML='<div class="pb-empty-light pb-photo-empty">Nenhuma foto registrada para <strong>'+esc(scope.unitName)+' / '+esc(scope.phaseName)+'</strong> nesta semana. Use “Importar fotos” para adicionar.</div>';
       return;
     }
-    host.innerHTML=info.items.map((photo,index)=>{
+    const fallbackNotice=photosPhaseFallback
+      ? '<div class="pb-empty-light pb-photo-empty"><strong>Sem fotos para '+esc(scope.unitName)+'.</strong><br>Mostrando os registros de <strong>'+esc(scope.phaseName)+'</strong> existentes em outras unidades da Semana '+esc(currentWeek)+'.</div>'
+      : '';
+    host.innerHTML=fallbackNotice+info.items.map((photo,index)=>{
       const src=photo.signed_url || '';
       const admin=curationMode && !photo.pending
         ? '<div class="pb-photo-admin"><button type="button" data-replace-photo="'+esc(photo.id)+'">Substituir</button><button type="button" class="danger" data-delete-photo="'+esc(photo.id)+'">Excluir</button></div>'
@@ -1331,12 +1344,15 @@
       const pendingBadge=photo.pending ? '<span class="pb-photo-pending">AGUARDANDO SALVAR</span>' : '';
       const fallback='Foto '+String(info.start+index+1).padStart(2,'0');
       const caption=String(photo.caption||'').trim() || fallback;
+      const unitLabel=photosPhaseFallback && photo.unit_name
+        ? '<div class="pb-photo-unit-label">'+esc(photo.unit_name)+'</div>'
+        : '';
       const captionMarkup=curationMode && !photo.pending
         ? '<figcaption><input class="pb-photo-caption-input" type="text" value="'+esc(caption)+'" data-photo-caption="'+esc(photo.id)+'" maxlength="500" aria-label="Legenda da foto"></figcaption>'
         : '<figcaption class="pb-photo-caption">'+esc(caption)+'</figcaption>';
       return '<figure class="pb-photo-item'+(photo.pending?' pb-photo-item-pending':'')+'">'+
-        '<img src="'+esc(src)+'" alt="Registro fotográfico de '+esc(scope.unitName)+' / '+esc(scope.phaseName)+'">'+
-        pendingBadge+admin+captionMarkup+
+        '<img src="'+esc(src)+'" alt="Registro fotográfico de '+esc(photo.unit_name || scope.unitName)+' / '+esc(scope.phaseName)+'">'+
+        unitLabel+pendingBadge+admin+captionMarkup+
       '</figure>';
     }).join('');
   }
