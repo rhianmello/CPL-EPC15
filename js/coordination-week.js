@@ -298,14 +298,23 @@
 
       const remoteKey=remoteVersion+'|'+String(remoteSavedAt||'');
       if(force || remoteKey!==lastManualSyncVersion){
-        window.PBDashboard?.importWeekData?.(snapshot.pb_manual || {},weekNo);
+        // Sincronização em segundo plano não deve mexer na visão que o usuário
+        // está usando. Preserva filtros e seleção das métricas atuais e atualiza
+        // apenas o conteúdo manual vindo do banco.
+        const localState=window.PBDashboard?.exportWeekData?.(weekNo) || {};
+        const mergedManual={
+          ...(snapshot.pb_manual || {}),
+          filterSelection:localState.filterSelection || snapshot.pb_manual?.filterSelection,
+          metricSelection:localState.metricSelection || snapshot.pb_manual?.metricSelection
+        };
+        window.PBDashboard?.importWeekData?.(mergedManual,weekNo);
         lastManualSyncVersion=remoteKey;
         if(currentSnapshot){
           currentSnapshot={...currentSnapshot,version_no:remoteVersion,pb_manual:snapshot.pb_manual,saved_at:remoteSavedAt};
         }
         const badge=document.getElementById('pb-save-feedback');
         if(badge && !force){
-          badge.textContent='Atualizado automaticamente • V'+remoteVersion;
+          badge.textContent='Dados sincronizados • V'+remoteVersion;
           badge.dataset.tone='ok';
         }
         refreshStatus();
