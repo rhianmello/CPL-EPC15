@@ -2360,6 +2360,8 @@
 .topbar.pb-mode .cloud-controls{
   flex:1 1 270px;
   min-width:230px;
+  width:auto;
+  order:0;
   align-items:flex-start;
 }
 .topbar.pb-mode .source-status{
