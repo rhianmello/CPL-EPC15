@@ -14,6 +14,7 @@
   let manualSyncTimer = null;
   let manualSyncBusy = false;
   let lastManualSyncVersion = null;
+  const masterUnlockedWeeks = new Map();
 
   function isoDateInSaoPaulo() {
     try {
@@ -136,7 +137,19 @@
 
   function hasActiveSnapshot() { return activeSnapshot; }
   function isLocked() { return Boolean(weekByNo(getSelectedWeek())?.is_locked); }
-  function canEdit() { return !isLocked(); }
+  function isMasterUnlocked(weekNo=getSelectedWeek()) {
+    return masterUnlockedWeeks.has(Number(weekNo));
+  }
+  function getMasterPassword(weekNo=getSelectedWeek()) {
+    return masterUnlockedWeeks.get(Number(weekNo)) || '';
+  }
+  function unlockWeek(weekNo,password) {
+    const week=Number(weekNo);
+    const clean=String(password || '');
+    if(Number.isFinite(week) && clean) masterUnlockedWeeks.set(week,clean);
+    refreshStatus();
+  }
+  function canEdit() { return !isLocked() || isMasterUnlocked(); }
 
   async function loadWeek(weekNo) {
     selectedWeek=Number(weekNo);
@@ -179,7 +192,7 @@
   }
 
   function useLiveExcel() {
-    if (isLocked()) return;
+    if (!canEdit()) return;
     usingLiveDraft=true;
     activeSnapshot=false;
     currentSnapshot=null;
@@ -190,8 +203,8 @@
   async function saveWeek() {
     if(savingWeek) return;
     const week=getSelectedWeek();
-    if (isLocked()) {
-      alert('A Semana '+week+' já foi encerrada e está disponível apenas para consulta.');
+    if (!canEdit()) {
+      alert('A Semana '+week+' está encerrada. Use o lápis e informe a senha master para liberar a edição.');
       return;
     }
 
@@ -210,13 +223,15 @@
     try {
       if(saveButton){saveButton.disabled=true;saveButton.textContent='Salvando...';}
       const pbManual=window.PBDashboard?.exportWeekData?.(week) || {};
+      const masterPassword=isMasterUnlocked(week) ? getMasterPassword(week) : '';
       const saved=activeSnapshot && currentSnapshot?.dataset?.model === model && !usingLiveDraft
-        ? {...currentSnapshot, ...await window.CloudSync.saveCoordinationManualWeek(week,pbManual)}
+        ? {...currentSnapshot, ...await window.CloudSync.saveCoordinationManualWeek(week,pbManual,masterPassword)}
         : await window.CloudSync.saveCoordinationWeek({
         weekNo:week,
         model,
         excelFileName:info.fileName || appFile.name || publication.file_name || 'Versão publicada',
-        pbManual
+        pbManual,
+        masterPassword
       });
       if(!saved || !Number.isFinite(Number(saved.version_no)) || Number(saved.version_no)<1){
         throw new Error('O banco não confirmou a versão salva.');
@@ -348,7 +363,9 @@
     }
 
     if(weekEl && week) {
-      const state=week.is_locked?'FECHADA • somente leitura':(week.is_current?'SEMANA ATUAL':'ABERTA PARA PREPARAÇÃO');
+      const state=week.is_locked
+        ? (isMasterUnlocked(week.week_no) ? 'FECHADA • EDIÇÃO MASTER LIBERADA' : 'FECHADA • somente leitura')
+        : (week.is_current?'SEMANA ATUAL':'ABERTA PARA PREPARAÇÃO');
       const saved=currentSnapshot?.version_no ? ' • V'+currentSnapshot.version_no : (week.has_snapshot?' • salva':' • ainda não salva');
       weekEl.innerHTML='<span>SEMANA EPC-15</span><strong>Semana '+week.week_no+' • '+shortDate(week.start_date)+'–'+shortDate(week.end_date)+'</strong><small>'+state+saved+'</small>';
     }
@@ -358,11 +375,13 @@
 
   function updateEditState() {
     const locked=isLocked();
+    const editable=canEdit();
     const save=document.getElementById('pb-save-week');
     const live=document.getElementById('pb-use-live-excel');
-    if(save) save.disabled=savingWeek || locked || !window.PBDashboard?.getCurrentModel?.();
-    if(live) live.disabled=locked || !window.EPC15State?.hasData?.();
-    document.getElementById('page-pb')?.classList.toggle('coordination-readonly',locked);
+    if(save) save.disabled=savingWeek || !editable || !window.PBDashboard?.getCurrentModel?.();
+    if(live) live.disabled=!editable || !window.EPC15State?.hasData?.();
+    document.getElementById('page-pb')?.classList.toggle('coordination-readonly',locked && !editable);
+    document.getElementById('page-pb')?.classList.toggle('coordination-master-unlocked',locked && editable);
   }
 
   function install() {
@@ -382,7 +401,8 @@
 
   window.CoordinationWeek={
     install,fillWeekOptions,ensureCloudWeeks,getSelectedWeek,selectWeekFromUI,
-    canEdit,hasActiveSnapshot,refreshStatus,useLiveExcel,saveWeek,syncManualFromCloud,noteManualSaved
+    canEdit,isLocked,isMasterUnlocked,getMasterPassword,unlockWeek,
+    hasActiveSnapshot,refreshStatus,useLiveExcel,saveWeek,syncManualFromCloud,noteManualSaved
   };
 
   window.addEventListener('DOMContentLoaded',install);
