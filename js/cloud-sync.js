@@ -30,15 +30,34 @@
   }
   function hasCredentials() { return Boolean(credentials?.username && credentials?.password); }
 
-  async function rpc(name, args) {
+  const PUBLIC_READ_RPC = Object.freeze({
+    get_current_bi_snapshot:'get_current_bi_snapshot_public',
+    list_bi_publications:'list_bi_publications_public',
+    list_coordination_weeks:'list_coordination_weeks_public',
+    get_coordination_week:'get_coordination_week_public',
+    get_coordination_manual_week:'get_coordination_manual_week_public',
+    get_coordination_layout:'get_coordination_layout_public'
+  });
+
+  async function rpc(name, args={}) {
     const supabase = getClient();
     if (!supabase) throw new Error('Supabase ainda não está configurado.');
-    if (!hasCredentials()) throw new Error('Informe o login do BI para acessar a versão publicada.');
-    const { data, error } = await supabase.rpc(name, {
-      p_username: credentials.username,
-      p_password: credentials.password,
-      ...args
-    });
+
+    let rpcName=name;
+    let payload={...args};
+    if(hasCredentials()){
+      payload={
+        p_username:credentials.username,
+        p_password:credentials.password,
+        ...payload
+      };
+    }else if(PUBLIC_READ_RPC[name]){
+      rpcName=PUBLIC_READ_RPC[name];
+    }else{
+      throw new Error('Entre como editor para executar esta ação.');
+    }
+
+    const { data, error } = await supabase.rpc(rpcName,payload);
     if (error) throw new Error(error.message || 'Falha de comunicação com o Supabase.');
     return data;
   }
@@ -119,10 +138,20 @@
   }
 
   async function verifyCoordinationMaster(masterPassword, weekNo) {
-    const data = await rpc('verify_coordination_master', {
-      p_master_password: String(masterPassword || ''),
-      p_week_no: Number(weekNo)
-    });
+    const clean=String(masterPassword || '');
+    const args={
+      p_master_password:clean,
+      p_week_no:Number(weekNo)
+    };
+    const supabase=getClient();
+    if(!supabase) throw new Error('Supabase ainda não está configurado.');
+    const rpcName=hasCredentials() ? 'verify_coordination_master' : 'verify_coordination_master_public';
+    if(hasCredentials()){
+      args.p_username=credentials.username;
+      args.p_password=credentials.password;
+    }
+    const {data,error}=await supabase.rpc(rpcName,args);
+    if(error) throw new Error(error.message || 'Falha ao validar a senha master.');
     return typeof data === 'string' ? JSON.parse(data) : data;
   }
 
@@ -163,12 +192,23 @@
       p_dataset: dataset,
       p_pb_manual: payload.pbManual || {}
     };
-    const rpcName = masterPassword ? 'save_coordination_excel_week_master' : 'save_coordination_excel_week';
-    if (masterPassword) args.p_master_password = masterPassword;
+    let rpcName='save_coordination_excel_week';
+    if(masterPassword){
+      rpcName=hasCredentials() ? 'save_coordination_excel_week_master' : 'save_coordination_excel_week_master_public';
+      args.p_master_password=masterPassword;
+    }
 
     for (let attempt=0; attempt<2; attempt+=1) {
       try {
-        const data=await rpc(rpcName,args);
+        let data;
+        if(masterPassword && !hasCredentials()){
+          const supabase=getClient();
+          const result=await supabase.rpc(rpcName,args);
+          if(result.error) throw new Error(result.error.message || 'Falha ao salvar a semana.');
+          data=result.data;
+        }else{
+          data=await rpc(rpcName,args);
+        }
         return typeof data === 'string' ? JSON.parse(data) : data;
       } catch(error) {
         if (attempt===0 && isStatementTimeoutError(error)) {
@@ -193,10 +233,19 @@
       p_pb_manual:pbManual || {}
     };
     if(cleanMaster) args.p_master_password=cleanMaster;
-    const data = await rpc(
-      cleanMaster ? 'save_coordination_manual_week_master' : 'save_coordination_manual_week',
-      args
-    );
+
+    let data;
+    if(cleanMaster && !hasCredentials()){
+      const supabase=getClient();
+      const {data:result,error}=await supabase.rpc('save_coordination_manual_week_master_public',args);
+      if(error) throw new Error(error.message || 'Falha ao salvar as configurações da semana.');
+      data=result;
+    }else{
+      data=await rpc(
+        cleanMaster ? 'save_coordination_manual_week_master' : 'save_coordination_manual_week',
+        args
+      );
+    }
     return typeof data === 'string' ? JSON.parse(data) : data;
   }
 
@@ -206,17 +255,30 @@
   }
 
   async function saveCoordinationLayout({weekNo,layout,masterPassword}) {
-    const data = await rpc('save_coordination_layout', {
+    const args={
       p_master_password:String(masterPassword || ''),
       p_week_no:Number(weekNo),
       p_layout:layout || {}
-    });
+    };
+    let data;
+    if(!hasCredentials()){
+      const supabase=getClient();
+      const {data:result,error}=await supabase.rpc('save_coordination_layout_master_public',args);
+      if(error) throw new Error(error.message || 'Falha ao salvar o layout.');
+      data=result;
+    }else{
+      data=await rpc('save_coordination_layout',args);
+    }
     return typeof data === 'string' ? JSON.parse(data) : data;
   }
 
   async function photoRequest(method, payload, formData) {
     if (!ready()) throw new Error('Supabase ainda não está configurado.');
-    if (!hasCredentials()) throw new Error('Informe o login do BI para acessar as fotos.');
+    const publicList=Boolean(payload?.action==='list');
+    const masterFromPayload=String(payload?.master_password || formData?.get?.('master_password') || '');
+    if (!hasCredentials() && !publicList && !masterFromPayload) {
+      throw new Error('Entre como editor ou use a senha master para alterar fotos.');
+    }
     const url = cfg.url.replace(/\/$/,'') + '/functions/v1/coordination-photos';
     let response;
     if (formData) {
