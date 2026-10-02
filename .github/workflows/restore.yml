@@ -1,0 +1,42 @@
+name: Restore EPC-15 package
+
+on:
+  push:
+    paths:
+      - '.restore/READY'
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Rebuild package
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .restore/chunk-* > /tmp/epc15.b64
+          base64 -d /tmp/epc15.b64 > /tmp/epc15.zip
+          rm -rf /tmp/epc15-unpack
+          mkdir -p /tmp/epc15-unpack
+          unzip -q /tmp/epc15.zip -d /tmp/epc15-unpack
+          cp -a /tmp/epc15-unpack/bi-epc15-site/. ./
+          rm -rf .restore
+          rm -f .github/workflows/restore.yml
+          find . -name .gitkeep -type f -delete
+      - name: Commit restored site
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "restore: populate EPC-15 site from sanitized package"
+          git push origin HEAD:main
