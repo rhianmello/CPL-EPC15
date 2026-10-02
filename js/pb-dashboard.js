@@ -22,6 +22,7 @@
   let metricStepAll = true;
   const metricSelectedSteps = new Set();
   let metricTreeStructureKey = null;
+  let importedWeekPayload = {};
 
   let draggedLayoutCard = null;
   let layoutDirty = false;
@@ -2085,6 +2086,7 @@
 
   function exportWeekData(weekNo) {
     return {
+      ...(importedWeekPayload && typeof importedWeekPayload==='object' ? importedWeekPayload : {}),
       coordinationNotes:notes(weekNo),
       filterSelection:savedFilterSelection(),
       metricSelection:{
@@ -2095,6 +2097,9 @@
   }
 
   function importWeekData(payload,weekNo) {
+    importedWeekPayload=payload && typeof payload==='object'
+      ? JSON.parse(JSON.stringify(payload))
+      : {};
     const selected=payload?.metricSelection;
     resetMetricSelection();
     if(selected && typeof selected==='object'){
