@@ -81,7 +81,7 @@ body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);c
   <aside class="rundown-sidebar">
     <div class="rundown-sidebar-brand"><span>BI</span> RUNDOWN</div>
     <nav class="rundown-nav" aria-label="Navegação do Rundown">
-      <a class="rundown-nav-item" href="https://rhianmello.github.io/bi-epc15/"><span>00</span> Painéis</a>
+      <a class="rundown-nav-item" href="index.html"><span>00</span> Painéis</a>
       <button class="rundown-nav-item active" id="unitAllBtn" type="button"><span>01</span> Todas as Unidades</button>
       <div class="rundown-nav-label">UNIDADES</div>
       <div id="unitNav"></div>
@@ -156,22 +156,10 @@ body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);c
   const error=document.getElementById('loginError');
 
   if(sessionStorage.getItem(KEY)!=='1'){
-    gate.classList.remove('hidden');
-    setTimeout(()=>user.focus(),0);
+    window.location.replace('index.html');
+    return;
   }
-
-  form.addEventListener('submit',function(e){
-    e.preventDefault();
-    if((user.value||'').trim().toLowerCase()==='admin' && pass.value==='12345678'){
-      sessionStorage.setItem(KEY,'1');
-      gate.classList.add('hidden');
-      error.classList.remove('show');
-      pass.value='';
-    }else{
-      error.classList.add('show');
-      pass.select();
-    }
-  });
+  gate.classList.add('hidden');
 })();
 </script>
 
