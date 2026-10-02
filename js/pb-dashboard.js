@@ -1222,7 +1222,8 @@
             unitName:photo.unit_name,unitKey:photo.unit_key,
             phaseName:photo.phase_name,phaseKey:photo.phase_key
           },
-          file:photo.file
+          file:photo.file,
+          masterPassword:window.CoordinationWeek?.getMasterPassword?.(week) || curationMasterPassword || ''
         });
         saved++;
         try{URL.revokeObjectURL(photo.signed_url);}catch(_){}
