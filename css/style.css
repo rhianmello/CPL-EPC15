@@ -2274,3 +2274,190 @@
 .pb-metric-tree-child::before{content:"";position:absolute;left:-16px;top:17px;width:12px;border-top:1px solid #41546b}
 #pb-metric-filter-options .pb-metric-tree-child strong{font-size:.67rem!important}
 .pb-metric-tree-parent{background:rgba(34,211,238,.05)}
+
+
+/* ===== Reunião de Coordenação — cabeçalho executivo compacto (02/10/2026) ===== */
+.pb-filterbar.pb-filterbar-hierarchy{
+  grid-template-columns:1fr!important;
+  gap:0!important;
+  padding:12px 14px 14px!important;
+}
+.pb-filter-main{
+  width:100%;
+  gap:12px;
+}
+.pb-filter-headrow{
+  grid-template-columns:minmax(245px,.68fr) minmax(0,2.32fr)!important;
+  gap:12px!important;
+  align-items:stretch!important;
+}
+.pb-week-status-inline{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:8px!important;
+  margin:0!important;
+}
+.pb-week-status-inline .pb-source-box{
+  min-height:64px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.pb-filter-controls{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:9px 12px!important;
+}
+.pb-filter-controls .pb-filter-component{
+  grid-column:span 2!important;
+}
+
+/* As ações da semana passam para a mesma faixa do Excel/publicação. */
+.pb-topbar-week-tools{
+  flex:0 0 auto;
+  display:grid;
+  grid-template-columns:40px minmax(132px,148px);
+  grid-template-rows:34px 34px;
+  grid-template-areas:
+    "edit live"
+    ". save";
+  gap:6px 8px;
+  align-items:stretch;
+}
+.pb-topbar-week-tools.hidden{
+  display:none!important;
+}
+.pb-topbar-week-tools #pb-curation-edit{
+  grid-area:edit;
+  width:40px;
+  height:34px;
+}
+.pb-topbar-week-tools #pb-use-live-excel{
+  grid-area:live;
+}
+.pb-topbar-week-tools #pb-save-week{
+  grid-area:save;
+}
+.pb-topbar-week-tools .pb-week-button{
+  width:100%;
+  height:34px;
+  padding:0 10px;
+  white-space:nowrap;
+}
+
+/* Quando a Reunião de Coordenação está aberta, a barra superior vira a barra operacional. */
+.topbar.pb-mode{
+  height:auto;
+  min-height:96px;
+  padding:10px 0;
+}
+.topbar.pb-mode .topbar-actions{
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:12px;
+  flex-wrap:nowrap;
+}
+.topbar.pb-mode .cloud-controls{
+  flex:1 1 270px;
+  min-width:230px;
+  align-items:flex-start;
+}
+.topbar.pb-mode .source-status{
+  width:100%;
+  max-width:none;
+  text-align:left;
+}
+.topbar.pb-mode .cloud-buttons{
+  justify-content:flex-start;
+}
+.topbar.pb-mode .dashboard-file-button{
+  flex:0 0 auto;
+  min-height:42px;
+  padding:0 18px;
+}
+.topbar.pb-mode .topbar-meta{
+  flex:0 0 92px;
+  min-width:92px;
+  text-align:left;
+}
+.topbar.pb-mode .topbar-meta strong{
+  display:block;
+  margin-top:3px;
+}
+
+/* Remove qualquer resquício do antigo bloco lateral. */
+#page-pb .pb-filter-side{
+  display:none!important;
+}
+
+@media(max-width:1180px){
+  .topbar.pb-mode .topbar-actions{
+    gap:8px;
+  }
+  .topbar.pb-mode .cloud-controls{
+    flex-basis:235px;
+    min-width:210px;
+  }
+  .pb-topbar-week-tools{
+    grid-template-columns:38px minmax(118px,132px);
+  }
+  .topbar.pb-mode .dashboard-file-button{
+    padding:0 12px;
+    font-size:.76rem;
+  }
+  .pb-filter-headrow{
+    grid-template-columns:minmax(225px,.72fr) minmax(0,2.28fr)!important;
+  }
+}
+
+@media(max-width:980px){
+  .topbar.pb-mode .topbar-actions{
+    flex-wrap:wrap;
+    justify-content:flex-start;
+    padding:8px 0;
+  }
+  .topbar.pb-mode .cloud-controls{
+    order:1;
+    flex:1 1 100%;
+    width:100%;
+  }
+  .topbar.pb-mode .dashboard-file-button{
+    order:2;
+  }
+  .topbar.pb-mode .topbar-meta{
+    order:3;
+  }
+  .pb-topbar-week-tools{
+    order:4;
+    margin-left:auto;
+  }
+  .pb-filter-headrow{
+    grid-template-columns:1fr!important;
+  }
+}
+
+@media(max-width:760px){
+  .topbar.pb-mode .topbar-actions{
+    align-items:stretch;
+  }
+  .topbar.pb-mode .dashboard-file-button,
+  .topbar.pb-mode .topbar-meta,
+  .pb-topbar-week-tools{
+    width:100%;
+  }
+  .pb-topbar-week-tools{
+    grid-template-columns:40px 1fr;
+  }
+  .pb-filter-controls{
+    grid-template-columns:1fr 1fr!important;
+  }
+  .pb-filter-controls .pb-filter-component{
+    grid-column:span 1!important;
+  }
+}
+
+@media(max-width:560px){
+  .pb-filter-controls{
+    grid-template-columns:1fr!important;
+  }
+}
