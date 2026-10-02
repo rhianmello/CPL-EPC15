@@ -1174,7 +1174,7 @@
   async function loadPhotos(weekNo, force=false) {
     const week=Number(weekNo || window.CoordinationWeek?.getSelectedWeek?.());
     const scope=photoScopeContext();
-    if(!Number.isFinite(week) || !scope || !window.CloudSync?.hasCredentials?.()){
+    if(!Number.isFinite(week) || !scope || !window.CloudSync?.ready?.()){
       photos=[];
       photosWeek=week;
       photosUnitKey=scope?.unitKey || '';
@@ -1972,7 +1972,7 @@
     applyPbLayout(readLocalPbLayout());
     render();
     loadPbLayout();
-    if(window.CloudSync?.hasCredentials?.()){
+    if(window.CloudSync?.ready?.()){
       loadPhotos(window.CoordinationWeek?.getSelectedWeek?.());
     }
   }
