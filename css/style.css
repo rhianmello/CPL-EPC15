@@ -2463,3 +2463,39 @@
     grid-template-columns:1fr!important;
   }
 }
+
+
+/* ===== Destaques da semana — quebra de linha (02/10/2026) ===== */
+.pb-week-highlights-card .pb-highlight-row{
+  align-items:flex-start;
+  min-height:52px;
+}
+.pb-week-highlights-card .pb-activity-copy.pb-highlight-copy{
+  display:block;
+  min-width:0;
+  overflow:visible;
+}
+.pb-week-highlights-card .pb-highlight-display{
+  display:block;
+  min-width:0;
+  overflow:visible;
+}
+.pb-week-highlights-card .pb-highlight-title,
+.pb-week-highlights-card .pb-highlight-subtitle,
+.pb-week-highlights-card .pb-activity-copy strong,
+.pb-week-highlights-card .pb-activity-copy small,
+.pb-week-highlights-card .pb-activity-copy span{
+  display:block;
+  max-width:none;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  overflow-wrap:anywhere;
+  word-break:normal;
+  line-height:1.35;
+}
+.pb-week-highlights-card .pb-activity-icon,
+.pb-week-highlights-card .pb-focus-row-button,
+.pb-week-highlights-card .pb-highlight-delete{
+  align-self:flex-start;
+}
