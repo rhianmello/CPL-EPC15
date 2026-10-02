@@ -105,14 +105,19 @@ Deno.serve(async (req:Request)=>{
       if(action==="list"){
         const unitKey=normalize(String(body.unit_key||""));
         const phaseKey=normalize(String(body.phase_key||""));
-        if(!unitKey) throw new Error("Unidade não informada.");
         if(!phaseKey) throw new Error("Fase não informada.");
-        const {data,error}=await admin.from("coordination_stage_photos").select("*")
+
+        let query=admin.from("coordination_stage_photos").select("*")
           .eq("week_no",weekNo)
-          .eq("unit_key",unitKey)
-          .eq("phase_key",phaseKey)
+          .eq("phase_key",phaseKey);
+
+        if(unitKey) query=query.eq("unit_key",unitKey);
+
+        const {data,error}=await query
+          .order("unit_name",{ascending:true})
           .order("sort_order",{ascending:true})
           .order("created_at",{ascending:true});
+
         if(error) throw error;
         return json({photos:await signedRows(admin,data||[])});
       }
