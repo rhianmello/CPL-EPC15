@@ -596,6 +596,13 @@
       render();
       return;
     }
+    if(window.CoordinationWeek?.isLocked?.() && window.CoordinationWeek?.isMasterUnlocked?.()){
+      curationMode=true;
+      curationMasterPassword=window.CoordinationWeek?.getMasterPassword?.() || '';
+      updateCurationUI();
+      render();
+      return;
+    }
     document.getElementById('pb-curation-master-modal')?.classList.remove('hidden');
     setTimeout(()=>document.getElementById('pb-curation-password')?.focus(),0);
   }
