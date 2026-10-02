@@ -318,7 +318,7 @@
   selectEmpty?.addEventListener('click', () => requestAccess(() => input.click()));
   document.getElementById('back-home')?.addEventListener('click', backToPortal);
   publishButton?.addEventListener('click', () => requestAccess(publishCurrent));
-  publishedButton?.addEventListener('click', () => loadPublished({keepLocalOnError:true}));
+  publishedButton?.addEventListener('click', () => requestAccess(() => loadPublished({keepLocalOnError:true})));
 
   document.addEventListener('click', event => {
     const page = event.target.closest('[data-page]')?.dataset.page;
