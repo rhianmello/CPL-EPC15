@@ -100,7 +100,6 @@ Deno.serve(async (req:Request)=>{
       const username=String(body.username||"");
       const password=String(body.password||"");
       const weekNo=Number(body.week_no);
-      await verifyBi(anon,username,password);
       if(!Number.isFinite(weekNo)) throw new Error("Semana inválida.");
 
       if(action==="list"){
@@ -122,7 +121,17 @@ Deno.serve(async (req:Request)=>{
         const master=String(body.master_password||"");
         const photoId=String(body.photo_id||"");
         const caption=String(body.caption||"").trim().slice(0,500);
-        await verifyMaster(anon,username,password,master,weekNo);
+        if(master){
+          const {data,error}=await anon.rpc("verify_coordination_master_public",{
+            p_master_password:master,p_week_no:weekNo
+          });
+          if(error) throw new Error(error.message || "Falha ao validar senha master.");
+          const result=typeof data==="string"?JSON.parse(data):data;
+          if(!result?.ok) throw new Error("Senha master incorreta.");
+        }else{
+          await verifyBi(anon,username,password);
+          await verifyMaster(anon,username,password,master,weekNo);
+        }
         const {data,error}=await admin.from("coordination_stage_photos")
           .update({caption,updated_at:new Date().toISOString()})
           .eq("id",photoId).eq("week_no",weekNo)
@@ -147,11 +156,19 @@ Deno.serve(async (req:Request)=>{
       const phaseKey=normalize(String(form.get("phase_key")||phaseName));
       const file=form.get("file");
 
-      await verifyBi(anon,username,password);
-      const week=await weekInfo(anon,username,password,weekNo);
-      if(week.is_locked){
-        if(!master) throw new Error("Semana encerrada: informe a senha master para editar.");
-        await verifyMaster(anon,username,password,master,weekNo);
+      let week:any;
+      if(master){
+        const {data,error}=await anon.rpc("verify_coordination_master_public",{
+          p_master_password:master,p_week_no:weekNo
+        });
+        if(error) throw new Error(error.message || "Falha ao validar senha master.");
+        const result=typeof data==="string"?JSON.parse(data):data;
+        if(!result?.ok) throw new Error("Senha master incorreta.");
+        week={week_no:weekNo,is_locked:Boolean(result.locked)};
+      }else{
+        await verifyBi(anon,username,password);
+        week=await weekInfo(anon,username,password,weekNo);
+        if(week.is_locked) throw new Error("Semana encerrada: informe a senha master para editar.");
       }
       if(!unitName || !unitKey) throw new Error("Unidade não identificada.");
       if(!phaseName || !phaseKey) throw new Error("Fase não identificada.");
@@ -159,7 +176,6 @@ Deno.serve(async (req:Request)=>{
       if(file.size>10*1024*1024) throw new Error("Cada foto deve ter no máximo 10 MB.");
 
       if(action==="replace"){
-        await verifyMaster(anon,username,password,master,weekNo);
         const photoId=String(form.get("photo_id")||"");
         const {data:existing,error:findError}=await admin.from("coordination_stage_photos")
           .select("*").eq("id",photoId).eq("week_no",weekNo).single();
@@ -211,8 +227,17 @@ Deno.serve(async (req:Request)=>{
       const master=String(body.master_password||"");
       const weekNo=Number(body.week_no);
       const photoId=String(body.photo_id||"");
-      await verifyBi(anon,username,password);
-      await verifyMaster(anon,username,password,master,weekNo);
+      if(master){
+        const {data,error}=await anon.rpc("verify_coordination_master_public",{
+          p_master_password:master,p_week_no:weekNo
+        });
+        if(error) throw new Error(error.message || "Falha ao validar senha master.");
+        const result=typeof data==="string"?JSON.parse(data):data;
+        if(!result?.ok) throw new Error("Senha master incorreta.");
+      }else{
+        await verifyBi(anon,username,password);
+        await verifyMaster(anon,username,password,master,weekNo);
+      }
       const {data:existing,error:findError}=await admin.from("coordination_stage_photos")
         .select("*").eq("id",photoId).eq("week_no",weekNo).single();
       if(findError||!existing) throw new Error("Foto não encontrada.");
