@@ -1,0 +1,54 @@
+name: Restore EPC-15 runtime dependencies
+
+on:
+  push:
+    paths:
+      - '.restore-runtime/READY'
+
+permissions:
+  contents: write
+
+jobs:
+  restore-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Download runtime dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://dashboard.epc15.com.br"
+          files=(
+            "css/home.css"
+            "assets/home-card-obra.jpg"
+            "assets/home-card-prazos-new.jpg"
+            "js/cloudflare-config.js"
+            "vendor/lucide.min.js"
+          )
+          for path in "${files[@]}"; do
+            mkdir -p "$(dirname "$path")"
+            tmp="$(mktemp)"
+            code="$(curl -L -sS -o "$tmp" -w '%{http_code}' "$BASE/$path" || true)"
+            if [ "$code" != "200" ]; then
+              echo "Falha HTTP $code em $path" >&2
+              exit 1
+            fi
+            if head -c 300 "$tmp" | grep -Eiq '<!doctype html|<html'; then
+              echo "Servidor devolveu HTML fallback em $path" >&2
+              exit 1
+            fi
+            mv "$tmp" "$path"
+          done
+      - name: Commit dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .restore-runtime
+          rm -f .github/workflows/restore-runtime.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "restore: add EPC-15 runtime dependencies"
+          git push origin HEAD:main
