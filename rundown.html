@@ -148,18 +148,8 @@ body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);c
 
 <script>
 (function(){
-  const KEY='bi_epc15_basic_auth';
   const gate=document.getElementById('loginGate');
-  const form=document.getElementById('loginForm');
-  const user=document.getElementById('loginUser');
-  const pass=document.getElementById('loginPass');
-  const error=document.getElementById('loginError');
-
-  if(sessionStorage.getItem(KEY)!=='1'){
-    window.location.replace('index.html');
-    return;
-  }
-  gate.classList.add('hidden');
+  gate?.classList.add('hidden');
 })();
 </script>
 
