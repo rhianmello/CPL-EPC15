@@ -1764,7 +1764,7 @@
     document.getElementById('pb-focus-mitigation')?.addEventListener('input',event=>saveFocusNote('mitigation',event.target.value));
 
     document.getElementById('page-pb')?.addEventListener('change',event=>{
-      if(event.target.closest('#pb-metric-stage-filter') && (!curationMode || !canEdit())) return;
+      if(event.target.closest('#pb-metric-stage-filter') && !canEdit()) return;
       const metricGroupAllInput=event.target.closest('[data-metric-group-all]');
       if(metricGroupAllInput){
         metricGroupAll=Boolean(metricGroupAllInput.checked);
