@@ -595,10 +595,6 @@
       render();
       return;
     }
-    if (!window.CoordinationWeek?.canEdit?.()) {
-      alert('Esta semana está encerrada e não pode mais ser alterada.');
-      return;
-    }
     document.getElementById('pb-curation-master-modal')?.classList.remove('hidden');
     setTimeout(()=>document.getElementById('pb-curation-password')?.focus(),0);
   }
@@ -611,11 +607,12 @@
       const result=await window.CloudSync?.verifyCoordinationMaster?.(password,week);
       if(!result?.ok){
         if(error){
-          error.textContent=result?.locked ? 'Esta semana está encerrada.' : 'Senha master incorreta.';
+          error.textContent='Senha master incorreta.';
           error.classList.remove('hidden');
         }
         return;
       }
+      window.CoordinationWeek?.unlockWeek?.(week,password);
       curationMode=true;
       curationMasterPassword=password;
       closeCurationModal();
@@ -663,7 +660,8 @@
     const week=Number(window.CoordinationWeek?.getSelectedWeek?.());
     if(!Number.isFinite(week) || !window.CloudSync?.saveCoordinationManualWeek) return;
     const payload=exportWeekData(week);
-    const saved=await window.CloudSync.saveCoordinationManualWeek(week,payload);
+    const masterPassword=window.CoordinationWeek?.getMasterPassword?.(week) || curationMasterPassword || '';
+    const saved=await window.CloudSync.saveCoordinationManualWeek(week,payload,masterPassword);
     window.CoordinationWeek?.noteManualSaved?.(saved);
   }
 
@@ -874,8 +872,18 @@
 
   function metricSelectedGroupKeys() {
     if (metricGroupAll) return null;
-    const valid = new Set(metricGroupRows().map(metricGroupKey));
-    return new Set([...metricSelectedGroups].filter(key => valid.has(key)));
+    const groups=metricGroupRows();
+    const valid=new Set(groups.map(metricGroupKey));
+    const selected=new Set([...metricSelectedGroups].filter(key=>valid.has(key)));
+    if(!metricStepAll){
+      metricStageRows().forEach(row=>{
+        if(metricSelectedSteps.has(String(row.sourceIndex))){
+          const key=metricGroupKey(row);
+          if(valid.has(key)) selected.add(key);
+        }
+      });
+    }
+    return selected;
   }
 
   function metricContextBySource() {
@@ -1458,6 +1466,40 @@
     }).join('');
   }
 
+  function syncMetricCheckboxDom(host,groups,steps,filterLocked) {
+    const activeKeys=metricSelectedGroupKeys();
+    const groupActive=key=>metricGroupAll || Boolean(activeKeys?.has(key));
+    const stepActive=row=>groupActive(metricGroupKey(row)) && (metricStepAll || metricSelectedSteps.has(String(row.sourceIndex)));
+    const activeStepCount=steps.filter(stepActive).length;
+    const activeGroupCount=metricGroupAll ? groups.length : (activeKeys?.size || 0);
+
+    const allInput=host.querySelector('[data-metric-group-all]');
+    if(allInput){
+      const everything=groups.length>0 && activeGroupCount===groups.length && activeStepCount===steps.length;
+      const anything=activeGroupCount>0 || activeStepCount>0;
+      allInput.checked=everything;
+      allInput.indeterminate=!everything && anything;
+      allInput.disabled=filterLocked;
+    }
+
+    host.querySelectorAll('[data-metric-group-key]').forEach(input=>{
+      const key=String(input.dataset.metricGroupKey || '');
+      const children=steps.filter(step=>metricGroupKey(step)===key);
+      const selectedChildren=children.filter(stepActive).length;
+      const active=groupActive(key);
+      input.checked=children.length ? active && selectedChildren===children.length : active;
+      input.indeterminate=active && selectedChildren>0 && selectedChildren<children.length;
+      input.disabled=filterLocked;
+    });
+
+    host.querySelectorAll('[data-metric-step-source]').forEach(input=>{
+      const id=String(input.dataset.metricStepSource || '');
+      const row=steps.find(step=>String(step.sourceIndex)===id);
+      input.checked=Boolean(row && stepActive(row));
+      input.disabled=filterLocked;
+    });
+  }
+
   function renderMetricFilterOptions(groups,steps) {
     const host=document.getElementById('pb-metric-filter-options');
     const summary=document.getElementById('pb-metric-filter-summary');
@@ -1467,48 +1509,44 @@
     [...metricSelectedGroups].forEach(key=>{if(!groupKeys.has(key)) metricSelectedGroups.delete(key);});
     const stepIds=new Set(steps.map(row=>String(row.sourceIndex)));
     [...metricSelectedSteps].forEach(id=>{if(!stepIds.has(id)) metricSelectedSteps.delete(id);});
-    const groupCount=metricGroupAll ? groups.length : metricSelectedGroups.size;
-    const activeSteps=steps.filter(row=>(metricGroupAll || metricSelectedGroups.has(metricGroupKey(row))) &&
-      (metricStepAll || metricSelectedSteps.has(String(row.sourceIndex))));
+
+    const activeKeys=metricSelectedGroupKeys();
+    const groupCount=metricGroupAll ? groups.length : (activeKeys?.size || 0);
+    const activeSteps=steps.filter(row=>
+      (metricGroupAll || activeKeys?.has(metricGroupKey(row))) &&
+      (metricStepAll || metricSelectedSteps.has(String(row.sourceIndex)))
+    );
     const filterLocked=!canEdit();
     summary.textContent=groupCount+' agrup. • '+activeSteps.length+' etapas'+(filterLocked?' • 🔒 somente leitura':'');
+
     const structure=groups.length+':'+steps.length+':'+groups.map(metricGroupKey).join('|')+'#'+steps.map(row=>row.sourceIndex).join('|');
     if(metricTreeStructureKey===structure && host.querySelector('.pb-metric-tree')){
-      const allInput=host.querySelector('[data-metric-group-all]');
-      if(allInput){allInput.checked=metricGroupAll && metricStepAll;allInput.disabled=filterLocked;}
-      host.querySelectorAll('[data-metric-group-key]').forEach(input=>{
-        input.checked=metricGroupAll || metricSelectedGroups.has(String(input.dataset.metricGroupKey || ''));
-        input.disabled=filterLocked;
-      });
-      host.querySelectorAll('[data-metric-step-source]').forEach(input=>{
-        input.checked=metricStepAll || metricSelectedSteps.has(String(input.dataset.metricStepSource || ''));
-        input.disabled=filterLocked;
-      });
+      syncMetricCheckboxDom(host,groups,steps,filterLocked);
       host.scrollTop=previousScroll;
       return;
     }
+
     metricTreeStructureKey=structure;
     const lockAttr=filterLocked?' disabled':'';
     host.innerHTML='<div class="pb-metric-tree">'+
-      '<label class="pb-metric-check-all"><input type="checkbox" data-metric-group-all="1" '+(metricGroupAll && metricStepAll?'checked':'')+lockAttr+'><span>Selecionar todos os agrupamentos e etapas</span></label>'+
+      '<label class="pb-metric-check-all"><input type="checkbox" data-metric-group-all="1"'+lockAttr+'><span>Selecionar todos os agrupamentos e etapas</span></label>'+
       groups.map(row=>{
         const key=metricGroupKey(row);
-        const selected=metricGroupAll || metricSelectedGroups.has(key);
         const note=noteFor(row);
         const title=note.metricTitle || metricContextValue(row,'grouping') || rowLabel(row);
         const children=steps.filter(step=>metricGroupKey(step)===key);
         return '<section class="pb-metric-tree-group">'+
           '<label class="pb-metric-check-option pb-metric-tree-parent">'+
-            '<input type="checkbox" data-metric-group-key="'+esc(key)+'" '+(selected?'checked':'')+lockAttr+'>'+
+            '<input type="checkbox" data-metric-group-key="'+esc(key)+'"'+lockAttr+'>'+
             '<span><strong>'+esc((note.metricHidden?'OCULTO • ':'')+title)+'</strong><small>L'+(Number(row.sourceIndex)+1)+'</small></span></label>'+
           '<div class="pb-metric-tree-children">'+children.map(step=>{
             const name=metricContextValue(step,'step') || rowLabel(step);
-            const checked=metricStepAll || metricSelectedSteps.has(String(step.sourceIndex));
             return '<label class="pb-metric-check-option pb-metric-tree-child">'+
-              '<input type="checkbox" data-metric-step-source="'+esc(step.sourceIndex)+'" '+(checked?'checked':'')+lockAttr+'>'+
+              '<input type="checkbox" data-metric-step-source="'+esc(step.sourceIndex)+'"'+lockAttr+'>'+
               '<span><strong title="'+esc(name)+'">'+esc(compactMetricStageTitle(name))+'</strong><small>L'+(Number(step.sourceIndex)+1)+'</small></span></label>';
           }).join('')+'</div></section>';
       }).join('')+'</div>';
+    syncMetricCheckboxDom(host,groups,steps,filterLocked);
     host.scrollTop=previousScroll;
   }
 
@@ -1569,9 +1607,10 @@
     renderMetricFilterOptions(allGroups,allSteps);
 
     const groupKeys=new Set(allGroups.map(metricGroupKey));
-    const selectedGroupKeys=metricGroupAll
+    const activeSelection=metricSelectedGroupKeys();
+    const selectedGroupKeys=activeSelection===null
       ? groupKeys
-      : new Set([...metricSelectedGroups].filter(key=>groupKeys.has(key)));
+      : new Set([...activeSelection].filter(key=>groupKeys.has(key)));
 
     let groups=allGroups.filter(row=>selectedGroupKeys.has(metricGroupKey(row)));
 
@@ -2013,9 +2052,41 @@
   function getCurrentModel() { return model; }
   function isCurationMode() { return curationMode; }
 
+  function savedFilterSelection() {
+    const sel=selection();
+    return Object.fromEntries(FILTERS.map(def=>[def.field,sel[def.field] ?? '']));
+  }
+
+  function restoreFilterSelection(saved) {
+    FILTERS.forEach(def=>{
+      const el=document.getElementById(def.id);
+      if(el) el.value='';
+    });
+    populateHierarchyFilters();
+    if(!saved || typeof saved!=='object') return;
+
+    FILTERS.forEach(def=>{
+      const el=document.getElementById(def.id);
+      if(!el) return;
+      const desired=saved[def.field];
+      const desiredValue=desired==null ? '' : String(desired);
+      if([...el.options].some(option=>option.value===desiredValue)) el.value=desiredValue;
+      populateHierarchyFilters();
+    });
+  }
+
+  function resetMetricSelection() {
+    metricGroupAll=true;
+    metricSelectedGroups.clear();
+    metricStepAll=true;
+    metricSelectedSteps.clear();
+    metricTreeStructureKey=null;
+  }
+
   function exportWeekData(weekNo) {
     return {
       coordinationNotes:notes(weekNo),
+      filterSelection:savedFilterSelection(),
       metricSelection:{
         groupAll:metricGroupAll, groups:[...metricSelectedGroups],
         stepAll:metricStepAll, steps:[...metricSelectedSteps]
@@ -2025,18 +2096,24 @@
 
   function importWeekData(payload,weekNo) {
     const selected=payload?.metricSelection;
+    resetMetricSelection();
     if(selected && typeof selected==='object'){
       metricGroupAll=selected.groupAll!==false;
       metricStepAll=selected.stepAll!==false;
-      metricSelectedGroups.clear();
-      metricSelectedSteps.clear();
       (Array.isArray(selected.groups)?selected.groups:[]).forEach(key=>metricSelectedGroups.add(String(key)));
       (Array.isArray(selected.steps)?selected.steps:[]).forEach(id=>metricSelectedSteps.add(String(id)));
     }
+
     if(payload?.coordinationNotes && typeof payload.coordinationNotes==='object'){
       writeJson(notesKey(weekNo),payload.coordinationNotes);
     }
-    if(model) render();
+
+    if(model){
+      restoreFilterSelection(payload?.filterSelection);
+      resetPagination();
+      lastScopeKey='';
+      render();
+    }
   }
 
   function exportManualData(){ return {}; }
