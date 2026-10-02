@@ -1,0 +1,12 @@
+*.xls
+*.xlsx
+*.xlsm
+*.xlsb
+*.csv
+~$*
+.env
+.env.*
+*.log
+Thumbs.db
+.DS_Store
+node_modules/
