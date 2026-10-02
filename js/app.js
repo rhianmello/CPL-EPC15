@@ -133,9 +133,12 @@
       setSource(hasData ? sourceStatus.textContent : 'Nuvem ainda não configurada • use o Excel local', 'warning');
       return false;
     }
-    // Leitura anônima: não exige login.
+    if (!isAuthenticated()) {
+      requestAccess(() => loadPublished({ keepLocalOnError }));
+      return false;
+    }
 
-    showLoading('Carregando versão publicada...', 'Buscando o snapshot atual na nuvem.');
+    showLoading('Carregando versão publicada...', 'Buscando o snapshot atual no Supabase.');
     try {
       const result = await window.CloudSync.loadCurrent();
       if (!result) {
@@ -265,6 +268,10 @@
   homeAvatar?.addEventListener('click', () => requestAccess(openEpcDashboard));
 
   historyToggle?.addEventListener('click', async () => {
+    if (!isAuthenticated()) {
+      requestAccess(() => historyToggle?.click());
+      return;
+    }
     const expanded = historyToggle.getAttribute('aria-expanded') === 'true';
     if (expanded) {
       historyToggle.setAttribute('aria-expanded', 'false');
