@@ -282,14 +282,18 @@
     const url = cfg.url.replace(/\/$/,'') + '/functions/v1/coordination-photos';
     let response;
     if (formData) {
-      formData.set('username', credentials.username);
-      formData.set('password', credentials.password);
+      formData.set('username', credentials?.username || '');
+      formData.set('password', credentials?.password || '');
       response = await fetch(url, { method, body:formData });
     } else {
       response = await fetch(url, {
         method,
         headers:{'Content-Type':'application/json','apikey':cfg.publishableKey},
-        body:JSON.stringify({ username:credentials.username, password:credentials.password, ...payload })
+        body:JSON.stringify({
+          username:credentials?.username || '',
+          password:credentials?.password || '',
+          ...payload
+        })
       });
     }
     let data={};
