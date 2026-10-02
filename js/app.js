@@ -243,9 +243,8 @@
         console.error(error);
       }
     } else {
-      // Compatibilidade temporária somente enquanto a integração cloud estiver desativada.
-      valid = email.toLowerCase() === 'admin' && pass === '12345678';
-      if (valid) window.CloudSync?.setCredentials?.(email, pass);
+      valid = false;
+      setSource('Serviço de autenticação indisponível', 'error');
     }
 
     if (valid) {
