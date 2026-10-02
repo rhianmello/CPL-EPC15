@@ -727,6 +727,19 @@
     return Array.isArray(all.__manualHighlights) ? all.__manualHighlights : [];
   }
 
+  function manualHighlightMatchesSelection(item) {
+    const sel=selection();
+    const itemUnit=String(item?.unit || '').trim();
+    const itemPhase=String(item?.phase || '').trim();
+    if(sel.unit && itemUnit && itemUnit!==sel.unit) return false;
+    if(sel.phase && itemPhase && itemPhase!==sel.phase) return false;
+    return true;
+  }
+
+  function manualHighlightText(item) {
+    return String(item?.description || item?.title || '').trim();
+  }
+
   async function persistManualHighlights(items) {
     const all=notes();
     all.__manualHighlights=items;
@@ -759,6 +772,7 @@
     const clean=String(value||'').trim();
     const items=manualHighlights().map(item=>{
       if(item.id!==id) return item;
+      if(field==='description') return {...item,description:clean};
       if(field==='title') return {...item,title:clean||item.title||'Novo destaque'};
       if(field==='subtitle') return {...item,subtitle:clean};
       return item;
@@ -1360,16 +1374,24 @@
   function renderWeekHighlights() {
     const host=document.getElementById('pb-week-highlights-list');
     const count=document.getElementById('pb-week-highlights-count');
+    const heading=document.getElementById('pb-week-highlights-title');
     if(!host) return;
 
-    const automaticRows=presentationVisibleRows(presentationRows())
+    const allNotes=notes();
+    const periodLabel=String(allNotes.__highlightPeriodLabel || '').trim();
+    if(heading) heading.textContent='DESTAQUES DA SEMANA'+(periodLabel ? ' — '+periodLabel : '');
+
+    const hideAutomatic=Boolean(allNotes.__hideAutomaticHighlights);
+    const automaticRows=hideAutomatic ? [] : presentationVisibleRows(presentationRows())
       .filter(hasDeviation)
       .sort((a,b)=>(a.sourceIndex??0)-(b.sourceIndex??0))
       .slice(0,4);
 
     const visibleAuto=automaticRows.filter(row=>!noteFor(row).highlightHidden);
     const hiddenAuto=automaticRows.filter(row=>noteFor(row).highlightHidden);
-    const manual=manualHighlights();
+    const manual=manualHighlights()
+      .filter(manualHighlightMatchesSelection)
+      .filter(item=>manualHighlightText(item));
 
     const cards=[];
 
@@ -1410,14 +1432,13 @@
       }
 
       const item=entry.item;
-      const title=item.title || 'Novo destaque';
-      const subtitle=item.subtitle || '';
+      const description=manualHighlightText(item);
+      const subtitle=String(item.subtitle || '').trim();
       const copy=curationMode
         ? '<div class="pb-highlight-edit-stack">'+
-            '<label><span>H1</span><input class="pb-highlight-title-input" type="text" value="'+esc(title)+'" data-manual-highlight="'+esc(item.id)+'" data-manual-field="title" aria-label="Título H1 manual"></label>'+
-            '<label><span>H2</span><input class="pb-highlight-subtitle-input" type="text" value="'+esc(subtitle)+'" data-manual-highlight="'+esc(item.id)+'" data-manual-field="subtitle" placeholder="Digite o subtítulo" aria-label="Subtítulo H2 manual"></label>'+
+            '<label><span>DESTAQUE</span><input class="pb-highlight-title-input" type="text" value="'+esc(description)+'" data-manual-highlight="'+esc(item.id)+'" data-manual-field="description" aria-label="Descrição do destaque"></label>'+
           '</div>'
-        : '<div class="pb-highlight-display"><strong class="pb-highlight-title">'+esc(title)+'</strong>'+
+        : '<div class="pb-highlight-display"><strong class="pb-highlight-title">'+esc(description)+'</strong>'+
             (subtitle?'<small class="pb-highlight-subtitle">'+esc(subtitle)+'</small>':'')+
           '</div>';
       const remove=curationMode
@@ -1432,14 +1453,14 @@
     }).join('');
 
     if(!cards.length && !curationMode){
-      html='<div class="pb-empty-light">Nenhum destaque para os filtros atuais. Use o lápis para inserir manualmente.</div>';
+      html='<div class="pb-empty-light">Nenhum destaque cadastrado para esta unidade/fase na Semana '+esc(window.CoordinationWeek?.getSelectedWeek?.() || '')+'.</div>';
     }
 
     if(curationMode){
       html += '<div class="pb-highlight-master-actions">'+
-        '<div class="pb-manual-highlight-add pb-manual-highlight-add-two">'+
-          '<label><span>H1</span><input id="pb-new-highlight-title" type="text" placeholder="Digite o título"></label>'+
-          '<label><span>H2</span><input id="pb-new-highlight-subtitle" type="text" placeholder="Digite o subtítulo"></label>'+
+        '<div class="pb-manual-highlight-add">'+
+          '<input id="pb-new-highlight-title" type="text" placeholder="Digite a descrição do destaque">'+
+          '<input id="pb-new-highlight-subtitle" type="hidden" value="">'+
           '<button type="button" data-add-manual-highlight>+ Inserir destaque</button>'+
         '</div>'+
         (hiddenAuto.length
@@ -1450,7 +1471,6 @@
 
     host.innerHTML=html;
   }
-
   function renderOffenders() {
     const keySet=metricSelectedGroupKeys();
     const contextBySource=keySet ? metricContextBySource() : null;
@@ -2031,7 +2051,7 @@
   function getPresentationData() {
     const sel=selection();
     const scope=scopeSummary();
-    const auto=presentationVisibleRows(presentationRows())
+    const auto=notes().__hideAutomaticHighlights ? [] : presentationVisibleRows(presentationRows())
       .filter(hasDeviation)
       .sort((a,b)=>(a.sourceIndex??0)-(b.sourceIndex??0))
       .slice(0,4)
@@ -2043,10 +2063,13 @@
           subtitle:note.highlightSubtitle || ''
         };
       });
-    const manual=manualHighlights().map(item=>({
-      title:item.title || 'Novo destaque',
-      subtitle:item.subtitle || ''
-    }));
+    const manual=manualHighlights()
+      .filter(manualHighlightMatchesSelection)
+      .filter(item=>manualHighlightText(item))
+      .map(item=>({
+        title:manualHighlightText(item),
+        subtitle:item.subtitle || ''
+      }));
     const selectedUnit=sel.unit
       ? (model?.units||[]).find(unit=>unit.rawName===sel.unit || unit.unit===sel.unit || unit.code===sel.unit)
       : null;
