@@ -35,7 +35,7 @@
   // Autenticação direta no Supabase pelas RPCs protegidas do BI.
   (function syncLoginLabels() {
     const hint = loginGate?.querySelector('p');
-    if (hint) hint.textContent = 'Informe usuário e senha para acessar o painel.';
+    if (hint) hint.textContent = 'Informe usuário e senha apenas para editar ou publicar.';
     const userLabel = loginGate?.querySelector('label[for="login-user"]');
     if (userLabel) userLabel.textContent = 'Usuário';
     if (loginUser) loginUser.placeholder = 'Admin';
@@ -133,11 +133,6 @@
       setSource(hasData ? sourceStatus.textContent : 'Nuvem ainda não configurada • use o Excel local', 'warning');
       return false;
     }
-    if (!isAuthenticated()) {
-      requestAccess(() => loadPublished({ keepLocalOnError }));
-      return false;
-    }
-
     showLoading('Carregando versão publicada...', 'Buscando o snapshot atual no Supabase.');
     try {
       const result = await window.CloudSync.loadCurrent();
@@ -222,12 +217,11 @@
     if(file) load(file);
   });
 
-  // O Supabase protege leitura e escrita pelas mesmas credenciais do BI.
-  openEpc?.addEventListener('click', () => requestAccess(openEpcDashboard));
+  // Leitura pública; autenticação fica restrita às ações de edição/publicação.
+  openEpc?.addEventListener('click', openEpcDashboard);
   openRundown?.addEventListener('click', event => {
     event.preventDefault();
-    const href = openRundown.href;
-    requestAccess(() => { window.location.href = href; });
+    window.location.href = openRundown.href;
   });
 
   loginForm?.addEventListener('submit', async event => {
@@ -265,13 +259,9 @@
 
   loginCancel?.addEventListener('click', closeLogin);
 
-  homeAvatar?.addEventListener('click', () => requestAccess(openEpcDashboard));
+  homeAvatar?.addEventListener('click', () => requestAccess(() => {}));
 
   historyToggle?.addEventListener('click', async () => {
-    if (!isAuthenticated()) {
-      requestAccess(() => historyToggle?.click());
-      return;
-    }
     const expanded = historyToggle.getAttribute('aria-expanded') === 'true';
     if (expanded) {
       historyToggle.setAttribute('aria-expanded', 'false');
@@ -320,12 +310,12 @@
       historyToggle.disabled = false;
     }
   });
-  // Importar/publicar também usam o mesmo acesso do Supabase.
-  selectDashboard?.addEventListener('click', () => requestAccess(() => input.click()));
-  selectEmpty?.addEventListener('click', () => requestAccess(() => input.click()));
+  // Importação local e leitura são livres; publicação continua protegida.
+  selectDashboard?.addEventListener('click', () => input.click());
+  selectEmpty?.addEventListener('click', () => input.click());
   document.getElementById('back-home')?.addEventListener('click', backToPortal);
   publishButton?.addEventListener('click', () => requestAccess(publishCurrent));
-  publishedButton?.addEventListener('click', () => requestAccess(() => loadPublished({keepLocalOnError:true})));
+  publishedButton?.addEventListener('click', () => loadPublished({keepLocalOnError:true}));
 
   document.addEventListener('click', event => {
     const page = event.target.closest('[data-page]')?.dataset.page;
@@ -357,7 +347,7 @@
 
   setSource(
     cloudReady()
-      ? 'Pronto • Supabase conectado • entre para carregar ou publicar dados'
+      ? 'Pronto • leitura liberada • login somente para editar ou publicar'
       : 'Nuvem ainda não configurada • Excel local disponível',
     cloudReady() ? 'cloud' : 'neutral'
   );
