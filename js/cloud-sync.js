@@ -246,7 +246,7 @@
     return Array.isArray(data?.photos) ? data.photos : [];
   }
 
-  async function uploadCoordinationPhoto({weekNo,scope,file}) {
+  async function uploadCoordinationPhoto({weekNo,scope,file,masterPassword=''}) {
     if (!(file instanceof File)) throw new Error('Arquivo de foto inválido.');
     const form=new FormData();
     form.set('action','upload');
@@ -255,6 +255,7 @@
     form.set('unit_key',String(scope.unitKey || ''));
     form.set('phase_name',String(scope.phaseName || ''));
     form.set('phase_key',String(scope.phaseKey || ''));
+    form.set('master_password',String(masterPassword || ''));
     form.set('file',file,file.name || 'foto');
     return photoRequest('POST',null,form);
   }
