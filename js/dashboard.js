@@ -97,7 +97,10 @@
     document.getElementById(`page-${page}`).classList.add('active');
     document.querySelector(`[data-page="${page}"]`)?.classList.add('active');
     document.getElementById('page-title').textContent = page === 'executive' ? 'Painel Gerencial' : page === 'pb' ? 'Reunião de Coordenação' : page === 'analysis' ? 'Análises' : currentUnit?.rawName || 'Unidade';
-    document.querySelector('.topbar > div:first-child')?.classList.toggle('hidden', page === 'pb');
+    const topbar=document.querySelector('.topbar');
+    topbar?.querySelector(':scope > div:first-child')?.classList.toggle('hidden', page === 'pb');
+    topbar?.classList.toggle('pb-mode', page === 'pb');
+    document.getElementById('pb-topbar-week-tools')?.classList.toggle('hidden', page !== 'pb');
     if (page === 'pb' && window.PBDashboard) window.PBDashboard.render();
     if (page === 'analysis') {
       buildAnalysisPhaseFilter();
