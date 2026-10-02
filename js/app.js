@@ -32,15 +32,14 @@
   let currentFile = null;
   let currentPublication = null;
 
-  // Task 6 (Cloudflare): o acesso passa a ser e-mail+senha via Worker.
-  // Os textos do gate vivem no index.html (não tocado); sincroniza via JS.
+  // Autenticação direta no Supabase pelas RPCs protegidas do BI.
   (function syncLoginLabels() {
     const hint = loginGate?.querySelector('p');
-    if (hint) hint.textContent = 'Informe e-mail e senha para acessar o painel.';
+    if (hint) hint.textContent = 'Informe usuário e senha para acessar o painel.';
     const userLabel = loginGate?.querySelector('label[for="login-user"]');
-    if (userLabel) userLabel.textContent = 'E-mail';
-    if (loginUser) loginUser.placeholder = 'voce@exemplo.com';
-    if (loginError) loginError.textContent = 'E-mail ou senha incorretos.';
+    if (userLabel) userLabel.textContent = 'Usuário';
+    if (loginUser) loginUser.placeholder = 'Admin';
+    if (loginError) loginError.textContent = 'Usuário ou senha incorretos.';
   })();
 
   function cloudReady() { return Boolean(window.CloudSync?.ready?.()); }
@@ -220,31 +219,31 @@
     if(file) load(file);
   });
 
-  // Leitura (abrir BI, rundown, versão publicada) é anônima. Escrita
-  // (publicar) exige login editor via requestAccess.
-  openEpc?.addEventListener('click', openEpcDashboard);
+  // O Supabase protege leitura e escrita pelas mesmas credenciais do BI.
+  openEpc?.addEventListener('click', () => requestAccess(openEpcDashboard));
   openRundown?.addEventListener('click', event => {
     event.preventDefault();
-    window.location.href = openRundown.href;
+    const href = openRundown.href;
+    requestAccess(() => { window.location.href = href; });
   });
 
   loginForm?.addEventListener('submit', async event => {
     event.preventDefault();
-    const email = (loginUser?.value || '').trim();
+    const user = (loginUser?.value || '').trim();
     const pass = loginPass?.value || '';
     let valid = false;
 
     if (cloudReady()) {
       try {
-        valid = await window.CloudSync.verifyAccess(email, pass);
+        valid = await window.CloudSync.verifyAccess(user, pass);
       } catch (error) {
         valid = false;
-        setSource('Não foi possível validar o acesso na nuvem', 'error');
+        setSource('Não foi possível validar o acesso no Supabase', 'error');
         console.error(error);
       }
     } else {
       valid = false;
-      setSource('Serviço de autenticação indisponível', 'error');
+      setSource('Supabase não configurado • autenticação indisponível', 'error');
     }
 
     if (valid) {
@@ -263,15 +262,7 @@
 
   loginCancel?.addEventListener('click', closeLogin);
 
-  homeAvatar?.addEventListener('click', () => {
-    if (isAuthenticated()) {
-      openDashboard();
-      return;
-    }
-    loginError?.classList.add('hidden');
-    loginGate?.classList.remove('hidden');
-    setTimeout(() => loginUser?.focus(), 0);
-  });
+  homeAvatar?.addEventListener('click', () => requestAccess(openEpcDashboard));
 
   historyToggle?.addEventListener('click', async () => {
     const expanded = historyToggle.getAttribute('aria-expanded') === 'true';
@@ -322,7 +313,7 @@
       historyToggle.disabled = false;
     }
   });
-  // Subir Excel também exige login: leitura é livre, o resto não.
+  // Importar/publicar também usam o mesmo acesso do Supabase.
   selectDashboard?.addEventListener('click', () => requestAccess(() => input.click()));
   selectEmpty?.addEventListener('click', () => requestAccess(() => input.click()));
   document.getElementById('back-home')?.addEventListener('click', backToPortal);
@@ -359,7 +350,7 @@
 
   setSource(
     cloudReady()
-      ? 'Pronto • abra o BI para carregar a versão publicada (leitura livre, publicar exige login)'
+      ? 'Pronto • Supabase conectado • entre para carregar ou publicar dados'
       : 'Nuvem ainda não configurada • Excel local disponível',
     cloudReady() ? 'cloud' : 'neutral'
   );
