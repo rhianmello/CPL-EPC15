@@ -154,6 +154,7 @@
       generated_at: new Date().toISOString(),
       model: payload.model
     };
+    const masterPassword = String(payload.masterPassword || '');
     const args = {
       p_week_no: Number(payload.weekNo),
       p_excel_file_name: payload.excelFileName || null,
@@ -162,10 +163,12 @@
       p_dataset: dataset,
       p_pb_manual: payload.pbManual || {}
     };
+    const rpcName = masterPassword ? 'save_coordination_excel_week_master' : 'save_coordination_excel_week';
+    if (masterPassword) args.p_master_password = masterPassword;
 
     for (let attempt=0; attempt<2; attempt+=1) {
       try {
-        const data=await rpc('save_coordination_excel_week',args);
+        const data=await rpc(rpcName,args);
         return typeof data === 'string' ? JSON.parse(data) : data;
       } catch(error) {
         if (attempt===0 && isStatementTimeoutError(error)) {
@@ -183,11 +186,17 @@
     return typeof data === 'string' ? JSON.parse(data) : data;
   }
 
-  async function saveCoordinationManualWeek(weekNo, pbManual) {
-    const data = await rpc('save_coordination_manual_week', {
+  async function saveCoordinationManualWeek(weekNo, pbManual, masterPassword='') {
+    const cleanMaster=String(masterPassword || '');
+    const args={
       p_week_no:Number(weekNo),
       p_pb_manual:pbManual || {}
-    });
+    };
+    if(cleanMaster) args.p_master_password=cleanMaster;
+    const data = await rpc(
+      cleanMaster ? 'save_coordination_manual_week_master' : 'save_coordination_manual_week',
+      args
+    );
     return typeof data === 'string' ? JSON.parse(data) : data;
   }
 
