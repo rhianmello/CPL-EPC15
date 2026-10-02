@@ -1,4 +1,4 @@
-name: Restore EPC-15 package
+name: Restore EPC-15 files
 
 on:
   push:
@@ -15,28 +15,101 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Rebuild package
+
+      - name: Restore deployed frontend
         shell: bash
         run: |
           set -euo pipefail
-          cat .restore/chunk-* > /tmp/epc15.b64
-          base64 -d /tmp/epc15.b64 > /tmp/epc15.zip
-          rm -rf /tmp/epc15-unpack
-          mkdir -p /tmp/epc15-unpack
-          unzip -q /tmp/epc15.zip -d /tmp/epc15-unpack
-          cp -a /tmp/epc15-unpack/bi-epc15-site/. ./
+          BASE="https://dashboard.epc15.com.br"
+          files=(
+            "index.html"
+            "rundown.html"
+            "qualidade.html"
+            "comissionamento.html"
+            "simulador-andaimes.html"
+            "css/estacas.css"
+            "css/style.css"
+            "assets/logo-cpl-epc15.png"
+            "data/estacas_seed_20260930.gz.b64"
+            "js/app.js"
+            "js/charts.js"
+            "js/cloud-sync.js"
+            "js/config.js"
+            "js/coordination-deck.js"
+            "js/coordination-week.js"
+            "js/dashboard.js"
+            "js/data-model.js"
+            "js/estacas.js"
+            "js/excel-reader.js"
+            "js/export.js"
+            "js/integration-matcher.js"
+            "js/integration-normalizer.js"
+            "js/integration-repository.js"
+            "js/integration-ui.js"
+            "js/pb-dashboard.js"
+            "js/presentation.js"
+            "js/supabase-config.js"
+            "vendor/chart.umd.min.js"
+            "vendor/html2canvas.min.js"
+            "vendor/jspdf.umd.min.js"
+            "vendor/xlsx.full.min.js"
+          )
+          for path in "${files[@]}"; do
+            mkdir -p "$(dirname "$path")"
+            echo "Restoring $path"
+            curl --fail --location --silent --show-error --retry 3 "$BASE/$path" -o "$path"
+          done
+
+      - name: Harden public repository defaults
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p=Path('js/supabase-config.js')
+          s=p.read_text(encoding='utf-8')
+          s=re.sub(r'testAccess\s*:\s*true', 'testAccess: false', s)
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('js/app.js')
+          s=p.read_text(encoding='utf-8')
+          s=re.sub(
+              r"}\s*else\s*\{\s*// Compatibilidade temporária somente enquanto a integração cloud estiver desativada\.\s*valid\s*=\s*user\.toLowerCase\(\)\s*===\s*'admin'\s*&&\s*pass\s*===\s*'12345678';\s*if\s*\(valid\)\s*window\.CloudSync\?\.setCredentials\?\.\(user,\s*pass\);\s*}",
+              "} else {\n      valid = false;\n      setSource('Supabase não configurado • autenticação indisponível', 'error');\n    }",
+              s,
+              flags=re.S
+          )
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('rundown.html')
+          s=p.read_text(encoding='utf-8')
+          s=re.sub(
+              r"if\(sessionStorage\.getItem\(KEY\)!=='1'\)\{.*?form\.addEventListener\('submit',function\(e\)\{.*?\n\s*\}\);",
+              "if(sessionStorage.getItem(KEY)!=='1'){\n    window.location.replace('index.html');\n    return;\n  }\n  gate.classList.add('hidden');",
+              s,
+              flags=re.S
+          )
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('https://rhianmello.github.io/bi-epc15/rundown.html','rundown.html')
+          p.write_text(s,encoding='utf-8')
+          PY
+
+      - name: Clean placeholders and commit
+        shell: bash
+        run: |
+          set -euo pipefail
           rm -rf .restore
           rm -f .github/workflows/restore.yml
           find . -name .gitkeep -type f -delete
-      - name: Commit restored site
-        shell: bash
-        run: |
-          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "restore: populate EPC-15 site from sanitized package"
+          git commit -m "restore: populate EPC-15 frontend files"
           git push origin HEAD:main
