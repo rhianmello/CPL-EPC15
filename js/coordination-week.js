@@ -176,11 +176,13 @@
         await window.PBDashboard?.loadPhotos?.(selectedWeek);
       } else {
         window.PBDashboard?.useLive?.();
+        window.PBDashboard?.importWeekData?.({},selectedWeek);
         await window.PBDashboard?.loadPhotos?.(selectedWeek);
       }
     } catch(error) {
       console.error('Falha ao carregar a Semana '+selectedWeek,error);
       window.PBDashboard?.useLive?.();
+      window.PBDashboard?.importWeekData?.({},selectedWeek);
     } finally {
       refreshStatus();
     }
