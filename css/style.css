@@ -437,6 +437,15 @@
 }
 .pb-photo-admin button.danger{border-color:rgba(239,68,68,.38);background:rgba(239,68,68,.11);color:#fca5a5}
 .pb-photo-admin button:hover{color:#fff}
+.pb-photo-unit-label{
+  padding:6px 9px;
+  border-top:1px solid rgba(34,211,238,.16);
+  background:rgba(34,211,238,.07);
+  color:#8be9f6;
+  font-size:.52rem;
+  font-weight:900;
+  letter-spacing:.03em;
+}
 
 
 /* Destaques da semana abaixo do registro fotográfico */
