@@ -1,587 +1,78 @@
-<!doctype html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#07111f">
-  <title>BI EPC-15</title>
-  <link rel="stylesheet" href="css/style.css?v=20260930-filter-tree1">
-  <link rel="stylesheet" href="css/home.css?v=20261002-home1">
-  <style>
-    /* Ajustes CPL / Reunião de Coordenação */
-    .nav-item[data-page="executive"]::after,.nav-item[data-page="pb"]::after{content:""}
-    .cpl-ppt-button{padding:11px 16px;border:1px solid rgba(34,211,238,.32);border-radius:10px;background:rgba(14,165,233,.13);color:#9de8f4;font-weight:800;cursor:pointer;white-space:nowrap}
-    .cpl-ppt-button:hover{background:rgba(14,165,233,.22);color:#fff}
-    .pb-page{margin:0!important;padding:0!important;background:transparent!important;color:inherit!important;font-family:inherit!important}
-    .pb-filterbar,.pb-card{background:#0e1f34!important;border:1px solid rgba(148,163,184,.16)!important;box-shadow:none!important;color:#e8f2fc!important}
-    .pb-filterbar{margin-bottom:16px!important;padding:16px!important;border-radius:16px!important}
-    .pb-filterbar label,.pb-filter-title small,.pb-right-note small,.pb-focus-week{color:#7d95b0!important}
-    .pb-filter-title strong,.pb-card-head h3,.pb-subhead strong{color:#e8f2fc!important}
-    .pb-petrobras-pill{background:linear-gradient(135deg,#16d4ff,#1e72ff)!important;box-shadow:none!important;color:#06101d!important;border:0!important;letter-spacing:.12em}
-    .pb-filterbar select,.pb-quick-add input,.pb-offender-body textarea,.pb-modal-card input,.pb-modal-card textarea,.pb-modal-card select{background:#071321!important;border-color:rgba(148,163,184,.22)!important;color:#e8f2fc!important}
-    .pb-progress-box,.pb-gap-box,.pb-pareto,.pb-offender,.pb-activity,.pb-metric,.pb-empty-light{background:#071321!important;border-color:rgba(148,163,184,.14)!important;color:#e8f2fc!important}
-    .pb-actual-box{background:#0f3146!important;border-color:#22d3ee!important;box-shadow:inset 5px 0 #22d3ee!important}
-    .pb-activity-copy strong,.pb-offender-title strong,.pb-metric-head strong{color:#f8fbff!important}
-    .pb-activity-copy span,.pb-offender-title span,.pb-metric-foot,.pb-pareto-legend{color:#8fa4bd!important}
-    .pb-card-head{border-bottom-color:rgba(148,163,184,.12)!important}
-    .financial-summary{display:none!important}
-    .curve-panel{background:#0e1f34!important;border-color:rgba(148,163,184,.16)!important;color:#e8f2fc!important}
-    .financial-title{background:transparent!important;border-bottom:1px solid rgba(148,163,184,.12)!important;color:#e8f2fc!important}
-    .financial-title-copy h2,.financial-title-copy h3{color:#f8fbff!important}
-    .financial-logo b,.financial-logo span{color:#22d3ee!important}
-    .financial-title-meta strong,.financial-title-meta small{color:#8fa4bd!important}
-    .curve-panel .curve-canvas-shell{background:transparent!important;margin:0!important;padding:12px!important;border-radius:0!important;height:470px!important}
-    .curve-panel .curve-empty{background:#0e1f34!important;color:#8fa4bd!important}
-    .unit-phase-chart-panel,.phase-summary-panel,.delay-panel,.unit-toolbar{background:#0e1f34!important;border-color:rgba(148,163,184,.16)!important}
-    .coordination-ppt-panel{margin-bottom:16px;padding:16px;border:1px solid rgba(34,211,238,.18);border-radius:16px;background:#0e1f34;color:#e8f2fc}
-    .coordination-ppt-panel.hidden{display:none!important}
-    .coordination-ppt-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
-    .coordination-ppt-head h3{margin:0;font-size:1rem}.coordination-ppt-head small{color:#8fa4bd}
-    .coordination-slide-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
-    .coordination-slide{padding:12px;border:1px solid rgba(148,163,184,.14);border-radius:12px;background:#071321;color:#cfe2f5;min-height:88px}
-    .coordination-slide strong{display:block;margin-bottom:6px;color:#22d3ee}.coordination-slide p{margin:0;white-space:pre-wrap;line-height:1.35;font-size:.82rem}
-      .pb-physical-card header label,.pb-metric-stage-filter{display:flex;gap:8px;align-items:center;font-size:12px;color:#8fa4bd}
-    .pb-physical-card header select,.pb-metric-stage-filter select{background:#071321;color:#e8f2fc;border:1px solid #41546b;border-radius:6px;padding:8px;max-width:100%}
-    .pb-metric-stage-filter{margin:0 0 14px;flex-wrap:wrap}
-    .pb-metric-stage-filter select{flex:1;min-width:180px}
-    #unit-kpis{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
-  .executive-row{grid-template-columns:repeat(2,minmax(0,1fr))}
-    .offender-filters{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
-    .offender-filters label{display:flex;flex-direction:column;gap:6px;color:#8fa4bd;font-size:12px;flex:1;min-width:130px}
-    .offender-filters select{width:100%;padding:9px;border:1px solid #41546b;border-radius:8px;background:#071321;color:#e8f2fc}
-    .delay-copy strong,.delay-copy span{white-space:normal!important;overflow-wrap:anywhere}
-    @media(max-width:760px){.executive-row{grid-template-columns:1fr}}
-    #upload-view .upload-card{position:relative}
-    .portal-cpl-logo{
-      position:absolute;
-      top:24px;
-      left:24px;
-      width:112px;
-      height:72px;
-      object-fit:contain;
-      background:#fff;
-      border:1px solid rgba(148,163,184,.2);
-      border-radius:12px;
-      padding:7px 9px;
-      box-sizing:border-box;
-      box-shadow:0 10px 28px rgba(0,0,0,.2);
-      z-index:2;
-    }
-    @media(max-width:760px){
-      .portal-cpl-logo{top:16px;left:16px;width:82px;height:54px;padding:5px 7px;border-radius:9px}
-      .portal-head{padding-top:48px}
-    }
-  </style>
-</head>
-<body>
-  <section id="upload-view" class="upload-view home" aria-label="Página inicial">
-    <header class="site-topbar">
-      <div class="site-brand"><img class="site-logo" src="assets/logo-cpl-epc15.png" alt="CPL Construtora EPC-15"></div>
-      <nav class="site-nav" aria-label="Navegação da página inicial">
-        <a href="#topo" class="active">Início</a>
-        <a href="#paineis">Painéis</a>
-        <a href="#historico">Histórico</a>
-      </nav>
-      <button id="home-avatar" class="site-avatar" type="button" aria-label="Entrar no BI" title="Entrar no BI">
-        <i data-lucide="user-round"></i>
-      </button>
-    </header>
+(function () {
+  'use strict';
 
-    <div class="home-hero" id="topo">
-      <div class="home-hero-copy">
-        <p class="home-eyebrow">CPL • EPC-15</p>
-        <h1>Planejamento e Qualidade</h1>
-        <p class="home-sub">Acompanhe a evolução do empreendimento.</p>
-        <a class="btn-outline" href="#paineis">PRÉVIA VISUAL</a>
-      </div>
-    </div>
+  const RELATIONSHIP_STATUS = Object.freeze({
+    CONFIRMED: 'CONFIRMED',
+    PROBABLE: 'PROBABLE',
+    AMBIGUOUS: 'AMBIGUOUS',
+    UNMATCHED: 'UNMATCHED',
+    MANUAL_ALIAS: 'MANUAL_ALIAS',
+    SOURCE_ERROR: 'SOURCE_ERROR'
+  });
 
-    <main class="home-body">
-      <h2>O que você deseja acompanhar?</h2>
-      <div class="home-grid" id="paineis">
-        <article class="home-card">
-          <div class="home-card-top">
-            <span class="home-icon blue" aria-hidden="true">
-              <i data-lucide="drafting-compass"></i>
-            </span>
-            <div>
-              <h3>Planejamento da Obra</h3>
-              <span class="home-tag cyan">PLANO DE ATAQUE</span>
-            </div>
-          </div>
-          <p>Avanço físico, unidades, fases e desvios.</p>
-          <div class="home-preview photo">
-            <!-- Foto: obra (Unsplash, arquivo local) -->
-            <img src="assets/home-card-obra.jpg" alt="" loading="lazy" onerror="this.remove()">
-            <svg class="chart" viewBox="0 0 400 130" preserveAspectRatio="none" aria-hidden="true">
-              <g fill="rgba(56,182,232,.30)">
-                <rect x="20" y="70" width="34" height="60" rx="2"/>
-                <rect x="70" y="55" width="34" height="75" rx="2"/>
-                <rect x="120" y="62" width="34" height="68" rx="2"/>
-                <rect x="170" y="40" width="34" height="90" rx="2"/>
-                <rect x="220" y="48" width="34" height="82" rx="2"/>
-                <rect x="270" y="25" width="34" height="105" rx="2"/>
-                <rect x="320" y="32" width="34" height="98" rx="2"/>
-              </g>
-              <polyline points="20,95 87,80 137,84 187,60 237,64 287,38 337,40 370,18" fill="none" stroke="#38b6e8" stroke-width="3"/>
-              <g fill="#bff0ff" stroke="#38b6e8" stroke-width="2">
-                <circle cx="20" cy="95" r="4"/><circle cx="87" cy="80" r="4"/><circle cx="137" cy="84" r="4"/>
-                <circle cx="187" cy="60" r="4"/><circle cx="237" cy="64" r="4"/><circle cx="287" cy="38" r="4"/>
-                <circle cx="337" cy="40" r="4"/><circle cx="370" cy="18" r="5"/>
-              </g>
-            </svg>
-          </div>
-          <button class="home-cta blue" id="open-epc-dashboard" type="button">Consultar avanço <i data-lucide="arrow-right"></i></button>
-        </article>
+  function text(value) {
+    return value == null ? '' : String(value).trim();
+  }
 
-        <article class="home-card">
-          <div class="home-card-top">
-            <span class="home-icon yellow" aria-hidden="true">
-              <i data-lucide="calendar-days"></i>
-            </span>
-            <div>
-              <h3>Produção e Prazos</h3>
-              <span class="home-tag yellow">RUNDOWN</span>
-            </div>
-          </div>
-          <p>Produção semanal e atividades restantes.</p>
-          <div class="home-preview dark">
-            <img src="assets/home-card-prazos-new.jpg" alt="" loading="lazy" onerror="this.remove()">
-            <div class="home-gantt" aria-hidden="true">
-              <i style="width:24%;margin-left:2%"></i>
-              <i style="width:34%;margin-left:12%"></i>
-              <i style="width:30%;margin-left:22%"></i>
-              <i style="width:40%;margin-left:30%"></i>
-              <i class="dim" style="width:32%;margin-left:42%"></i>
-              <i style="width:28%;margin-left:52%"></i>
-              <i class="dim" style="width:34%;margin-left:60%"></i>
-            </div>
-          </div>
-          <a class="home-cta yellow" id="open-rundown-dashboard" href="rundown.html">Consultar Rundown <i data-lucide="arrow-right"></i></a>
-        </article>
+  function fold(value) {
+    return text(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
 
-        <article class="home-card">
-          <div class="home-card-top">
-            <span class="home-icon teal" aria-hidden="true">
-              <i data-lucide="shield-check"></i>
-            </span>
-            <div>
-              <h3>Qualidade e Rastreabilidade</h3>
-              <span class="home-tag teal">ESTACAS E ENSAIOS</span>
-            </div>
-          </div>
-          <p>Execução, concretagem, ensaios e pendências.</p>
-          <div class="home-preview">
-            <div class="home-flow">
-              <div class="home-flow-step">
-                <span class="home-flow-dot" aria-hidden="true">
-                  <i data-lucide="tractor"></i>
-                </span>
-                <span>Execução</span>
-              </div>
-              <div class="home-flow-step">
-                <span class="home-flow-dot" aria-hidden="true">
-                  <i data-lucide="truck"></i>
-                </span>
-                <span>Concreto</span>
-              </div>
-              <div class="home-flow-step">
-                <span class="home-flow-dot" aria-hidden="true">
-                  <i data-lucide="file-text"></i>
-                </span>
-                <span>Ensaios</span>
-              </div>
-            </div>
-          </div>
-          <a class="home-cta teal" href="qualidade.html?v=20261001-quality2">Consultar estacas <i data-lucide="arrow-right"></i></a>
-        </article>
-      </div>
+  function normalizeText(value) {
+    return fold(value).toUpperCase().replace(/\s+/g, ' ').trim();
+  }
 
-      <section class="home-history" id="historico" aria-label="Histórico de publicações">
-        <div class="home-history-left">
-          <span class="home-history-icon" aria-hidden="true">
-            <i data-lucide="calendar-days"></i>
-          </span>
-          <div>
-            <h3>Histórico de publicações</h3>
-            <p>Consulte a evolução por semana.</p>
-          </div>
-        </div>
-        <button class="btn-ghost" id="home-history-toggle" type="button" aria-expanded="false" aria-controls="home-history-list">Ver histórico <i data-lucide="arrow-right"></i></button>
-      </section>
-      <ul class="home-history-list hidden" id="home-history-list"></ul>
+  function normalizeHeader(value) {
+    return normalizeText(value).replace(/[×*]/g, ' X ').replace(/[^A-Z0-9]+/g, ' ').trim();
+  }
 
-      <input id="excel-input" type="file" accept=".xlsb,.xlsx,.xlsm" hidden>
-      <div id="upload-error" class="alert hidden" role="alert"></div>
-      <p class="home-footnote">Modelo conceitual • Imagem de obra ilustrativa.</p>
-    </main>
-  </section>
+  function normalizeReport(value) {
+    const raw = normalizeText(value).replace(/=0\s*$/i, '');
+    return raw.replace(/[^A-Z0-9]/g, '');
+  }
 
-  <div id="loading" class="loading hidden" aria-live="polite">
-    <div class="spinner"></div>
-    <strong id="loading-title">Analisando o arquivo...</strong>
-    <span id="loading-detail">Validando abas, hierarquia e indicadores.</span>
-  </div>
+  function parseUnit(value) {
+    const match = normalizeText(value).match(/U[-_\s]?(\d{4})/);
+    return match ? 'U-' + match[1] : '';
+  }
 
-  <div id="app-shell" class="app-shell hidden">
-    <aside id="sidebar" class="sidebar">
-      <div class="sidebar-brand"><img class="cpl-brand-image cpl-brand-image-sidebar" src="assets/logo-cpl-epc15.png?v=20260929" alt="CPL Construtora EPC-15"><span class="sidebar-brand-name"><span>BI</span> EPC-15</span></div>
-      <nav class="main-nav" aria-label="Navegação principal">
-        <button class="nav-item active" data-page="executive"><span>01</span> Painel Gerencial</button>
-        <button class="nav-item" data-page="pb"><span>02</span> Reunião de Coordenação</button>
-        <div class="nav-group-label">UNIDADES</div>
-        <div id="unit-nav"></div>
-        <button class="nav-item" data-page="analysis"><span>03</span> Análises</button>
-        <button class="nav-item" data-action="presentation-executive"><span>04</span> Apresentação Gerencial</button>
-        <button class="nav-item" data-action="presentation-coordination"><span>05</span> Apresentação de Coordenação</button>
-        <a class="nav-item" href="rundown.html" style="text-decoration:none"><span>06</span> BI Rundown</a>
-      </nav>
-      <div class="sidebar-footer">
-        <button id="back-home" class="sidebar-back-button" type="button" title="Voltar à página principal"><span aria-hidden="true">←</span> Voltar</button>
-        <span id="file-name"></span>
-      </div>
-    </aside>
+  function parsePileTag(value) {
+    const match = normalizeText(value).match(/E[-_\s]?(\d{3,4})/);
+    return match ? 'E' + match[1] : '';
+  }
 
-    <main class="main-content">
-      <header class="topbar">
-        <div>
-          <p class="eyebrow">CONTRATO EPC-15</p>
-          <h2 id="page-title">Painel Gerencial</h2>
-        </div>
-        <div class="topbar-actions">
-          <div class="cloud-controls">
-            <span id="source-status" class="source-status" data-tone="neutral">Fonte atual: nenhum dado</span>
-            <div class="cloud-buttons">
-              <button id="use-published" class="cloud-button" type="button">Usar versão publicada</button>
-              <button id="publish-update" class="cloud-button cloud-button-primary" type="button" disabled>Publicar atualização</button>
-            </div>
-          </div>
-          <button id="select-excel-dashboard" class="dashboard-file-button" type="button">Selecionar Excel</button>
-          <div class="topbar-meta">
-            <span>Data-base</span>
-            <strong id="header-date">—</strong>
-          </div>
-        </div>
-      </header>
+  function hierarchyKey(parts) {
+    return [
+      parts?.entrega,
+      parts?.fase,
+      parts?.subfase,
+      parts?.agrupamento,
+      parts?.componente,
+      parts?.etapa,
+      parts?.criterio
+    ].map(normalizeText).join('|');
+  }
 
-      <section id="page-executive" class="page active">
-        <div id="dashboard-empty" class="dashboard-empty">
-          <div>
-            <p class="eyebrow">BI EPC-15</p>
-            <h3>Carregue o arquivo do Plano de Ataque</h3>
-            <p>O painel está aberto. Selecione o Excel atualizado para preencher os indicadores, gráficos e unidades.</p>
-          </div>
-          <button id="select-excel-empty" class="dashboard-file-button" type="button">Selecionar Excel</button>
-        </div>
-        <div id="executive-kpis" class="kpi-grid"></div>
-        <div class="grid-2 executive-row">
-          <article class="panel chart-panel"><div class="panel-heading"><div><p class="eyebrow">AVANÇO FÍSICO</p><h3>Avanço por unidade</h3></div></div><div class="chart-wrap"><canvas id="units-progress-chart"></canvas></div></article>
-          <article class="panel chart-panel"><div class="panel-heading"><div><p class="eyebrow">AVANÇO FÍSICO</p><h3>Avanço por fase</h3></div></div><div class="chart-wrap"><canvas id="executive-phases-chart"></canvas></div></article>
-        </div>
-        <article class="panel">
-          <div class="panel-heading"><div><p class="eyebrow">PORTFÓLIO</p><h3>Resumo das unidades</h3></div><button class="sort-button" id="sort-units">Ordenar por desvio</button></div>
-          <div class="table-wrap"><table><thead><tr><th>Unidade</th><th>Previsto</th><th>Realizado</th><th>Desvio</th><th>Valor previsto</th><th>Status</th></tr></thead><tbody id="units-table"></tbody></table></div>
-        </article>
+  function reportIdentity(value) {
+    const rawValue = text(value);
+    return {
+      rawValue,
+      normalizedValue: normalizeReport(rawValue),
+      unit: parseUnit(rawValue),
+      tag: parsePileTag(rawValue)
+    };
+  }
 
-
-      </section>
-
-      <section id="page-pb" class="page pb-page">
-        <div class="pb-filterbar pb-filterbar-hierarchy">
-          <div class="pb-filter-main">
-            <div class="pb-filter-headrow">
-              <div class="pb-filter-title">
-                <img class="cpl-brand-image cpl-brand-image-pb" src="assets/logo-cpl-epc15.png?v=20260929" alt="CPL Construtora EPC-15">
-                <div>
-                  <strong>REUNIÃO DE COORDENAÇÃO</strong>
-                  <small id="pb-file-info" class="hidden"></small>
-                  <div id="pb-save-feedback" class="pb-save-feedback"></div>
-                </div>
-              </div>
-
-              <div class="pb-week-statusbar pb-week-statusbar-excel pb-week-status-inline" aria-live="polite">
-                <div id="pb-excel-source-status" class="pb-source-box"><span>FONTE DA REUNIÃO</span><strong>Avanço PLATAQ</strong><small>Sem Excel carregado</small></div>
-                <div id="pb-sync-source-status" class="pb-source-box pb-source-state" data-tone="ok"><span>STATUS</span><strong>Somente dados do Excel</strong><small>PowerPoint removido desta página</small></div>
-                <div id="pb-week-source-status" class="pb-source-box"><span>SEMANA EPC-15</span><strong>Semana N/D</strong><small></small></div>
-              </div>
-            </div>
-
-            <div class="pb-filter-controls">
-              <label>ENTREGA<select id="pb-unit-filter"><option value="">Todas as Entregas</option></select></label>
-              <label>FASE<select id="pb-phase-filter"><option value="">Todas as Fases</option></select></label>
-              <label>SUBFASE<select id="pb-subphase-filter"><option value="">Todas as Subfases</option></select></label>
-              <label>AGRUPAMENTO<select id="pb-grouping-filter"><option value="">Todos os Agrupamentos</option></select></label>
-              <label class="pb-filter-component">COMPONENTE<select id="pb-component-filter"><option value="">Todos os Componentes</option></select></label>
-              <label>ETAPA<select id="pb-step-filter"><option value="">Todas as Etapas</option></select></label>
-              <label>SEMANA EPC-15<select id="pb-week-filter"><option>Carregando semanas...</option></select></label>
-            </div>
-          </div>
-
-          <aside class="pb-filter-side">
-            <div class="pb-week-actions">
-              <button id="pb-curation-edit" class="pb-edit-week" type="button" title="Editar/ocultar itens (senha master)" aria-label="Editar ou ocultar itens">✎</button>
-              <button id="pb-use-live-excel" class="pb-week-button" type="button">Usar Excel atual</button>
-              <button id="pb-save-week" class="pb-week-button pb-week-button-save" type="button">Salvar semana</button>
-            </div>
-          </aside>
-        </div>
-
-        <div class="pb-layout">
-          <div class="pb-column pb-column-left">
-            <article class="pb-card pb-physical-card">
-              <header class="pb-card-head">
-                <div><h3>AVANÇO FÍSICO &amp; ANÁLISE DE DESVIOS</h3></div>
-                <label>NÍVEL<select id="pb-level-filter"><option value="">Todos</option></select></label>
-                <div class="pb-context"><span id="pb-wbs">Avanço PLATAQ</span><b id="pb-context-date">Data Base: N/D</b></div>
-              </header>
-              <p id="pb-summary-note" class="pb-summary-note hidden" role="status"></p>
-              <div class="pb-physical-grid">
-                <div class="pb-progress-stack">
-                  <div class="pb-progress-box pb-planned-box">
-                    <div><small>FÍSICO PREVISTO</small><strong id="pb-planned">N/D</strong></div>
-                  </div>
-                  <div class="pb-progress-box pb-actual-box">
-                    <div><small>FÍSICO REALIZADO</small><strong id="pb-actual">N/D</strong></div>
-                  </div>
-                  <div class="pb-progress-box pb-gap-box pb-deviation-box">
-                    <div>
-                      <small>DESVIO</small>
-                      <strong id="pb-gap" class="pb-gap-value">N/D</strong>
-                      <span id="pb-gap-days" class="pb-gap-source">Fonte: Avanço PLATAQ</span>
-                    </div>
-                  </div>
-                </div>
-                <div class="pb-pareto">
-                  <div class="pb-subhead"><strong id="pb-pareto-title">Pareto de Desvios</strong><span id="pb-pareto-marker">Sem desvios</span></div>
-                  <div class="pb-pareto-chart-wrap">
-                    <canvas id="pb-pareto-chart"></canvas>
-                    <div id="pb-pareto-empty" class="pb-chart-empty hidden">Sem desvios comparáveis para esta seleção.</div>
-                  </div>
-                  <div class="pb-pareto-legend"><span>■ Desvio ponderado (AB)</span><span>— Acumulado</span></div>
-                </div>
-              </div>
-            </article>
-
-            <article class="pb-card pb-offenders-card">
-              <header class="pb-card-head">
-                <div class="pb-title-inline"><h3>FRENTES OFENSORAS — DESVIOS CRÍTICOS</h3><span id="pb-offender-count" class="pb-count-red">0 Ofensores</span></div>
-                <div class="pb-right-note"><b>FOCO DE DECISÃO</b><small id="pb-cpm-note">Ordenado pelo desvio da aba Avanço PLATAQ</small></div>
-              </header>
-              <div id="pb-offenders-list" class="pb-offenders-list"></div>
-              <div id="pb-offenders-pager" class="pb-card-pager hidden"></div>
-            </article>
-          </div>
-
-          <div class="pb-column pb-column-right">
-            <article class="pb-card pb-lookahead-card pb-photo-card">
-              <header class="pb-card-head">
-                <div class="pb-title-inline"><h3>REGISTRO FOTOGRÁFICO</h3><span id="pb-lookahead-count" class="pb-count-green">0 fotos</span></div>
-                <div class="pb-photo-actions">
-                  <button id="pb-photo-import" class="pb-photo-import-button" type="button">Importar fotos</button>
-                  <input id="pb-photo-input" type="file" accept="image/*" multiple hidden>
-                  <input id="pb-photo-replace-input" type="file" accept="image/*" hidden>
-                </div>
-              </header>
-              <div id="pb-lookahead-list" class="pb-photo-grid"></div>
-              <div id="pb-lookahead-pager" class="pb-card-pager hidden"></div>
-            </article>
-
-            <article class="pb-card pb-week-highlights-card">
-              <header class="pb-card-head">
-                <div class="pb-title-inline"><h3>DESTAQUES DA SEMANA</h3><span id="pb-week-highlights-count" class="pb-count-green">0 destaques</span></div>
-                <span class="pb-focus-week">AVANÇO PLATAQ</span>
-              </header>
-              <div id="pb-week-highlights-list" class="pb-lookahead-list"></div>
-            </article>
-
-            <article class="pb-card pb-metrics-card">
-              <header class="pb-card-head">
-                <div class="pb-title-inline"><div><h3>ETAPAS NÍVEL 4 — MÉTRICA PONDERADA (AB)</h3><small class="pb-metric-header-note">Agrupamentos e etapas • Valores: V, W, Y, Z e AB</small></div><span id="pb-metric-count" class="pb-muted-chip">0 agrupamentos</span></div>
-                <span class="pb-focus-week">AVANÇO PLATAQ</span>
-              </header>
-              <div id="pb-metric-stage-filter" class="pb-metric-stage-filter hidden">
-  <span class="pb-metric-filter-label">AGRUPAMENTO / ETAPA</span>
-  <details id="pb-metric-filter-details" class="pb-metric-multiselect">
-    <summary id="pb-metric-filter-summary">Todas as métricas</summary>
-    <div id="pb-metric-filter-options" class="pb-metric-filter-options"></div>
-  </details>
-</div>
-              <div id="pb-metrics-grid" class="pb-metrics-grid"></div>
-              <div id="pb-metrics-pager" class="pb-card-pager hidden"></div>
-            </article>
-          </div>
-
-          <div class="pb-column pb-column-full">
-          <article class="pb-card pb-focus-card">
-          <header class="pb-card-head">
-          <div>
-          <p class="eyebrow">ITEM EM FOCO PARA A REUNIÃO</p>
-          <h3 id="pb-focus-title">Selecione os filtros ou escolha um item</h3>
-          <small id="pb-focus-path">Avanço PLATAQ</small>
-          </div>
-          <div class="pb-focus-source">
-          <label>ITEM / CRITÉRIO
-          <select id="pb-row-filter"><option value="">Selecione um item</option></select>
-          </label>
-          <span id="pb-focus-row">Linha Excel: —</span>
-          </div>
-          </header>
-          <div class="pb-focus-kpis">
-          <div><span>Previsto % (coluna Y)</span><strong id="pb-focus-planned">N/D</strong></div>
-          <div><span>Realizado % (coluna Z)</span><strong id="pb-focus-actual">N/D</strong></div>
-          <div><span>Desvio</span><strong id="pb-focus-variance">N/D</strong></div>
-          <div><span>Peso</span><strong id="pb-focus-weight">N/D</strong></div>
-          </div>
-          <div class="pb-focus-notes">
-          <label><span>CAUSA RAIZ / MOTIVO DO DESVIO</span><textarea id="pb-focus-cause" rows="4" placeholder="Informe a causa do desvio para este item..."></textarea></label>
-          <label><span>PLANO DE MITIGAÇÃO / AÇÃO</span><textarea id="pb-focus-mitigation" rows="4" placeholder="Informe o que será feito para mitigar ou recuperar o desvio..."></textarea></label>
-          </div>
-          </article>
-          </div>
-        </div>
-        <div id="pb-curation-master-modal" class="pb-modal hidden" role="dialog" aria-modal="true" aria-labelledby="pb-curation-title">
-          <div class="pb-modal-card pb-master-card">
-            <div class="pb-modal-head">
-              <h3 id="pb-curation-title">Editar exibição da reunião</h3>
-              <button id="pb-curation-cancel" type="button">×</button>
-            </div>
-            <p class="pb-master-copy">Informe a senha master para ocultar ou reexibir itens da apresentação.</p>
-            <label>Senha master
-              <input id="pb-curation-password" type="password" autocomplete="off" placeholder="Digite a senha master">
-            </label>
-            <div id="pb-curation-error" class="login-error hidden">Senha master incorreta.</div>
-            <div class="pb-modal-actions pb-master-actions">
-              <button id="pb-curation-submit" class="pb-btn-primary" type="button">Liberar edição</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="page-unit" class="page">
-        <div class="unit-toolbar panel">
-          <div>
-            <p class="eyebrow">VISÃO EXECUTIVA DA UNIDADE</p>
-            <h3>Filtro de escopo</h3>
-          </div>
-          <label class="phase-filter-label">Fase
-            <select id="unit-phase-filter"><option value="">Todas as fases</option></select>
-          </label>
-        </div>
-
-        <div id="unit-kpis" class="kpi-grid"></div>
-
-        <div class="unit-executive-grid">
-<article class="panel curve-panel">
-            <div class="financial-title">
-              <div class="financial-logo"><b>CPL</b><span>EPC-15</span></div>
-              <div class="financial-title-copy">
-                <h2>Curva Física</h2>
-                <h3 id="unit-curve-unit">UNIDADE</h3>
-              </div>
-              <div class="financial-title-meta"><strong id="unit-curve-date">Data-base: —</strong><small id="unit-curve-source">Fonte: Avanço PLATAQ</small></div>
-            </div>
-            <div class="curve-canvas-shell">
-              <canvas id="unit-curve-chart"></canvas>
-              <div id="unit-curve-empty" class="curve-empty">Curva Física não disponível para esta unidade.</div>
-            </div>
-          </article>
-
-<article class="panel unit-phase-chart-panel">
-            <div class="panel-heading"><div><p class="eyebrow">AVANÇO FÍSICO</p><h3>Previsto x realizado por fase</h3></div></div>
-            <div class="chart-wrap tall"><canvas id="phase-chart"></canvas></div>
-          </article>
-
-<article class="panel phase-summary-panel">
-            <div class="panel-heading"><div><p class="eyebrow">DESEMPENHO</p><h3>Fases da unidade</h3></div></div>
-            <div class="table-wrap compact"><table><thead><tr><th>Fase</th><th>Prev.</th><th>Real.</th><th>Desvio</th><th>Status</th></tr></thead><tbody id="phase-table"></tbody></table></div>
-          </article>
-
-<article class="panel delay-panel">
-            <div class="panel-heading">
-              <div><p class="eyebrow">ITENS EM ATRASO</p><h3>Ofensores por fase e subfase</h3></div>
-              <span id="delay-count" class="delay-count">0 em atraso</span>
-            </div>
-            <div class="offender-filters">
-              <label>Nível<select id="delay-level-filter"><option value="2">Fase</option><option value="3" selected>Subfase</option></select></label>
-              <label>Subfase<select id="delay-subphase-filter"><option value="">Todas as subfases</option></select></label>
-            </div>
-            <div id="delay-list" class="delay-list"></div>
-          </article>
-        </div>
-
-
-      </section>
-
-      <section id="page-analysis" class="page">
-        <div class="analysis-filter-bar">
-          <label for="analysis-phase-filter"><span>FASE</span>
-            <select id="analysis-phase-filter">
-              <option value="">Todas as fases</option>
-            </select>
-          </label>
-          <small id="analysis-phase-status">Comparativo geral por unidade</small>
-        </div>
-        <div class="grid-2">
-          <article class="panel"><div class="panel-heading"><div><p class="eyebrow">UNIDADES</p><h3>Previsto x realizado</h3></div></div><div class="chart-wrap tall"><canvas id="analysis-progress-chart"></canvas></div></article>
-          <article class="panel"><div class="panel-heading"><div><p class="eyebrow">UNIDADES</p><h3>Desvio ponderado — coluna AB</h3></div></div><div class="chart-wrap tall"><canvas id="variance-chart"></canvas></div></article>
-        </div>
-        <article class="panel methodology">
-          <p class="eyebrow">CRITÉRIO DE LEITURA</p>
-          <h3>Hierarquia sem dupla contagem</h3>
-          <p>Os resumos utilizam exclusivamente as linhas consolidadas do primeiro bloco hierárquico da aba <strong>Avanço PLATAQ</strong>. O detalhamento mostra somente linhas-folha. O segundo bloco, reorganizado por disciplina, não é somado novamente.</p>
-        </article>
-      </section>
-    </main>
-  </div>
-
-  <section id="presentation" class="presentation hidden" aria-label="Modo apresentação">
-    <div id="slides" class="slides"></div>
-    <div class="presentation-controls">
-      <button id="prev-slide">← Anterior</button>
-      <span id="slide-counter">1 / 1</span>
-      <button id="next-slide">Próximo →</button>
-      <button id="fullscreen">Tela cheia</button>
-      <button id="export-pdf">Exportar PDF</button>
-      <button id="close-presentation">Fechar</button>
-    </div>
-  </section>
-
-
-  <div id="login-gate" class="login-gate hidden" role="dialog" aria-modal="true" aria-labelledby="login-title">
-    <form id="login-form" class="login-card">
-      <div class="login-badge">ACESSO RESTRITO</div>
-      <h2 id="login-title">Entrar no BI</h2>
-      <p>Informe usuário e senha para acessar o painel.</p>
-      <label for="login-user">Usuário</label>
-      <input id="login-user" name="username" type="text" autocomplete="username" placeholder="Admin" required>
-      <label for="login-pass">Senha</label>
-      <input id="login-pass" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required>
-      <div id="login-error" class="login-error hidden">Usuário ou senha incorretos.</div>
-      <div class="login-actions">
-        <button type="button" id="login-cancel" class="login-secondary">Cancelar</button>
-        <button type="submit" class="login-primary">Entrar</button>
-      </div>
-    </form>
-  </div>
-
-  <script src="vendor/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-  <script src="vendor/chart.umd.min.js"></script>
-  <script src="vendor/html2canvas.min.js"></script>
-  <script src="vendor/jspdf.umd.min.js"></script>
-  <script src="js/config.js?v=20260928-hierarchy2"></script>
-  <script>window.__EPC15_API_BASE__="https://bi-epc15-api.fabiob-ftech.workers.dev";</script><script src="js/cloudflare-config.js"></script>
-  <script src="js/cloud-sync.js?v=20260929-save-retry1"></script>
-  <script src="js/excel-reader.js"></script>
-  <script src="js/data-model.js?v=20260928-hierarchy2"></script>
-  <script src="js/charts.js?v=20260930-phase-diagonal2"></script>
-  <script src="js/dashboard.js?v=20260930-managerial1"></script>
-  <script src="js/pb-dashboard.js?v=20261002-metric-filter-lock1"></script>
-  <script src="js/presentation.js?v=20260929-deviation-bars2"></script>
-  <script src="js/export.js"></script>
-  <script src="vendor/lucide.min.js"></script>
-  <script src="js/app.js?v=20260929-back-home1"></script>
-  <script>if (window.lucide) lucide.createIcons();</script>
-  <script src="js/coordination-week.js?v=20260930-master-filter1"></script>
-</body>
-</html>
+  window.IntegrationNormalizer = {
+    RELATIONSHIP_STATUS,
+    text,
+    fold,
+    normalizeText,
+    normalizeHeader,
+    normalizeReport,
+    parseUnit,
+    parsePileTag,
+    hierarchyKey,
+    reportIdentity
+  };
+}());
