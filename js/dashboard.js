@@ -42,9 +42,30 @@
     return match[1].toUpperCase() + ' - ' + name;
   }
 
+  function unitHasExecution(unit) {
+    const rows=[unit,...(unit?.phases||[]),...(unit?.details||[])];
+    return rows.some(row=>[
+      row?.actual,
+      row?.actualValue,
+      row?.actualQuantity,
+      row?.attackActualValue,
+      row?.attackActualQuantity
+    ].some(value=>Number.isFinite(Number(value)) && Number(value)>0));
+  }
+
+  function canInspectNotStartedUnit() {
+    return Boolean(window.PBDashboard?.isCurationMode?.());
+  }
+
   function renderUnitNavigation() {
-    document.getElementById('unit-nav').innerHTML = model.units.map((unit, index) =>
-      `<button class="nav-item unit-nav-item" data-unit-index="${index}" title="${escapeHtml(unit.rawName)}">${escapeHtml(titleCaseUnit(unit.rawName))}</button>`).join('');
+    document.getElementById('unit-nav').innerHTML = model.units.map((unit, index) => {
+      const started=unitHasExecution(unit);
+      const locked=!started && !canInspectNotStartedUnit();
+      const title=locked
+        ? titleCaseUnit(unit.rawName)+' • Unidade não iniciada'
+        : unit.rawName;
+      return `<button class="nav-item unit-nav-item${locked?' unit-nav-item-not-started':''}" data-unit-index="${index}" data-unit-started="${started?'1':'0'}" aria-disabled="${locked?'true':'false'}" title="${escapeHtml(title)}">${escapeHtml(titleCaseUnit(unit.rawName))}${locked?'<span class="unit-not-started-badge">NÃO INICIADA</span>':''}</button>`;
+    }).join('');
   }
 
   function renderExecutive() {
@@ -349,5 +370,5 @@
 
   function toggleSort() { unitSortAscending = !unitSortAscending; renderUnitsTable(); }
 
-  window.Dashboard = { init, showPage, renderUnit, setPhaseFilter, toggleSort, format: { percent, pp, currency, quantity, date, escapeHtml }, getModel: () => model };
+  window.Dashboard = { init, showPage, renderUnit, setPhaseFilter, toggleSort, refreshUnitNavigation:renderUnitNavigation, unitHasExecution, format: { percent, pp, currency, quantity, date, escapeHtml }, getModel: () => model };
 }());
