@@ -319,12 +319,21 @@
 
   document.addEventListener('click', event => {
     const page = event.target.closest('[data-page]')?.dataset.page;
-    const unitIndex = event.target.closest('[data-unit-index]')?.dataset.unitIndex;
+    const unitButton = event.target.closest('[data-unit-index]');
+    const unitIndex = unitButton?.dataset.unitIndex;
     if (page) {
       if (!hasData && page !== 'executive') return;
       Dashboard.showPage(page);
     }
-    if (unitIndex != null && hasData) Dashboard.renderUnit(Number(unitIndex));
+    if (unitIndex != null && hasData) {
+      const started=unitButton?.dataset.unitStarted!=='0';
+      const masterInspection=Boolean(window.PBDashboard?.isCurationMode?.());
+      if(!started && !masterInspection){
+        alert('Unidade não iniciada. Para consultar esta unidade, ative o lápis na Reunião de Coordenação e informe a senha master.');
+        return;
+      }
+      Dashboard.renderUnit(Number(unitIndex));
+    }
     if (event.target.closest('[data-action="presentation-executive"]') && hasData) Presentation.open('gerencial');
     if (event.target.closest('[data-action="presentation-coordination"]') && hasData) Presentation.open('coordination');
   });
