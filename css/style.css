@@ -2499,3 +2499,64 @@
 .pb-week-highlights-card .pb-highlight-delete{
   align-self:flex-start;
 }
+
+
+/* ===== Execução ativa e unidades não iniciadas — 02/10/2026 ===== */
+.unit-nav-item-not-started{
+  opacity:.38;
+  filter:saturate(.35);
+  cursor:not-allowed;
+  border:1px dashed rgba(148,163,184,.14);
+}
+.unit-nav-item-not-started:hover{
+  background:rgba(148,163,184,.05);
+  color:#8293a7;
+  transform:none;
+}
+.unit-nav-item-not-started .unit-not-started-badge{
+  margin-left:auto;
+  padding:2px 5px;
+  border:1px solid rgba(148,163,184,.18);
+  border-radius:999px;
+  color:#718399;
+  font-size:.48rem;
+  font-weight:900;
+  letter-spacing:.06em;
+  white-space:nowrap;
+}
+.pb-metric-title-line{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px;
+  min-width:0;
+}
+.pb-execution-badge{
+  display:inline-flex;
+  align-items:center;
+  width:max-content;
+  padding:3px 7px;
+  border-radius:999px;
+  font-size:.52rem;
+  font-weight:900;
+  letter-spacing:.07em;
+  line-height:1;
+  white-space:nowrap;
+}
+.pb-execution-badge.running{
+  border:1px solid rgba(34,211,238,.28);
+  background:rgba(34,211,238,.10);
+  color:#67e8f9;
+}
+.pb-execution-badge.done{
+  border:1px solid rgba(34,197,94,.30);
+  background:rgba(34,197,94,.11);
+  color:#86efac;
+}
+.pb-stage-table-row th .pb-stage-title-copy{
+  display:block;
+  margin-bottom:5px;
+}
+.pb-stage-table-row th .pb-execution-badge{
+  font-size:.48rem;
+}
