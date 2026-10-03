@@ -22,6 +22,8 @@
   let metricStepAll = true;
   const metricSelectedSteps = new Set();
   let metricTreeStructureKey = null;
+  let metricSelectionsByScope = {};
+  let activeMetricScopeKey = '';
   let importedWeekPayload = {};
 
   let draggedLayoutCard = null;
@@ -1780,13 +1782,11 @@
 
   function onFilterChange() {
     focusedSourceIndex=null;
-    metricGroupAll=true;
-    metricSelectedGroups.clear();
-    metricStepAll=true;
-    metricSelectedSteps.clear();
+    rememberMetricSelection();
     resetPagination();
     populateHierarchyFilters();
     populateRowFilter();
+    restoreMetricSelectionForScope(metricScopeKey());
     render();
     loadPhotos(window.CoordinationWeek?.getSelectedWeek?.());
   }
@@ -1852,6 +1852,8 @@
         renderMetrics();
         renderOffenders();
         renderPareto();
+        rememberMetricSelection();
+        saveManualOnly().catch(console.error);
         return;
       }
 
@@ -1871,6 +1873,8 @@
         renderMetrics();
         renderOffenders();
         renderPareto();
+        rememberMetricSelection();
+        saveManualOnly().catch(console.error);
         return;
       }
 
@@ -1882,6 +1886,8 @@
         renderMetrics();
         renderOffenders();
         renderPareto();
+        rememberMetricSelection();
+        saveManualOnly().catch(console.error);
         return;
       }
 
@@ -1906,6 +1912,8 @@
         renderMetrics();
         renderOffenders();
         renderPareto();
+        rememberMetricSelection();
+        saveManualOnly().catch(console.error);
         return;
       }
 
@@ -2047,6 +2055,7 @@
     bind();
     if(window.CoordinationWeek?.fillWeekOptions) window.CoordinationWeek.fillWeekOptions(document.getElementById('pb-week-filter'));
     applyPbLayout(readLocalPbLayout());
+    if(!activeMetricScopeKey) activeMetricScopeKey=metricScopeKey();
     render();
     loadPbLayout();
     if(window.CloudSync?.ready?.()){
@@ -2164,6 +2173,19 @@
     });
   }
 
+  function metricScopeKey(sel=selection()) {
+    return [String(sel.unit||'*'),String(sel.phase||'*')].join('||');
+  }
+
+  function metricSelectionPayload() {
+    return {
+      groupAll:metricGroupAll,
+      groups:[...metricSelectedGroups],
+      stepAll:metricStepAll,
+      steps:[...metricSelectedSteps]
+    };
+  }
+
   function resetMetricSelection() {
     metricGroupAll=true;
     metricSelectedGroups.clear();
@@ -2172,23 +2194,7 @@
     metricTreeStructureKey=null;
   }
 
-  function exportWeekData(weekNo) {
-    return {
-      ...(importedWeekPayload && typeof importedWeekPayload==='object' ? importedWeekPayload : {}),
-      coordinationNotes:notes(weekNo),
-      filterSelection:savedFilterSelection(),
-      metricSelection:{
-        groupAll:metricGroupAll, groups:[...metricSelectedGroups],
-        stepAll:metricStepAll, steps:[...metricSelectedSteps]
-      }
-    };
-  }
-
-  function importWeekData(payload,weekNo) {
-    importedWeekPayload=payload && typeof payload==='object'
-      ? JSON.parse(JSON.stringify(payload))
-      : {};
-    const selected=payload?.metricSelection;
+  function applyMetricSelection(selected) {
     resetMetricSelection();
     if(selected && typeof selected==='object'){
       metricGroupAll=selected.groupAll!==false;
@@ -2196,6 +2202,36 @@
       (Array.isArray(selected.groups)?selected.groups:[]).forEach(key=>metricSelectedGroups.add(String(key)));
       (Array.isArray(selected.steps)?selected.steps:[]).forEach(id=>metricSelectedSteps.add(String(id)));
     }
+  }
+
+  function rememberMetricSelection(scopeKey=activeMetricScopeKey || metricScopeKey()) {
+    if(!scopeKey) return;
+    metricSelectionsByScope[scopeKey]=metricSelectionPayload();
+  }
+
+  function restoreMetricSelectionForScope(scopeKey=metricScopeKey(),fallback=null) {
+    activeMetricScopeKey=scopeKey;
+    applyMetricSelection(metricSelectionsByScope[scopeKey] || fallback);
+  }
+
+  function exportWeekData(weekNo) {
+    rememberMetricSelection();
+    return {
+      ...(importedWeekPayload && typeof importedWeekPayload==='object' ? importedWeekPayload : {}),
+      coordinationNotes:notes(weekNo),
+      filterSelection:savedFilterSelection(),
+      metricSelection:metricSelectionPayload(),
+      metricSelectionsByScope:{...metricSelectionsByScope}
+    };
+  }
+
+  function importWeekData(payload,weekNo) {
+    importedWeekPayload=payload && typeof payload==='object'
+      ? JSON.parse(JSON.stringify(payload))
+      : {};
+    metricSelectionsByScope=payload?.metricSelectionsByScope && typeof payload.metricSelectionsByScope==='object'
+      ? JSON.parse(JSON.stringify(payload.metricSelectionsByScope))
+      : {};
 
     if(payload?.coordinationNotes && typeof payload.coordinationNotes==='object'){
       writeJson(notesKey(weekNo),payload.coordinationNotes);
@@ -2203,9 +2239,15 @@
 
     if(model){
       restoreFilterSelection(payload?.filterSelection);
+      const scopeKey=metricScopeKey();
+      restoreMetricSelectionForScope(scopeKey,payload?.metricSelection || null);
+      if(!metricSelectionsByScope[scopeKey]) rememberMetricSelection(scopeKey);
       resetPagination();
       lastScopeKey='';
       render();
+    } else {
+      applyMetricSelection(payload?.metricSelection || null);
+      activeMetricScopeKey='';
     }
   }
 
