@@ -16,8 +16,7 @@
   let photosWeek = null;
   let photosUnitKey = '';
   let photosPhaseKey = '';
-  let photosPhaseFallback = false;
-  let photoReplaceTarget = null;
+    let photoReplaceTarget = null;
   let metricGroupAll = true;
   const metricSelectedGroups = new Set();
   let metricStepAll = true;
@@ -214,17 +213,21 @@
     return String(value || '').trim().toLocaleLowerCase('pt-BR');
   }
 
-  function photoScopeContext() {
+  function photoFilterContext() {
     const sel=selection();
     const unitName=String(sel.unit || '').trim();
     const phaseName=String(sel.phase || '').trim();
-    if(!unitName || !phaseName) return null;
     return {
       unitName,
-      unitKey:normalizePhotoPhase(unitName),
+      unitKey:unitName ? normalizePhotoPhase(unitName) : '',
       phaseName,
-      phaseKey:normalizePhotoPhase(phaseName)
+      phaseKey:phaseName ? normalizePhotoPhase(phaseName) : ''
     };
+  }
+
+  function photoUploadScope() {
+    const scope=photoFilterContext();
+    return scope.unitName && scope.phaseName ? scope : null;
   }
 
   function aggregate(rows) {
@@ -1147,9 +1150,9 @@
   }
 
   function importPhotoFiles(fileList) {
-    const scope=photoScopeContext();
+    const scope=photoUploadScope();
     if(!scope){
-      alert('Selecione primeiro uma UNIDADE e uma FASE. As fotos serão registradas pela unidade, fase e semana.');
+      alert('Selecione primeiro uma ENTREGA e uma FASE específicas. Cada foto será salva vinculada à Entrega, Fase e Semana selecionadas.');
       return;
     }
     if(!canEdit()){
@@ -1188,12 +1191,12 @@
 
   async function loadPhotos(weekNo, force=false) {
     const week=Number(weekNo || window.CoordinationWeek?.getSelectedWeek?.());
-    const scope=photoScopeContext();
-    if(!Number.isFinite(week) || !scope || !window.CloudSync?.ready?.()){
+    const scope=photoFilterContext();
+    if(!Number.isFinite(week) || !window.CloudSync?.ready?.()){
       photos=[];
       photosWeek=week;
-      photosUnitKey=scope?.unitKey || '';
-      photosPhaseKey=scope?.phaseKey || '';
+      photosUnitKey=scope.unitKey;
+      photosPhaseKey=scope.phaseKey;
       renderActivities();
       return [];
     }
@@ -1202,15 +1205,7 @@
       return photos;
     }
     try{
-      let rows=await window.CloudSync.listCoordinationPhotos(week,scope.unitKey,scope.phaseKey);
-      photosPhaseFallback=false;
-      if(!rows.length){
-        const phaseRows=await window.CloudSync.listCoordinationPhotos(week,'',scope.phaseKey);
-        if(phaseRows.length){
-          rows=phaseRows;
-          photosPhaseFallback=true;
-        }
-      }
+      const rows=await window.CloudSync.listCoordinationPhotos(week,scope.unitKey,scope.phaseKey);
       photos=rows;
       photosWeek=week;
       photosUnitKey=scope.unitKey;
@@ -1218,9 +1213,8 @@
       renderActivities();
       return rows;
     } catch(error){
-      console.error('Falha ao carregar registro fotográfico da fase',error);
+      console.error('Falha ao carregar registro fotográfico',error);
       photos=[];
-      photosPhaseFallback=false;
       photosWeek=week;
       photosUnitKey=scope.unitKey;
       photosPhaseKey=scope.phaseKey;
@@ -1278,9 +1272,18 @@
 
   async function replacePhoto(photoId,file) {
     if(!curationMode || !curationMasterPassword || !(file instanceof File)) return;
-    const scope=photoScopeContext();
+    const existing=photos.find(item=>String(item.id)===String(photoId));
+    const selectedScope=photoUploadScope();
+    const scope=existing?.unit_name && existing?.phase_name
+      ? {
+          unitName:String(existing.unit_name),
+          unitKey:String(existing.unit_key || normalizePhotoPhase(existing.unit_name)),
+          phaseName:String(existing.phase_name),
+          phaseKey:String(existing.phase_key || normalizePhotoPhase(existing.phase_name))
+        }
+      : selectedScope;
     if(!scope){
-      alert('Selecione a UNIDADE e a FASE vinculadas à foto.');
+      alert('Esta foto não possui Entrega/Fase identificadas. Selecione uma Entrega e uma Fase específicas antes de substituir.');
       return;
     }
     try{
@@ -1317,40 +1320,48 @@
   }
 
   function renderActivities() {
-    const scope=photoScopeContext();
+    const scope=photoFilterContext();
+    const uploadScope=photoUploadScope();
     const host=document.getElementById('pb-lookahead-list');
     const count=document.getElementById('pb-lookahead-count');
     const importButton=document.getElementById('pb-photo-import');
     if(importButton){
-      importButton.disabled=!scope || !canEdit();
-      importButton.title=scope ? 'Importar fotos para '+scope.unitName+' / '+scope.phaseName : 'Selecione uma UNIDADE e uma FASE primeiro';
+      importButton.disabled=!uploadScope || !canEdit();
+      importButton.title=uploadScope
+        ? 'Importar fotos para '+uploadScope.unitName+' / '+uploadScope.phaseName
+        : 'Selecione uma ENTREGA e uma FASE específicas para importar fotos';
     }
     if(!host) return;
-    if(!scope){
-      if(count) count.textContent='0 fotos';
-      renderPager('pb-lookahead-pager','lookahead',{totalPages:1,total:0,page:0});
-      host.innerHTML='<div class="pb-empty-light pb-photo-empty">Selecione uma UNIDADE e uma FASE para visualizar ou importar o registro fotográfico.</div>';
-      return;
-    }
+
     const currentWeek=Number(window.CoordinationWeek?.getSelectedWeek?.());
     const remote=(photosWeek===currentWeek && photosUnitKey===scope.unitKey && photosPhaseKey===scope.phaseKey ? photos : []);
-    const pending=pendingPhotos.filter(photo=>
-      Number(photo.week_no)===currentWeek &&
-      photo.unit_key===scope.unitKey &&
-      photo.phase_key===scope.phaseKey
-    );
+    const pending=pendingPhotos.filter(photo=>{
+      if(Number(photo.week_no)!==currentWeek) return false;
+      if(scope.unitKey && photo.unit_key!==scope.unitKey) return false;
+      if(scope.phaseKey && photo.phase_key!==scope.phaseKey) return false;
+      return true;
+    });
     const items=remote.concat(pending);
     const info=paged(items,'lookahead');
-    if(count) count.textContent=items.length+(items.length===1?' foto':' fotos')+(photosPhaseFallback?' na fase':'');
+
+    if(count) count.textContent=items.length+(items.length===1?' foto':' fotos');
     renderPager('pb-lookahead-pager','lookahead',info);
+
     if(!items.length){
-      host.innerHTML='<div class="pb-empty-light pb-photo-empty">Nenhuma foto registrada para <strong>'+esc(scope.unitName)+' / '+esc(scope.phaseName)+'</strong> nesta semana. Use “Importar fotos” para adicionar.</div>';
+      let message='Nenhuma foto registrada nesta semana.';
+      if(scope.unitName && scope.phaseName){
+        message='Nenhuma foto registrada para <strong>'+esc(scope.unitName)+' / '+esc(scope.phaseName)+'</strong> nesta semana.';
+      }else if(scope.unitName){
+        message='Nenhuma foto registrada para <strong>'+esc(scope.unitName)+'</strong> nesta semana.';
+      }else if(scope.phaseName){
+        message='Nenhuma foto registrada em <strong>'+esc(scope.phaseName)+'</strong> nesta semana.';
+      }
+      if(uploadScope && canEdit()) message+=' Use “Importar fotos” para adicionar.';
+      host.innerHTML='<div class="pb-empty-light pb-photo-empty">'+message+'</div>';
       return;
     }
-    const fallbackNotice=photosPhaseFallback
-      ? '<div class="pb-empty-light pb-photo-empty"><strong>Sem fotos para '+esc(scope.unitName)+'.</strong><br>Mostrando os registros de <strong>'+esc(scope.phaseName)+'</strong> existentes em outras unidades da Semana '+esc(currentWeek)+'.</div>'
-      : '';
-    host.innerHTML=fallbackNotice+info.items.map((photo,index)=>{
+
+    host.innerHTML=info.items.map((photo,index)=>{
       const src=photo.signed_url || '';
       const admin=curationMode && !photo.pending
         ? '<div class="pb-photo-admin"><button type="button" data-replace-photo="'+esc(photo.id)+'">Substituir</button><button type="button" class="danger" data-delete-photo="'+esc(photo.id)+'">Excluir</button></div>'
@@ -1358,15 +1369,18 @@
       const pendingBadge=photo.pending ? '<span class="pb-photo-pending">AGUARDANDO SALVAR</span>' : '';
       const fallback='Foto '+String(info.start+index+1).padStart(2,'0');
       const caption=String(photo.caption||'').trim() || fallback;
-      const unitLabel=photosPhaseFallback && photo.unit_name
-        ? '<div class="pb-photo-unit-label">'+esc(photo.unit_name)+'</div>'
+      const showUnit=!scope.unitKey && photo.unit_name;
+      const showPhase=!scope.phaseKey && photo.phase_name;
+      const contextLabel=[showUnit ? photo.unit_name : '',showPhase ? photo.phase_name : ''].filter(Boolean).join(' • ');
+      const contextMarkup=contextLabel
+        ? '<div class="pb-photo-unit-label">'+esc(contextLabel)+'</div>'
         : '';
       const captionMarkup=curationMode && !photo.pending
         ? '<figcaption><input class="pb-photo-caption-input" type="text" value="'+esc(caption)+'" data-photo-caption="'+esc(photo.id)+'" maxlength="500" aria-label="Legenda da foto"></figcaption>'
         : '<figcaption class="pb-photo-caption">'+esc(caption)+'</figcaption>';
       return '<figure class="pb-photo-item'+(photo.pending?' pb-photo-item-pending':'')+'">'+
-        '<img src="'+esc(src)+'" alt="Registro fotográfico de '+esc(photo.unit_name || scope.unitName)+' / '+esc(scope.phaseName)+'">'+
-        unitLabel+pendingBadge+admin+captionMarkup+
+        '<img src="'+esc(src)+'" alt="Registro fotográfico de '+esc(photo.unit_name || scope.unitName || 'todas as entregas')+' / '+esc(photo.phase_name || scope.phaseName || 'todas as fases')+'">'+
+        contextMarkup+pendingBadge+admin+captionMarkup+
       '</figure>';
     }).join('');
   }
