@@ -16,7 +16,7 @@
   let photosWeek = null;
   let photosUnitKey = '';
   let photosPhaseKey = '';
-    let photoReplaceTarget = null;
+  let photoReplaceTarget = null;
   let metricGroupAll = true;
   const metricSelectedGroups = new Set();
   let metricStepAll = true;
@@ -662,6 +662,7 @@
       handle.setAttribute('aria-disabled',curationMode?'false':'true');
     });
     document.getElementById('pb-layout-reset')?.classList.toggle('hidden',!curationMode);
+    window.Dashboard?.refreshUnitNavigation?.();
   }
 
   function canEdit() {
@@ -924,12 +925,30 @@
     return keySet.has(metricGroupKey(source));
   }
 
+  function metricHasExecution(row) {
+    const executedValues=[
+      row?.actual,
+      row?.actualValue,
+      row?.actualQuantity,
+      row?.attackActualValue,
+      row?.attackActualQuantity
+    ];
+    return executedValues.some(value=>Number.isFinite(Number(value)) && Number(value)>0);
+  }
+
   function metricGroupRows() {
     const sel=selection();
-    return metricHierarchyRows()
+    const hierarchy=metricHierarchyRows();
+    const executedGroupKeys=new Set(
+      hierarchy
+        .filter(row=>Number(row.level)===6 && metricHasExecution(row))
+        .map(metricGroupKey)
+    );
+    return hierarchy
       .filter(row=>Number(row.level)===4)
       .filter(row=>metricMatches(row,sel,['unit','phase','subphase','grouping']))
       .filter(row=>hasPhysicalData(row) || Number.isFinite(row.weightedVariance))
+      .filter(row=>curationMode || metricHasExecution(row) || executedGroupKeys.has(metricGroupKey(row)))
       .filter(row=>curationMode || !isHidden(row))
       .sort((a,b)=>(a.sourceIndex??0)-(b.sourceIndex??0));
   }
@@ -947,6 +966,7 @@
         Number.isFinite(row.actual) ||
         Number.isFinite(row.weightedVariance)
       )
+      .filter(row=>curationMode || metricHasExecution(row))
       .sort((a,b)=>(a.sourceIndex??0)-(b.sourceIndex??0));
   }
 
@@ -1649,8 +1669,11 @@
     const unit=row.measureUnit ? ' '+row.measureUnit : '';
     const plannedQty=Number.isFinite(row.attackPlannedQuantity) ? qty(row.attackPlannedQuantity)+unit : '—';
     const actualQty=Number.isFinite(row.attackActualQuantity) ? qty(row.attackActualQuantity)+unit : '—';
+    const completed=Number.isFinite(row.actual) && row.actual>=.999;
+    const executionLabel=completed ? 'CONCLUÍDO' : 'EM EXECUÇÃO';
+    const executionClass=completed ? 'done' : 'running';
     return '<tr class="pb-stage-table-row pb-stage-table-row-'+tone+'">'+
-      '<th scope="row" title="'+esc(title)+' • Linha '+(Number(row.sourceIndex)+1)+'">'+esc(compactMetricStageTitle(title))+'</th>'+
+      '<th scope="row" title="'+esc(title)+' • Linha '+(Number(row.sourceIndex)+1)+'"><span class="pb-stage-title-copy">'+esc(compactMetricStageTitle(title))+'</span><span class="pb-execution-badge '+executionClass+'">'+executionLabel+'</span></th>'+
       '<td><strong>'+esc(plannedQty)+'</strong></td>'+
       '<td><strong>'+esc(actualQty)+'</strong></td>'+
       '<td><strong>'+esc(pct(row.planned))+'</strong></td>'+
@@ -1691,7 +1714,7 @@
     renderPager('pb-metrics-pager','metrics',info);
 
     if(!groups.length){
-      host.innerHTML='<div class="pb-empty-light pb-metrics-empty">Nenhum agrupamento de Nível 4 selecionado para esta visão.</div>';
+      host.innerHTML='<div class="pb-empty-light pb-metrics-empty">'+(curationMode ? 'Nenhum agrupamento de Nível 4 selecionado para esta visão.' : 'Nenhum agrupamento com execução registrada nesta seleção.')+'</div>';
       return;
     }
 
@@ -1704,9 +1727,13 @@
       const ratio=Number.isFinite(row.planned)&&row.planned>0&&Number.isFinite(row.actual)
         ? Math.max(0,Math.min(1,row.actual/row.planned))
         : 0;
+      const completed=Number.isFinite(row.actual) && row.actual>=.999;
+      const executionBadge=curationMode
+        ? ''
+        : '<span class="pb-execution-badge '+(completed?'done':'running')+'">'+(completed?'CONCLUÍDO':'EM EXECUÇÃO')+'</span>';
       const titleMarkup=curationMode
         ? '<input class="pb-metric-title-input" type="text" value="'+esc(title)+'" data-metric-title="'+esc(row.sourceIndex)+'" aria-label="Título do agrupamento">'
-        : '<strong>'+esc(title)+'</strong>';
+        : '<span class="pb-metric-title-line"><strong>'+esc(title)+'</strong>'+executionBadge+'</span>';
       const actions=curationMode
         ? '<div class="pb-metric-admin">'+
             '<button type="button" class="'+(hidden?'restore':'')+'" data-metric-hidden="'+esc(row.sourceIndex)+'" data-hidden-value="'+(hidden?'0':'1')+'">'+(hidden?'Reexibir':'Ocultar')+'</button>'+
