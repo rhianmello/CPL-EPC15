@@ -239,18 +239,17 @@ async function cloud(path,body){
  if(path.indexOf('/andaime_scenario_versions')===0){
   const query=path.split('?')[1]||'';
   if(/select=id,saved_at/.test(query)){
-   const {data,error}=await SUPABASE_CLIENT.from('andaime_scenario_versions')
-    .select('id,saved_at,saved_by').order('id',{ascending:false}).limit(200);
+   const {data,error}=await SUPABASE_CLIENT.rpc('list_andaime_scenario_versions_public',{p_limit:200});
    if(error)throw new Error(error.message||'Não foi possível carregar o histórico.');
-   return data||[];
+   const rows=typeof data==='string'?JSON.parse(data):data;
+   return Array.isArray(rows)?rows:[];
   }
   const match=/id=eq\.([^&]+)/.exec(query);
-  let request=SUPABASE_CLIENT.from('andaime_scenario_versions').select('*');
-  if(match)request=request.eq('id',decodeURIComponent(match[1])).limit(1);
-  else request=request.order('id',{ascending:false}).limit(1);
-  const {data,error}=await request;
+  const id=match?Number(decodeURIComponent(match[1])):null;
+  const {data,error}=await SUPABASE_CLIENT.rpc('get_andaime_scenario_version_public',{p_id:Number.isFinite(id)?id:null});
   if(error)throw new Error(error.message||'Não foi possível carregar a versão.');
-  return data||[];
+  const row=typeof data==='string'?JSON.parse(data):data;
+  return row?[row]:[];
  }
  throw new Error('Não foi possível acessar o banco.');
 }
@@ -264,8 +263,8 @@ async function loadVersion(id){
  loadingVersion=true;$('save').disabled=true;
  try{
  const rows=await cloud('/andaime_scenario_versions?select=*&id=eq.'+encodeURIComponent(id));if(!rows.length)throw new Error('Versão não encontrada.');
- const row=rows[0];state=JSON.parse(JSON.stringify(row.payload));ensureExtras();baseId=row.id;dirty=false;renderInputs();$('versions').value=row.id;cache();
- $('status').textContent='Versão salva em '+dateLabel(row.saved_at)+' — '+row.saved_by;
+ const row=rows[0];state=JSON.parse(JSON.stringify(row.payload));ensureExtras();baseId=row.id;dirty=false;renderInputs();$('versions').value=String(row.id);cache();
+ $('status').textContent='Supabase • versão '+row.id+' carregada em '+dateLabel(row.saved_at)+' — '+row.saved_by;
  }finally{loadingVersion=false;$('save').disabled=false;}
 }
 document.addEventListener('input',e=>{if(e.target.dataset.key)dirty=true;});
@@ -285,7 +284,7 @@ $('save-form').onsubmit=async e=>{
 };
 async function initializeCloud(){
  document.body.classList.add('cloud-loading');$('save').disabled=true;$('status').textContent='Carregando última versão compartilhada…';
- try{const rows=await listVersions();if(rows.length)await loadVersion(rows[0].id);else throw new Error('Nenhuma versão publicada.');}
+ try{const rows=await listVersions();if(rows.length)await loadVersion(rows[0].id);else throw new Error('Nenhuma versão publicada no Supabase.');}
  catch(e){try{const saved=JSON.parse(localStorage.getItem('cpl-andaime-shared-cache'));if(saved?.payload){state=saved.payload;state.cells={LIFE:70,...state.cells};baseId=saved.id;renderInputs();}}catch(ignore){}$('status').textContent='Banco indisponível. Exibindo cenário de referência ou última cópia carregada. '+e.message;$('versions').replaceChildren(new Option('Histórico indisponível',''));}
  finally{document.body.classList.remove('cloud-loading');$('save').disabled=false;}
 }
