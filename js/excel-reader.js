@@ -163,6 +163,7 @@
       const line = row.slice(from, to).filter(v => v != null && v !== '').join(' ');
       const match = line.match(/U\s*-\s*\d{4}/i);
       if (match) return match[0].replace(/\s/g, '').toUpperCase();
+      if (/EMPREENDIMENTO/i.test(line) && /TOTAL/i.test(line)) return 'EMPREENDIMENTO';
       if (/IMPLANTA[ÇC][AÃ]O/i.test(line)) return 'IMPLANTAÇÃO';
     }
     return '';
