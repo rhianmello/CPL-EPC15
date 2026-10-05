@@ -417,7 +417,11 @@
     });
     PB_LAYOUT_CARDS.forEach(item=>{
       if(!seen.has(item.id)){
-        clean[item.defaultColumn].push(item.id);
+        if(item.id==='delayContribution' && clean.left.includes('physical')){
+          clean.left.splice(clean.left.indexOf('physical')+1,0,item.id);
+        }else{
+          clean[item.defaultColumn].push(item.id);
+        }
         seen.add(item.id);
       }
     });
