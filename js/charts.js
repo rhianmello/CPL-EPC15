@@ -77,9 +77,20 @@
     const allValues = curve.series.flatMap(s => s.values || []).filter(Number.isFinite);
     const asPercent = rawSource || (allValues.length && Math.max(...allValues.map(v => Math.abs(v))) <= 1.5);
 
+    const dataSerial=Number(curve?.summary?.dataSerial);
     const datasets = curve.series.map((s,i) => {
       const st = styles[s.key] || {color:fallback[i%fallback.length],dash:[],width:1.8,points:0};
-      const data = (s.values || []).map(v => Number.isFinite(v) ? (asPercent ? v*100 : v) : null);
+      const data = (s.values || []).map((v,index) => {
+        if (!Number.isFinite(v)) return null;
+        // Corrige também snapshots já publicados: a série REAL não pode continuar
+        // depois da data-base, mesmo que a célula-fonte futura contenha fórmula/valor.
+        if (s.key==='real' && Number.isFinite(dataSerial) && Array.isArray(curve.serials) &&
+            Number(curve.serials[index]) > dataSerial) return null;
+        const plotted=asPercent ? v*100 : v;
+        // Série percentual válida deve permanecer dentro da escala física.
+        if (asPercent && s.key==='real' && (plotted < -0.001 || plotted > 100.001)) return null;
+        return plotted;
+      });
       return {
         label:s.name,
         data,
