@@ -302,12 +302,13 @@
     return data;
   }
 
-  async function listCoordinationPhotos(weekNo, unitKey, phaseKey) {
+  async function listCoordinationPhotos(weekNo, unitKey, phaseKey, groupingKey='') {
     const data = await photoRequest('POST', {
       action:'list',
       week_no:Number(weekNo),
       unit_key:String(unitKey || ''),
-      phase_key:String(phaseKey || '')
+      phase_key:String(phaseKey || ''),
+      grouping_key:String(groupingKey || '')
     });
     return Array.isArray(data?.photos) ? data.photos : [];
   }
@@ -321,6 +322,8 @@
     form.set('unit_key',String(scope.unitKey || ''));
     form.set('phase_name',String(scope.phaseName || ''));
     form.set('phase_key',String(scope.phaseKey || ''));
+    form.set('grouping_name',String(scope.groupingName || ''));
+    form.set('grouping_key',String(scope.groupingKey || ''));
     form.set('master_password',String(masterPassword || ''));
     form.set('file',file,file.name || 'foto');
     return photoRequest('POST',null,form);
@@ -336,6 +339,8 @@
     form.set('unit_key',String(scope.unitKey || ''));
     form.set('phase_name',String(scope.phaseName || ''));
     form.set('phase_key',String(scope.phaseKey || ''));
+    form.set('grouping_name',String(scope.groupingName || ''));
+    form.set('grouping_key',String(scope.groupingKey || ''));
     form.set('master_password',String(masterPassword||''));
     form.set('file',file,file.name || 'foto');
     return photoRequest('POST',null,form);
