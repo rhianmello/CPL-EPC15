@@ -32,6 +32,7 @@
   const PB_LAYOUT_STORAGE_KEY = 'epc15_pb_layout_v1';
   const PB_LAYOUT_CARDS = [
     { id:'physical', selector:'.pb-physical-card', defaultColumn:'left' },
+    { id:'delayContribution', selector:'.pb-delay-contribution-card', defaultColumn:'left' },
     { id:'offenders', selector:'.pb-offenders-card', defaultColumn:'left' },
     { id:'photos', selector:'.pb-photo-card', defaultColumn:'right' },
     { id:'highlights', selector:'.pb-week-highlights-card', defaultColumn:'right' },
@@ -39,7 +40,7 @@
     { id:'focus', selector:'.pb-focus-card', defaultColumn:'full' }
   ];
   const PB_DEFAULT_LAYOUT = {
-    left:['physical','offenders'],
+    left:['physical','delayContribution','offenders'],
     right:['photos','highlights','metrics'],
     full:['focus']
   };
@@ -189,6 +190,18 @@
     if (sel.phase) return 2;
     if (sel.unit) return 1;
     return 0;
+  }
+
+  function hasCoordinationDetailSelection(sel=selection()) {
+    return Boolean(sel.grouping || sel.component || sel.step);
+  }
+
+  function updateCoordinationDetailMode() {
+    const page=document.getElementById('page-pb');
+    if(!page) return false;
+    const active=hasCoordinationDetailSelection();
+    page.classList.toggle('pb-detail-mode',active);
+    return active;
   }
 
   function hasDeviation(row) {
@@ -1187,6 +1200,74 @@
     });
   }
 
+  function delayContributionRows() {
+    const sel=selection();
+    const fields=['unit','phase','subphase','grouping','component','step'];
+    let rows=allRows()
+      .filter(row=>Number(row.level)===6)
+      .filter(row=>matches(row,sel,fields))
+      .filter(row=>Number.isFinite(row.weightedVariance) && row.weightedVariance<0)
+      .map(row=>({
+        label:String(row.step || row.component || row.grouping || row.phase || rowLabel(row)).trim() || 'Item',
+        impact:Math.abs(row.weightedVariance)
+      }));
+
+    // Se a etapa não tiver AB preenchido, usa o agrupamento selecionado como fallback.
+    if(!rows.length){
+      rows=allRows()
+        .filter(row=>Number(row.level)===4)
+        .filter(row=>matches(row,sel,['unit','phase','subphase','grouping']))
+        .filter(row=>Number.isFinite(row.weightedVariance) && row.weightedVariance<0)
+        .map(row=>({
+          label:String(row.grouping || rowLabel(row)).trim() || 'Agrupamento',
+          impact:Math.abs(row.weightedVariance)
+        }));
+    }
+
+    const grouped=new Map();
+    rows.forEach(item=>grouped.set(item.label,(grouped.get(item.label)||0)+item.impact));
+    let items=[...grouped.entries()]
+      .map(([label,impact])=>({label,impact}))
+      .sort((a,b)=>b.impact-a.impact);
+
+    if(items.length>5){
+      const head=items.slice(0,4);
+      const others=items.slice(4).reduce((sum,item)=>sum+item.impact,0);
+      items=head.concat({label:'Outros',impact:others});
+    }
+
+    const total=items.reduce((sum,item)=>sum+item.impact,0);
+    return items.map(item=>({...item,share:total>0 ? item.impact/total*100 : 0}));
+  }
+
+  function renderDelayContribution() {
+    const host=document.getElementById('pb-delay-contribution-list');
+    const totalEl=document.getElementById('pb-delay-contribution-total');
+    if(!host) return;
+
+    if(!hasCoordinationDetailSelection()){
+      host.innerHTML='';
+      if(totalEl) totalEl.textContent='0 itens';
+      return;
+    }
+
+    const rows=delayContributionRows();
+    if(totalEl) totalEl.textContent=rows.length+' '+(rows.length===1?'item':'itens');
+
+    if(!rows.length){
+      host.innerHTML='<div class="pb-empty-light">Nenhuma contribuição negativa para o desvio nesta seleção.</div>';
+      return;
+    }
+
+    host.innerHTML=rows.map(row=>
+      '<div class="pb-delay-contribution-row">'+
+        '<span class="pb-delay-contribution-label" title="'+esc(row.label)+'">'+esc(row.label)+'</span>'+
+        '<div class="pb-delay-contribution-track"><i style="width:'+Math.max(2,Math.min(100,row.share))+'%"></i></div>'+
+        '<strong>'+pt0.format(row.share)+'%</strong>'+
+      '</div>'
+    ).join('');
+  }
+
   function importPhotoFiles(fileList) {
     const scope=photoUploadScope();
     if(!scope){
@@ -1785,11 +1866,13 @@
   function render() {
     if(!model) return;
     populateHierarchyFilters();
+    updateCoordinationDetailMode();
     const scopeKey=JSON.stringify(selection());
     if(scopeKey!==lastScopeKey){resetPagination();lastScopeKey=scopeKey;}
     renderFocus();
     renderPhysical();
     renderActivities();
+    renderDelayContribution();
     renderWeekHighlights();
     renderOffenders();
     renderMetrics();
