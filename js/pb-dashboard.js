@@ -32,7 +32,6 @@
   const PB_LAYOUT_STORAGE_KEY = 'epc15_pb_layout_v1';
   const PB_LAYOUT_CARDS = [
     { id:'physical', selector:'.pb-physical-card', defaultColumn:'left' },
-    { id:'delayContribution', selector:'.pb-delay-contribution-card', defaultColumn:'left' },
     { id:'offenders', selector:'.pb-offenders-card', defaultColumn:'left' },
     { id:'photos', selector:'.pb-photo-card', defaultColumn:'right' },
     { id:'highlights', selector:'.pb-week-highlights-card', defaultColumn:'right' },
@@ -40,7 +39,7 @@
     { id:'focus', selector:'.pb-focus-card', defaultColumn:'full' }
   ];
   const PB_DEFAULT_LAYOUT = {
-    left:['physical','delayContribution','offenders'],
+    left:['physical','offenders'],
     right:['photos','highlights','metrics'],
     full:['focus']
   };
@@ -193,7 +192,7 @@
   }
 
   function hasCoordinationDetailSelection(sel=selection()) {
-    return Boolean(sel.grouping || sel.component || sel.step);
+    return Boolean(sel.subphase || sel.grouping || sel.component || sel.step);
   }
 
   function updateCoordinationDetailMode() {
@@ -417,11 +416,7 @@
     });
     PB_LAYOUT_CARDS.forEach(item=>{
       if(!seen.has(item.id)){
-        if(item.id==='delayContribution' && clean.left.includes('physical')){
-          clean.left.splice(clean.left.indexOf('physical')+1,0,item.id);
-        }else{
-          clean[item.defaultColumn].push(item.id);
-        }
+        clean[item.defaultColumn].push(item.id);
         seen.add(item.id);
       }
     });
