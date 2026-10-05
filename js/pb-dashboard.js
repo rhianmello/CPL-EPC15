@@ -773,6 +773,14 @@
     return String(item?.description || item?.title || '').trim();
   }
 
+  function manualHighlightEvent(item) {
+    const raw=String(item?.event || 'Destaque').trim();
+    const key=raw.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    if(key.includes('proxim')) return {key:'next-action',label:'Próxima Ação'};
+    if(key.includes('atenc')) return {key:'attention',label:'Ponto de Atenção'};
+    return {key:'highlight',label:'Destaque'};
+  }
+
   async function persistManualHighlights(items) {
     const all=notes();
     all.__manualHighlights=items;
@@ -795,7 +803,8 @@
     items.push({
       id:'mh-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
       title:title || 'Novo destaque',
-      subtitle
+      subtitle,
+      event:'Destaque'
     });
     await persistManualHighlights(items);
   }
@@ -1550,7 +1559,7 @@
       cards.push({type:'manual',item});
     });
 
-    if(count) count.textContent=cards.length+(cards.length===1?' destaque':' destaques');
+    if(count) count.textContent=cards.length+(cards.length===1?' item':' itens');
 
     let html=cards.map((entry,index)=>{
       if(entry.type==='auto'){
@@ -1582,18 +1591,21 @@
       const item=entry.item;
       const description=manualHighlightText(item);
       const subtitle=String(item.subtitle || '').trim();
+      const eventInfo=manualHighlightEvent(item);
       const copy=curationMode
         ? '<div class="pb-highlight-edit-stack">'+
-            '<label><span>DESTAQUE</span><input class="pb-highlight-title-input" type="text" value="'+esc(description)+'" data-manual-highlight="'+esc(item.id)+'" data-manual-field="description" aria-label="Descrição do destaque"></label>'+
+            '<label><span>'+esc(eventInfo.label.toUpperCase())+'</span><input class="pb-highlight-title-input" type="text" value="'+esc(description)+'" data-manual-highlight="'+esc(item.id)+'" data-manual-field="description" aria-label="Descrição do item"></label>'+
           '</div>'
-        : '<div class="pb-highlight-display"><strong class="pb-highlight-title">'+esc(description)+'</strong>'+
+        : '<div class="pb-highlight-display">'+
+            '<span class="pb-highlight-event-badge pb-highlight-event-badge-'+esc(eventInfo.key)+'">'+esc(eventInfo.label)+'</span>'+
+            '<strong class="pb-highlight-title">'+esc(description)+'</strong>'+
             (subtitle?'<small class="pb-highlight-subtitle">'+esc(subtitle)+'</small>':'')+
           '</div>';
       const remove=curationMode
         ? '<button type="button" class="pb-highlight-delete" data-delete-manual-highlight="'+esc(item.id)+'">Excluir</button>'
         : '';
 
-      return '<article class="pb-activity pb-highlight-row pb-manual-highlight">'+
+      return '<article class="pb-activity pb-highlight-row pb-manual-highlight pb-highlight-event-'+esc(eventInfo.key)+'">'+
         '<span class="pb-activity-icon pb-highlight-number">'+String(index+1).padStart(2,'0')+'</span>'+
         '<div class="pb-activity-copy pb-highlight-copy">'+copy+'</div>'+
         remove+
@@ -1601,7 +1613,7 @@
     }).join('');
 
     if(!cards.length && !curationMode){
-      html='<div class="pb-empty-light">Nenhum destaque cadastrado para esta unidade/fase na Semana '+esc(window.CoordinationWeek?.getSelectedWeek?.() || '')+'.</div>';
+      html='<div class="pb-empty-light">Nenhum destaque, próxima ação ou ponto de atenção cadastrado para esta unidade/fase na Semana '+esc(window.CoordinationWeek?.getSelectedWeek?.() || '')+'.</div>';
     }
 
     if(curationMode){
@@ -2232,7 +2244,8 @@
       .filter(item=>manualHighlightText(item))
       .map(item=>({
         title:manualHighlightText(item),
-        subtitle:item.subtitle || ''
+        subtitle:item.subtitle || '',
+        event:item.event || 'Destaque'
       }));
     const selectedUnit=sel.unit
       ? (model?.units||[]).find(unit=>unit.rawName===sel.unit || unit.unit===sel.unit || unit.code===sel.unit)
