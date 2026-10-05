@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <title>Qualidade • EPC-15</title>
+  <link rel="stylesheet" href="../css/home.css?v=20261005-quality-home1">
+  <style>
+    html,body{margin:0;min-height:100%;background:#081426;color:#fff;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    .quality-home{min-height:100vh;background:#081426}
+    .quality-topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:18px 42px;border-bottom:1px solid rgba(148,163,184,.16);background:rgba(8,20,38,.96)}
+    .quality-brand{display:flex;align-items:center;gap:16px}
+    .quality-brand img{height:56px;width:auto}
+    .quality-brand strong{display:block;font-size:1.15rem;letter-spacing:.03em}
+    .quality-brand span{display:block;margin-top:3px;color:#2dd4bf;font-size:.72rem;font-weight:800;letter-spacing:.12em}
+    .quality-back{color:#9db2c7;text-decoration:none;font-size:.86rem;font-weight:700}
+    .quality-back:hover{color:#fff}
+    .quality-main{max-width:1180px;margin:0 auto;padding:54px 34px 70px}
+    .quality-eyebrow{margin:0 0 8px;color:#2dd4bf;font-size:.76rem;font-weight:900;letter-spacing:.14em}
+    .quality-title{margin:0;font-size:clamp(2rem,4vw,3.4rem);line-height:1.05}
+    .quality-sub{max-width:760px;margin:14px 0 34px;color:#bccadd;font-size:1.02rem;line-height:1.6}
+    .quality-grid{display:grid;grid-template-columns:minmax(0,520px);gap:24px}
+    .quality-grid .home-card{min-height:0}
+    .quality-grid .home-preview{height:210px}
+    .quality-grid .home-cta{margin-top:auto}
+    .quality-note{margin-top:22px;color:#6f8499;font-size:.78rem}
+    @media(max-width:700px){
+      .quality-topbar{padding:15px 18px}.quality-main{padding:34px 18px 54px}
+      .quality-brand img{height:46px}.quality-grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="quality-home">
+    <header class="quality-topbar">
+      <div class="quality-brand">
+        <img src="../assets/logo-cpl-epc15.png?v=20260929" alt="CPL EPC-15">
+        <div><strong>QUALIDADE EPC-15</strong><span>RASTREABILIDADE</span></div>
+      </div>
+      <a class="quality-back" href="../">← Portal EPC-15</a>
+    </header>
+
+    <main class="quality-main">
+      <p class="quality-eyebrow">CPL • EPC-15 • QUALIDADE</p>
+      <h1 class="quality-title">Painéis de Qualidade</h1>
+      <p class="quality-sub">Ambiente dedicado à rastreabilidade de execução, concretagem, ensaios e pendências da Qualidade.</p>
+
+      <section class="quality-grid" aria-label="Painéis da Qualidade">
+        <article class="home-card">
+          <div class="home-card-top">
+            <span class="home-icon teal" aria-hidden="true">
+              <i data-lucide="shield-check"></i>
+            </span>
+            <div>
+              <h3>Qualidade e Rastreabilidade</h3>
+              <span class="home-tag teal">ESTACAS E ENSAIOS</span>
+            </div>
+          </div>
+          <p>Execução, concretagem, ensaios e pendências.</p>
+          <div class="home-preview">
+            <div class="home-flow">
+              <div class="home-flow-step">
+                <span class="home-flow-dot" aria-hidden="true"><i data-lucide="tractor"></i></span>
+                <span>Execução</span>
+              </div>
+              <div class="home-flow-step">
+                <span class="home-flow-dot" aria-hidden="true"><i data-lucide="truck"></i></span>
+                <span>Concreto</span>
+              </div>
+              <div class="home-flow-step">
+                <span class="home-flow-dot" aria-hidden="true"><i data-lucide="file-text"></i></span>
+                <span>Ensaios</span>
+              </div>
+            </div>
+          </div>
+          <a class="home-cta teal" href="../qualidade.html?v=20261005-quality-home1">Consultar estacas <i data-lucide="arrow-right"></i></a>
+        </article>
+      </section>
+
+      <p class="quality-note">Acesso dedicado à equipe de Qualidade. O portal de Planejamento permanece separado.</p>
+    </main>
+  </div>
+  <script src="../vendor/lucide.min.js"></script>
+  <script>if(window.lucide) lucide.createIcons();</script>
+</body>
+</html>
