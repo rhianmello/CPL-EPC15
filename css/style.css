@@ -2709,3 +2709,84 @@
 .pb-highlight-event-highlight{
   border-left:3px solid rgba(34,197,94,.62);
 }
+
+
+/* ===== Eventos semanais agrupados por tipo (05/10/2026) ===== */
+.pb-week-highlights-card .pb-lookahead-list{
+  display:grid;
+  gap:12px;
+}
+.pb-event-group{
+  overflow:hidden;
+  border:1px solid rgba(148,163,184,.14);
+  border-radius:10px;
+  background:rgba(3,12,24,.26);
+}
+.pb-event-group-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:9px 11px;
+  border-bottom:1px solid rgba(148,163,184,.12);
+  background:rgba(7,19,33,.70);
+}
+.pb-event-group-title{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+}
+.pb-event-group-title i{
+  width:8px;
+  height:8px;
+  flex:0 0 8px;
+  border-radius:50%;
+}
+.pb-event-group-title strong{
+  color:#f8fbff;
+  font-size:.68rem;
+  font-weight:950;
+  letter-spacing:.02em;
+}
+.pb-event-group-head>span{
+  padding:3px 7px;
+  border:1px solid rgba(148,163,184,.16);
+  border-radius:999px;
+  color:#91a7bd;
+  font-size:.50rem;
+  font-weight:850;
+  white-space:nowrap;
+}
+.pb-event-group-list{
+  display:grid;
+  gap:7px;
+  padding:8px;
+}
+.pb-event-group-list .pb-highlight-row{
+  margin:0;
+}
+.pb-event-group-empty{
+  padding:10px 8px;
+  color:#667f97;
+  font-size:.58rem;
+}
+.pb-event-group-highlight .pb-event-group-title i{background:#34d399}
+.pb-event-group-attention .pb-event-group-title i{background:#fbbf24}
+.pb-event-group-next-action .pb-event-group-title i{background:#22d3ee}
+.pb-event-group-highlight .pb-event-group-head>span{
+  border-color:rgba(52,211,153,.18);
+  color:#86efac;
+}
+.pb-event-group-attention .pb-event-group-head>span{
+  border-color:rgba(251,191,36,.20);
+  color:#fde68a;
+}
+.pb-event-group-next-action .pb-event-group-head>span{
+  border-color:rgba(34,211,238,.20);
+  color:#67e8f9;
+}
+/* O título do grupo já informa o tipo; evita repetir badges em cada linha. */
+.pb-event-group .pb-highlight-event-badge{
+  display:none!important;
+}
