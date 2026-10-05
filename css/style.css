@@ -2652,3 +2652,18 @@
   }
   .pb-delay-contribution-label{font-size:.62rem}
 }
+
+
+/* ===== Contribuição para o desvio — faixa analítica superior (05/10/2026) ===== */
+.pb-detail-summary-zone{
+  width:100%;
+  margin:14px 0 16px;
+}
+.pb-detail-summary-zone .pb-delay-contribution-card{
+  width:100%;
+  border-color:rgba(34,211,238,.22);
+  box-shadow:0 12px 34px rgba(2,8,23,.18);
+}
+.pb-detail-summary-zone .pb-delay-contribution-list{
+  grid-template-columns:1fr;
+}
