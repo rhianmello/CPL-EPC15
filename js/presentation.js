@@ -46,15 +46,13 @@
     return value < 0 ? '#ef4444' : '#22c55e';
   }
 
-  function curveSvg(curve) {
-    if(!curve?.series?.length) return '';
-    const labels=curve.labels || curve.series.find(s=>s.categories?.length)?.categories || [];
-    const allValues=curve.series.flatMap(s=>s.values || []).filter(Number.isFinite);
-    if(!allValues.length) return '';
+  function curveSvg(curve, dataBase=null) {
+    const normalized=window.DashboardCharts?.normalizeFinancialCurve?.(curve,{dataBase});
+    if(!normalized) return '';
 
-    const asPercent = curve.source === 'financial-sheets' ||
-      curve.source === 'blplanataq-direct' ||
-      Math.max(...allValues.map(v=>Math.abs(v))) <= 1.5;
+    const {labels,series,asPercent}=normalized;
+    const allValues=series.flatMap(s=>s.values || []).filter(Number.isFinite);
+    if(!allValues.length) return '';
 
     const width=720, height=220, left=42, right=10, top=14, bottom=34;
     const plotW=width-left-right, plotH=height-top-bottom;
@@ -80,9 +78,8 @@
 
     function segments(values) {
       const out=[]; let seg=[];
-      (values||[]).forEach((raw,i)=>{
-        if(Number.isFinite(raw)){
-          const v=asPercent ? raw*100 : raw;
+      (values||[]).forEach((v,i)=>{
+        if(Number.isFinite(v)){
           seg.push(x(i).toFixed(1)+','+y(v).toFixed(1));
         } else if(seg.length){
           out.push(seg); seg=[];
@@ -92,7 +89,7 @@
       return out;
     }
 
-    const lines=curve.series.map((s,i)=>{
+    const lines=series.map((s,i)=>{
       const color=colors[s.key] || fallback[i%fallback.length];
       const dash=s.key==='projected'?'7 5':'';
       return segments(s.values).map(seg=>
@@ -110,7 +107,7 @@
       '<text x="'+x(i)+'" y="'+(height-8)+'" fill="#8fa4bd" font-size="9" text-anchor="middle">'+fmt().escapeHtml(labels[i]||'')+'</text>'
     ).join('');
 
-    const legend=curve.series.map((s,i)=>{
+    const legend=series.map((s,i)=>{
       const color=colors[s.key] || fallback[i%fallback.length];
       return '<span><i style="background:'+color+'"></i>'+fmt().escapeHtml(s.name || s.key || 'Série')+'</span>';
     }).join('');
@@ -124,7 +121,7 @@
     '</div>';
   }
 
-  function progressAndCurve(title, planned, actual, deviation, curve) {
+  function progressAndCurve(title, planned, actual, deviation, curve, dataBase=null) {
     const resolvedDeviation=Number.isFinite(deviation)
       ? deviation
       : (Number.isFinite(planned)&&Number.isFinite(actual) ? actual-planned : null);
@@ -135,7 +132,7 @@
         bar('Realizado',actual,'actual')+
         bar('Desvio',resolvedDeviation,'deviation')+
       '</div>'+
-      (curveSvg(curve) || '<div class="slide-no-curve">Curva Física não disponível para esta seleção.</div>')+
+      (curveSvg(curve,dataBase) || '<div class="slide-no-curve">Curva Física não disponível para esta seleção.</div>')+
     '</div>';
   }
 
@@ -156,7 +153,7 @@
       .map(u=>({label:u.code,value:fmt().pp(u.variance)}));
 
     const summaryBody='<div class="slide-grid">'+
-      progressAndCurve('Avanço físico',c.planned,c.actual,c.variance,c.curve)+
+      progressAndCurve('Avanço físico',c.planned,c.actual,c.variance,c.curve,model.dataBase)+
       rankingPanel('Maiores desvios',worst)+
     '</div>';
 
@@ -186,7 +183,7 @@
         kpi('Desvio',fmt().pp(unit.variance), deviationAccent(unit.variance))+
         kpi('Valor total',currencyWhole(unit.plannedValue), '#8b5cf6'),
         '<div class="slide-grid">'+
-          progressAndCurve('Avanço da unidade',unit.planned,unit.actual,unit.variance,unit.curve)+
+          progressAndCurve('Avanço da unidade',unit.planned,unit.actual,unit.variance,unit.curve,model.dataBase)+
           rankingPanel('Principais fases e desvios',phases)+
         '</div>',
         'slide-gerencial slide-unit'
@@ -224,7 +221,7 @@
       kpi('Desvio ponderado (AB)',fmt().pp(deviation), deviationAccent(deviation))+
       kpi('Semana',data.selection?.week ? 'Semana '+data.selection.week : 'Atual', '#8b5cf6'),
       '<div class="slide-grid">'+
-        progressAndCurve('Avanço físico',scope.planned,scope.actual,deviation,data.curve)+
+        progressAndCurve('Avanço físico',scope.planned,scope.actual,deviation,data.curve,data.dataBase)+
         rankingPanel('Principais desvios ponderados',pareto)+
       '</div>',
       'slide-coordination'
