@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#06111f">
+  <title>Tempo Fotográfico • EPC-15</title>
+  <link rel="stylesheet" href="css/tempo-fotografico.css?v=20261005-1">
+</head>
+<body>
+  <div class="tf-shell">
+    <aside class="tf-sidebar">
+      <div class="tf-brand">
+        <img src="assets/logo-cpl-epc15.png?v=20260929" alt="CPL EPC-15">
+        <div><strong>BI EPC-15</strong><small>PLANEJAMENTO</small></div>
+      </div>
+      <nav>
+        <a href="index.html"><span>01</span>Painel Gerencial</a>
+        <a href="index.html"><span>02</span>Análises</a>
+        <a href="index.html"><span>03</span>Apresentação Gerencial</a>
+        <a href="index.html"><span>04</span>Apresentação de Coordenação</a>
+        <a href="rundown.html"><span>05</span>BI Rundown</a>
+        <a href="index.html"><span>06</span>Reunião de Coordenação</a>
+        <a class="active" href="tempo-fotografico.html"><span>07</span>Tempo Fotográfico</a>
+      </nav>
+      <a class="tf-back" href="index.html">← Voltar ao BI</a>
+    </aside>
+
+    <main class="tf-main">
+      <header class="tf-topbar">
+        <div>
+          <p>PLANEJAMENTO EPC-15</p>
+          <h1>Tempo Fotográfico</h1>
+        </div>
+        <div class="tf-top-filters">
+          <label>Semana<select id="tf-week-select"></select></label>
+          <label>Entrega<select id="tf-unit-select"><option value="">Todas as Entregas</option></select></label>
+          <label>Fase<select id="tf-phase-select"><option value="">Todas as Fases</option></select></label>
+          <a class="tf-meeting-button" href="index.html">▶ Abrir BI</a>
+        </div>
+      </header>
+
+      <section class="tf-content">
+        <article class="tf-panel tf-timeline-panel">
+          <div class="tf-panel-head">
+            <div>
+              <p>MÁQUINA DO TEMPO FOTOGRÁFICA</p>
+              <h2>Evolução da obra por semana</h2>
+            </div>
+            <div class="tf-grouping-control">
+              <label>Agrupamento
+                <select id="tf-grouping-select"><option value="">Todos os Agrupamentos</option></select>
+              </label>
+              <button id="tf-compare-button" type="button">Comparar antes × atual</button>
+            </div>
+          </div>
+
+          <div id="tf-timeline" class="tf-timeline" aria-label="Linha do tempo semanal"></div>
+          <div id="tf-gallery" class="tf-gallery"></div>
+          <div id="tf-gallery-empty" class="tf-empty hidden">Nenhum registro fotográfico encontrado para esta seleção.</div>
+        </article>
+
+        <div class="tf-bottom-grid">
+          <article id="tf-compare-panel" class="tf-panel">
+            <div class="tf-panel-head compact">
+              <div><p>ANTES × AGORA</p><h2>Comparação visual</h2></div>
+            </div>
+            <div id="tf-compare" class="tf-compare"></div>
+          </article>
+
+          <article class="tf-panel tf-memory-panel">
+            <div class="tf-panel-head compact">
+              <div><p>MEMÓRIA DA OBRA</p><h2>Resumo da evolução</h2></div>
+            </div>
+            <div id="tf-memory" class="tf-memory">
+              <div class="tf-loading">Carregando histórico fotográfico...</div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/supabase-config.js?v=20261005-photo-time1"></script>
+  <script src="js/cloud-sync.js?v=20261005-photo-time1"></script>
+  <script src="js/tempo-fotografico.js?v=20261005-photo-time1"></script>
+</body>
+</html>
