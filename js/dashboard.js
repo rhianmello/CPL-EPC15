@@ -191,15 +191,17 @@
     if (title) title.textContent = titleCaseUnit(unit.rawName).toUpperCase();
     if (dateEl) dateEl.textContent = 'Data-base: ' + date(model.dataBase);
     if (sourceEl) {
-      if (curve?.source === 'blplanataq-summary') {
+      if (curve?.source === 'blplanataq-summary' || curve?.source === 'blplanataq-direct') {
         const rows = curve.sourceRows ? Object.values(curve.sourceRows).filter(Number.isFinite) : [];
         sourceEl.textContent = rows.length
           ? 'Fonte: BLPlanAtaq • linhas ' + Math.min(...rows) + '–' + Math.max(...rows)
           : 'Fonte: BLPlanAtaq • blocos financeiros';
+      } else if (curve?.source === 'curvas-chart') {
+        sourceEl.textContent = 'Fonte: gráfico original da aba CURVAS';
       } else if (curve?.source === 'financial-sheets') {
         sourceEl.textContent = 'Fonte: dados consolidados da curva';
       } else {
-        sourceEl.textContent = 'Fonte legada: CURVAS';
+        sourceEl.textContent = 'Fonte: CURVAS';
       }
     }
     if (!summaryEl) return;
