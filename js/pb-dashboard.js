@@ -240,11 +240,14 @@
     const sel=selection();
     const unitName=String(sel.unit || '').trim();
     const phaseName=String(sel.phase || '').trim();
+    const groupingName=String(sel.grouping || '').trim();
     return {
       unitName,
       unitKey:unitName ? normalizePhotoPhase(unitName) : '',
       phaseName,
-      phaseKey:phaseName ? normalizePhotoPhase(phaseName) : ''
+      phaseKey:phaseName ? normalizePhotoPhase(phaseName) : '',
+      groupingName,
+      groupingKey:groupingName ? normalizePhotoPhase(groupingName) : ''
     };
   }
 
@@ -1295,6 +1298,8 @@
         unit_key:scope.unitKey,
         phase_name:scope.phaseName,
         phase_key:scope.phaseKey,
+        grouping_name:scope.groupingName || '',
+        grouping_key:scope.groupingKey || '',
         signed_url:URL.createObjectURL(file)
       });
     });
@@ -1356,7 +1361,8 @@
           weekNo:week,
           scope:{
             unitName:photo.unit_name,unitKey:photo.unit_key,
-            phaseName:photo.phase_name,phaseKey:photo.phase_key
+            phaseName:photo.phase_name,phaseKey:photo.phase_key,
+            groupingName:photo.grouping_name || '',groupingKey:photo.grouping_key || ''
           },
           file:photo.file,
           masterPassword:window.CoordinationWeek?.getMasterPassword?.(week) || curationMasterPassword || ''
@@ -1397,7 +1403,9 @@
           unitName:String(existing.unit_name),
           unitKey:String(existing.unit_key || normalizePhotoPhase(existing.unit_name)),
           phaseName:String(existing.phase_name),
-          phaseKey:String(existing.phase_key || normalizePhotoPhase(existing.phase_name))
+          phaseKey:String(existing.phase_key || normalizePhotoPhase(existing.phase_name)),
+          groupingName:String(existing.grouping_name || ''),
+          groupingKey:String(existing.grouping_key || normalizePhotoPhase(existing.grouping_name || ''))
         }
       : selectedScope;
     if(!scope){
