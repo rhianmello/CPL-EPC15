@@ -2667,3 +2667,45 @@
 .pb-detail-summary-zone .pb-delay-contribution-list{
   grid-template-columns:1fr;
 }
+
+
+/* ===== Tipos de evento da Reunião de Coordenação (05/10/2026) ===== */
+.pb-highlight-event-badge{
+  display:inline-flex;
+  align-items:center;
+  width:max-content;
+  margin:0 0 6px;
+  padding:3px 7px;
+  border-radius:999px;
+  font-size:.48rem;
+  font-weight:900;
+  letter-spacing:.08em;
+  line-height:1;
+}
+.pb-highlight-event-highlight .pb-highlight-number,
+.pb-highlight-event-badge-highlight{
+  border-color:rgba(34,197,94,.30)!important;
+  background:rgba(34,197,94,.12)!important;
+  color:#86efac!important;
+}
+.pb-highlight-event-next-action .pb-highlight-number,
+.pb-highlight-event-badge-next-action{
+  border-color:rgba(34,211,238,.34)!important;
+  background:rgba(34,211,238,.12)!important;
+  color:#67e8f9!important;
+}
+.pb-highlight-event-attention .pb-highlight-number,
+.pb-highlight-event-badge-attention{
+  border-color:rgba(251,191,36,.34)!important;
+  background:rgba(251,191,36,.13)!important;
+  color:#fde68a!important;
+}
+.pb-highlight-event-next-action{
+  border-left:3px solid rgba(34,211,238,.72);
+}
+.pb-highlight-event-attention{
+  border-left:3px solid rgba(251,191,36,.80);
+}
+.pb-highlight-event-highlight{
+  border-left:3px solid rgba(34,197,94,.62);
+}
