@@ -360,10 +360,21 @@
         weightedVariance:row.weightedVariance
       }));
 
+    const rawContractCurve=financialCurveFromBLPlanAtaq(
+      parsed.blPlanAtaqCurves?.blocks?.EMPREENDIMENTO || null,
+      {dataSerial:excelSerial(dataBase)},
+      dataBase
+    );
+    const embeddedContractChart=curveForUnit(parsed.curvesCharts,'EMPREENDIMENTO','EMPREENDIMENTO');
+    const contractCurve=financialCurveFromEmbeddedChart(
+      embeddedContractChart,
+      rawContractCurve?.summary || {dataSerial:excelSerial(dataBase)}
+    ) || rawContractCurve;
+
     return {
       contract: {
         ...contract,
-        curve: financialCurveFromBLPlanAtaq(parsed.blPlanAtaqCurves?.blocks?.EMPREENDIMENTO || null, null),
+        curve: contractCurve,
         status: statusFor(contract.variance)
       },
       units,
