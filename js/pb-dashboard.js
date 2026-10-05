@@ -193,7 +193,9 @@
   }
 
   function hasCoordinationDetailSelection(sel=selection()) {
-    return Boolean(sel.subphase || sel.grouping || sel.component || sel.step);
+    // A análise detalhada começa assim que houver uma Entrega + Fase específicas.
+    // Subfase, Agrupamento, Componente e Etapa apenas refinam essa mesma visão.
+    return Boolean(sel.unit && sel.phase);
   }
 
   function updateCoordinationDetailMode() {
