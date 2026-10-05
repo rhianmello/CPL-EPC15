@@ -129,7 +129,7 @@
     return null;
   }
 
-  function financialCurveFromBLPlanAtaq(block, fallbackSummary) {
+  function financialCurveFromBLPlanAtaq(block, fallbackSummary, dataBase) {
     if (!block?.dates?.length) return null;
     const serials = [...new Set(block.dates.map(Number).filter(Number.isFinite))].sort((a,b)=>a-b);
     if (!serials.length) return null;
@@ -139,10 +139,12 @@
     const real = directBlockSeries(block,'realPct',serials);
     const projected = directBlockSeries(block,'projectedPct',serials);
 
-    // O REAL deve terminar na data-base. Algumas fórmulas do BLPlanAtaq continuam
-    // preenchidas para datas futuras (em U-8223 chegam a retornar 15 a partir de 01/10),
-    // mas esses valores não pertencem à série Real exibida pelo gráfico do Excel.
-    const dataSerial=Number(fallbackSummary?.dataSerial);
+    // O REAL deve terminar na data-base da planilha atualmente carregada/publicada.
+    // A data nunca é fixa: muda a cada atualização semanal. Fórmulas futuras do
+    // BLPlanAtaq não devem prolongar artificialmente a série Real.
+    const dataSerial=Number.isFinite(excelSerial(dataBase))
+      ? excelSerial(dataBase)
+      : Number(fallbackSummary?.dataSerial);
     if (Number.isFinite(dataSerial)) {
       serials.forEach((serial,index)=>{
         if (serial > dataSerial) real[index]=null;
@@ -291,7 +293,7 @@
   function financialCurveForUnit(blocks, sources, code, rawName, dataBase, fallbackActualValue) {
     const fallback = financialCurveFromSources(sources, code, rawName, dataBase, fallbackActualValue);
     const block = blocks?.blocks?.[code] || null;
-    if (block) return financialCurveFromBLPlanAtaq(block, fallback?.summary || null);
+    if (block) return financialCurveFromBLPlanAtaq(block, fallback?.summary || null, dataBase);
     return fallback;
   }
 
