@@ -400,4 +400,9 @@
       : 'Nuvem ainda não configurada • Excel local disponível',
     cloudReady() ? 'cloud' : 'neutral'
   );
+
+  // Compatibilidade com o antigo link direto do Tempo Fotográfico.
+  if (location.hash === '#tempo-fotografico') {
+    openDashboard('photo-time');
+  }
 }());
