@@ -117,7 +117,7 @@
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     document.getElementById(`page-${page}`).classList.add('active');
     document.querySelector(`[data-page="${page}"]`)?.classList.add('active');
-    document.getElementById('page-title').textContent = page === 'executive' ? 'Painel Gerencial' : page === 'pb' ? 'Reunião de Coordenação' : page === 'analysis' ? 'Análises' : currentUnit?.rawName || 'Unidade';
+    document.getElementById('page-title').textContent = page === 'executive' ? 'Painel Gerencial' : page === 'pb' ? 'Reunião de Coordenação' : page === 'analysis' ? 'Análises' : page === 'photo-time' ? 'Tempo Fotográfico' : currentUnit?.rawName || 'Unidade';
     const topbar=document.querySelector('.topbar');
     topbar?.querySelector(':scope > div:first-child')?.classList.toggle('hidden', page === 'pb');
     topbar?.classList.toggle('pb-mode', page === 'pb');
