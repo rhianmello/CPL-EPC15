@@ -139,6 +139,16 @@
     const real = directBlockSeries(block,'realPct',serials);
     const projected = directBlockSeries(block,'projectedPct',serials);
 
+    // O REAL deve terminar na data-base. Algumas fórmulas do BLPlanAtaq continuam
+    // preenchidas para datas futuras (em U-8223 chegam a retornar 15 a partir de 01/10),
+    // mas esses valores não pertencem à série Real exibida pelo gráfico do Excel.
+    const dataSerial=Number(fallbackSummary?.dataSerial);
+    if (Number.isFinite(dataSerial)) {
+      serials.forEach((serial,index)=>{
+        if (serial > dataSerial) real[index]=null;
+      });
+    }
+
     // O arquivo guarda o primeiro ponto do Projetado no dia seguinte ao último Real,
     // com exatamente o mesmo percentual. Repetimos esse valor no último dia Real
     // para a linha amarela nascer visualmente do fim da linha verde, sem salto.
@@ -164,6 +174,37 @@
       summary:fallbackSummary || null,
       sourceRows:block.sourceRows || {},
       sourceRange:{firstRow:block.firstRow,lastRow:block.lastRow}
+    };
+  }
+
+  function embeddedCurveKey(name) {
+    const raw=String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+    if (/PLAN\.?\s*ATAQ/.test(raw)) return 'planAttack';
+    if (/BLCONTRATUAL|BL\s*CONTRATUAL/.test(raw)) return 'contractual';
+    if (/^\s*REAL\b/.test(raw)) return 'real';
+    if (/^\s*PROJETADO\b/.test(raw)) return 'projected';
+    return '';
+  }
+
+  function financialCurveFromEmbeddedChart(chart,fallbackSummary) {
+    if (!chart?.series?.length) return null;
+    const labels=chart.series.find(series=>Array.isArray(series.categories)&&series.categories.length)?.categories || [];
+    const series=chart.series.map(series=>({
+      key:embeddedCurveKey(series.name),
+      name:series.name,
+      categories:series.categories || labels,
+      values:Array.isArray(series.values) ? series.values : []
+    })).filter(series=>series.values.some(Number.isFinite));
+    if (!series.length) return null;
+    return {
+      source:'curvas-chart',
+      unitCode:chart.unitCode,
+      title:chart.title,
+      labels,
+      series,
+      summary:fallbackSummary || null,
+      chartRow:chart.rowIndex,
+      chartColumn:chart.colIndex
     };
   }
 
@@ -280,8 +321,10 @@
       const leaves = leafRows(segment.filter(row => row.level >= 2));
       const identity = displayUnit(summary.unit);
       const rawFinancialCurve = financialCurveForUnit(parsed.blPlanAtaqCurves, parsed.financialSources, identity.code, summary.unit, dataBase, summary.actualValue);
-      const legacyCurve = curveForUnit(parsed.curvesCharts, identity.code, summary.unit);
-      const curve = rawFinancialCurve || legacyCurve;
+      const embeddedChart = curveForUnit(parsed.curvesCharts, identity.code, summary.unit);
+      // A aba CURVAS já contém a série exatamente como o Excel a apresenta.
+      // Ela é a fonte principal; BLPlanAtaq fica apenas como fallback quando o gráfico não puder ser extraído.
+      const curve = financialCurveFromEmbeddedChart(embeddedChart, rawFinancialCurve?.summary || null) || rawFinancialCurve;
       return { ...summary, ...identity, rawName: summary.unit, phases, details: leaves, curve, status: statusFor(summary.variance) };
     });
 
