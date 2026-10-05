@@ -7,6 +7,7 @@
   <title>BI EPC-15</title>
   <link rel="stylesheet" href="css/style.css?v=20261005-contribution-top1">
   <link rel="stylesheet" href="css/home.css?v=20261005-planning-home2">
+  <link rel="stylesheet" href="css/tempo-fotografico-embed.css?v=20261005-embed1">
   <style>
     /* Ajustes CPL / Reunião de Coordenação */
     .nav-item[data-page="executive"]::after,.nav-item[data-page="pb"]::after{content:""}
@@ -200,7 +201,7 @@
         <button class="nav-item" data-action="presentation-coordination"><span>04</span> Apresentação de Coordenação</button>
         <a class="nav-item" href="rundown.html" style="text-decoration:none"><span>05</span> BI Rundown</a>
         <button class="nav-item" data-page="pb"><span>06</span> Reunião de Coordenação</button>
-        <a class="nav-item" href="tempo-fotografico.html" style="text-decoration:none"><span>07</span> Tempo Fotográfico</a>
+        <button class="nav-item" data-page="photo-time"><span>07</span> Tempo Fotográfico</button>
       </nav>
       <div class="sidebar-footer">
         <button id="back-home" class="sidebar-back-button" type="button" title="Voltar à página principal"><span aria-hidden="true">←</span> Voltar</button>
@@ -508,6 +509,60 @@
           <p>Os resumos utilizam exclusivamente as linhas consolidadas do primeiro bloco hierárquico da aba <strong>Avanço PLATAQ</strong>. O detalhamento mostra somente linhas-folha. O segundo bloco, reorganizado por disciplina, não é somado novamente.</p>
         </article>
       </section>
+
+      <section id="page-photo-time" class="page tf-embedded-page">
+        <div class="tf-embed-filterbar">
+          <div>
+            <p class="eyebrow">PLANEJAMENTO EPC-15</p>
+            <h3>Máquina do Tempo Fotográfica</h3>
+          </div>
+          <div class="tf-embed-top-filters">
+            <label>Semana<select id="tf-week-select"></select></label>
+            <label>Entrega<select id="tf-unit-select"><option value="">Todas as Entregas</option></select></label>
+            <label>Fase<select id="tf-phase-select"><option value="">Todas as Fases</option></select></label>
+          </div>
+        </div>
+
+        <section class="tf-content tf-content-embedded">
+          <article class="tf-panel tf-timeline-panel">
+            <div class="tf-panel-head">
+              <div>
+                <p>MÁQUINA DO TEMPO FOTOGRÁFICA</p>
+                <h2>Evolução da obra por semana</h2>
+              </div>
+              <div class="tf-grouping-control">
+                <label>Agrupamento
+                  <select id="tf-grouping-select"><option value="">Todos os Agrupamentos</option></select>
+                </label>
+                <button id="tf-compare-button" type="button">Comparar antes × atual</button>
+              </div>
+            </div>
+
+            <div id="tf-timeline" class="tf-timeline" aria-label="Linha do tempo semanal"></div>
+            <div id="tf-gallery" class="tf-gallery"></div>
+            <div id="tf-gallery-empty" class="tf-empty hidden">Nenhum registro fotográfico encontrado para esta seleção.</div>
+          </article>
+
+          <div class="tf-bottom-grid">
+            <article id="tf-compare-panel" class="tf-panel">
+              <div class="tf-panel-head compact">
+                <div><p>ANTES × AGORA</p><h2>Comparação visual</h2></div>
+              </div>
+              <div id="tf-compare" class="tf-compare"></div>
+            </article>
+
+            <article class="tf-panel tf-memory-panel">
+              <div class="tf-panel-head compact">
+                <div><p>MEMÓRIA DA OBRA</p><h2>Resumo da evolução</h2></div>
+              </div>
+              <div id="tf-memory" class="tf-memory">
+                <div class="tf-loading">Carregando histórico fotográfico...</div>
+              </div>
+            </article>
+          </div>
+        </section>
+      </section>
+
     </main>
   </div>
 
@@ -561,5 +616,6 @@
   <script src="js/app.js?v=20261005-week-published-fix1"></script>
   <script>if (window.lucide) lucide.createIcons();</script>
   <script src="js/coordination-week.js?v=20261002-stable-sync1"></script>
+  <script src="js/tempo-fotografico.js?v=20261005-embed1"></script>
 </body>
 </html>
