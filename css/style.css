@@ -2583,3 +2583,72 @@
 .pb-stage-table-row th .pb-execution-badge{
   font-size:.48rem;
 }
+
+
+/* ===== Reunião de Coordenação — visão progressiva (05/10/2026) ===== */
+/* Ao abrir a reunião, mostra somente Avanço Físico e Registro Fotográfico.
+   Os blocos analíticos surgem após selecionar Agrupamento, Componente ou Etapa. */
+#page-pb:not(.pb-detail-mode) .pb-detail-only{
+  display:none!important;
+}
+
+/* Contribuição para o desvio — leitura executiva do AB negativo */
+.pb-delay-contribution-card{
+  width:100%;
+  align-self:flex-start;
+}
+.pb-delay-contribution-card .pb-card-head{
+  align-items:flex-start;
+}
+.pb-delay-eyebrow{
+  margin:0 0 5px;
+  color:#22d3ee!important;
+  font-size:.54rem!important;
+  font-weight:900;
+  letter-spacing:.13em;
+}
+.pb-delay-contribution-list{
+  display:grid;
+  gap:11px;
+  padding:13px 15px 15px;
+}
+.pb-delay-contribution-row{
+  display:grid;
+  grid-template-columns:minmax(120px,1.1fr) minmax(160px,2.8fr) 44px;
+  gap:12px;
+  align-items:center;
+}
+.pb-delay-contribution-label{
+  min-width:0;
+  overflow:hidden;
+  color:#f8fbff;
+  font-size:.67rem;
+  font-weight:800;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.pb-delay-contribution-track{
+  height:10px;
+  overflow:hidden;
+  border-radius:999px;
+  background:#06111f;
+  box-shadow:inset 0 0 0 1px rgba(148,163,184,.08);
+}
+.pb-delay-contribution-track i{
+  display:block;
+  height:100%;
+  border-radius:inherit;
+  background:linear-gradient(90deg,#ffc857 0%,#ff6b78 100%);
+}
+.pb-delay-contribution-row strong{
+  color:#f8fbff;
+  font-size:.68rem;
+  text-align:right;
+}
+@media(max-width:760px){
+  .pb-delay-contribution-row{
+    grid-template-columns:minmax(90px,1fr) minmax(100px,1.7fr) 38px;
+    gap:8px;
+  }
+  .pb-delay-contribution-label{font-size:.62rem}
+}
