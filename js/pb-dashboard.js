@@ -51,6 +51,15 @@
   const esc = value => String(value == null ? '' : value).replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
   const pct = value => Number.isFinite(value) ? pt1.format(value * 100) + '%' : 'N/D';
   const pts = value => Number.isFinite(value) ? (value > 0 ? '+' : '') + pt1.format(value * 100) + '%' : 'N/D'; // desvios sempre exibidos com símbolo %
+  const deviationTone = value => !Number.isFinite(value) || value === 0 ? 'neutral' : value > 0 ? 'positive' : 'negative';
+  function applyDeviationTone(element, value, container) {
+    const tone=deviationTone(value);
+    [element,container].filter(Boolean).forEach(node=>{
+      node.classList.remove('positive','negative','neutral');
+      node.classList.add(tone);
+    });
+    return tone;
+  }
   const qty = value => Number.isFinite(value) ? pt0.format(value) : '—';
   const brl = value => Number.isFinite(value) ? money.format(value) : 'N/D';
 
@@ -1011,6 +1020,7 @@
       if(path) path.textContent='Avanço PLATAQ';
       if(line) line.textContent='Linha Excel: —';
       ['pb-focus-planned','pb-focus-actual','pb-focus-variance','pb-focus-weight'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='N/D';});
+      applyDeviationTone(document.getElementById('pb-focus-variance'),null);
       if(cause){cause.value='';cause.disabled=true;}
       if(mitigation){mitigation.value='';mitigation.disabled=true;}
       return;
@@ -1022,7 +1032,9 @@
     if(line) line.textContent='Linha Excel: '+(Number(row.sourceIndex)+1)+' • Nível '+row.level;
     document.getElementById('pb-focus-planned').textContent=pct(row.planned);
     document.getElementById('pb-focus-actual').textContent=pct(row.actual);
-    document.getElementById('pb-focus-variance').textContent=pts(row.variance);
+    const focusVariance=document.getElementById('pb-focus-variance');
+    focusVariance.textContent=pts(row.variance);
+    applyDeviationTone(focusVariance,row.variance);
     document.getElementById('pb-focus-weight').textContent=Number.isFinite(row.weight)?pct(row.weight):'N/D';
     const editable=canEdit();
     if(cause){
@@ -1054,7 +1066,11 @@
     const gap=Number.isFinite(summary?.planned) && Number.isFinite(summary?.actual)
       ? summary.actual-summary.planned
       : summary?.variance;
-    document.getElementById('pb-gap').textContent=pts(gap);
+    const gapElement=document.getElementById('pb-gap');
+    if(gapElement){
+      gapElement.textContent=pts(gap);
+      applyDeviationTone(gapElement,gap,gapElement.closest('.pb-deviation-box'));
+    }
     document.getElementById('pb-gap-days').textContent='';
 
     const note=document.getElementById('pb-summary-note');
