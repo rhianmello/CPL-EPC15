@@ -16,6 +16,7 @@
   let photosWeek = null;
   let photosUnitKey = '';
   let photosPhaseKey = '';
+  let photosGroupingKey = '';
   let photoReplaceTarget = null;
   let metricGroupAll = true;
   const metricSelectedGroups = new Set();
@@ -1320,19 +1321,21 @@
       photosWeek=week;
       photosUnitKey=scope.unitKey;
       photosPhaseKey=scope.phaseKey;
+      photosGroupingKey=scope.groupingKey;
       renderActivities();
       return [];
     }
-    if(!force && photosWeek===week && photosUnitKey===scope.unitKey && photosPhaseKey===scope.phaseKey){
+    if(!force && photosWeek===week && photosUnitKey===scope.unitKey && photosPhaseKey===scope.phaseKey && photosGroupingKey===scope.groupingKey){
       renderActivities();
       return photos;
     }
     try{
-      const rows=await window.CloudSync.listCoordinationPhotos(week,scope.unitKey,scope.phaseKey);
+      const rows=await window.CloudSync.listCoordinationPhotos(week,scope.unitKey,scope.phaseKey,scope.groupingKey);
       photos=rows;
       photosWeek=week;
       photosUnitKey=scope.unitKey;
       photosPhaseKey=scope.phaseKey;
+      photosGroupingKey=scope.groupingKey;
       renderActivities();
       return rows;
     } catch(error){
@@ -1341,6 +1344,7 @@
       photosWeek=week;
       photosUnitKey=scope.unitKey;
       photosPhaseKey=scope.phaseKey;
+      photosGroupingKey=scope.groupingKey;
       renderActivities();
       return [];
     }
@@ -1460,11 +1464,12 @@
     if(!host) return;
 
     const currentWeek=Number(window.CoordinationWeek?.getSelectedWeek?.());
-    const remote=(photosWeek===currentWeek && photosUnitKey===scope.unitKey && photosPhaseKey===scope.phaseKey ? photos : []);
+    const remote=(photosWeek===currentWeek && photosUnitKey===scope.unitKey && photosPhaseKey===scope.phaseKey && photosGroupingKey===scope.groupingKey ? photos : []);
     const pending=pendingPhotos.filter(photo=>{
       if(Number(photo.week_no)!==currentWeek) return false;
       if(scope.unitKey && photo.unit_key!==scope.unitKey) return false;
       if(scope.phaseKey && photo.phase_key!==scope.phaseKey) return false;
+      if(scope.groupingKey && photo.grouping_key!==scope.groupingKey) return false;
       return true;
     });
     const items=remote.concat(pending);
@@ -1497,7 +1502,8 @@
       const caption=String(photo.caption||'').trim() || fallback;
       const showUnit=!scope.unitKey && photo.unit_name;
       const showPhase=!scope.phaseKey && photo.phase_name;
-      const contextLabel=[showUnit ? photo.unit_name : '',showPhase ? photo.phase_name : ''].filter(Boolean).join(' • ');
+      const showGrouping=!scope.groupingKey && photo.grouping_name;
+      const contextLabel=[showUnit ? photo.unit_name : '',showPhase ? photo.phase_name : '',showGrouping ? photo.grouping_name : ''].filter(Boolean).join(' • ');
       const contextMarkup=contextLabel
         ? '<div class="pb-photo-unit-label">'+esc(contextLabel)+'</div>'
         : '';
