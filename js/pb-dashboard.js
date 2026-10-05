@@ -495,21 +495,30 @@
       }
     });
 
-    const actions=document.querySelector('#page-pb .pb-week-actions');
+    const actions=document.getElementById('pb-topbar-week-tools');
     if(actions && !document.getElementById('pb-layout-reset')){
       const reset=document.createElement('button');
       reset.id='pb-layout-reset';
       reset.type='button';
-      reset.className='pb-layout-reset';
-      reset.textContent='Restaurar layout';
-      reset.title='Voltar ao layout padrão da Reunião de Coordenação';
+      reset.className='pb-layout-reset hidden';
+      reset.textContent='↶ Voltar layout';
+      reset.title='Restaurar a posição padrão das caixas da Reunião de Coordenação';
       reset.addEventListener('click',async()=>{
         if(!curationMode) return;
-        if(!confirm('Restaurar o layout padrão da Reunião de Coordenação?')) return;
+        if(!confirm('Voltar todas as caixas para o layout padrão da Reunião de Coordenação?')) return;
         applyPbLayout(PB_DEFAULT_LAYOUT);
+        storeLocalPbLayout(PB_DEFAULT_LAYOUT);
         await persistPbLayout();
+        render();
+        const feedback=document.getElementById('pb-save-feedback');
+        if(feedback){
+          feedback.textContent='Layout padrão restaurado';
+          feedback.dataset.tone='ok';
+        }
       });
-      actions.prepend(reset);
+      const editButton=document.getElementById('pb-curation-edit');
+      if(editButton?.nextSibling) actions.insertBefore(reset,editButton.nextSibling);
+      else actions.appendChild(reset);
     }
   }
 
