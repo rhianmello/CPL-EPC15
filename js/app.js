@@ -86,10 +86,15 @@
     if (loginError) loginError.classList.add('hidden');
   }
 
-  function openDashboard() {
+  function openDashboard(page = 'executive') {
     upload.classList.add('hidden');
     app.classList.remove('hidden');
-    Dashboard.showPage('executive');
+    Dashboard.showPage(page || 'executive');
+  }
+
+  function activeDashboardPage() {
+    const id=document.querySelector('.page.active')?.id || '';
+    return id.startsWith('page-') ? id.slice(5) : 'executive';
   }
 
   function backToPortal() {
@@ -128,11 +133,13 @@
     }
   }
 
-  async function loadPublished({ keepLocalOnError = true } = {}) {
+  async function loadPublished({ keepLocalOnError = true, preservePage = false, useForCoordination = false } = {}) {
     if (!cloudReady()) {
       setSource(hasData ? sourceStatus.textContent : 'Nuvem ainda não configurada • use o Excel local', 'warning');
       return false;
     }
+    const pageBefore=preservePage ? activeDashboardPage() : 'executive';
+    const selectedWeek=Number(window.CoordinationWeek?.getSelectedWeek?.());
     showLoading('Carregando versão publicada...', 'Buscando o snapshot atual no Supabase.');
     try {
       const result = await window.CloudSync.loadCurrent();
@@ -145,7 +152,24 @@
         size: result.publication.file_size,
         lastModified: result.publication.file_last_modified
       }, { origin:'published', publication:result.publication });
-      openDashboard();
+
+      if(useForCoordination && pageBefore==='pb'){
+        const weekSelect=document.getElementById('pb-week-filter');
+        if(Number.isFinite(selectedWeek) && weekSelect){
+          weekSelect.value=String(selectedWeek);
+        }
+        window.CoordinationWeek?.useLiveExcel?.();
+        openDashboard('pb');
+        window.CoordinationWeek?.refreshStatus?.();
+        const badge=document.getElementById('pb-save-feedback');
+        if(badge){
+          const version=result.publication?.version_no ? 'V'+result.publication.version_no : 'versão publicada';
+          badge.textContent=version+' aplicada à Semana '+selectedWeek+' • confira e clique em Salvar semana';
+          badge.dataset.tone='ok';
+        }
+      }else{
+        openDashboard(pageBefore);
+      }
       return true;
     } catch (error) {
       if (!hasData || !keepLocalOnError) setSource('Nuvem indisponível • carregue o Excel local', 'error');
@@ -315,7 +339,23 @@
   selectEmpty?.addEventListener('click', () => input.click());
   document.getElementById('back-home')?.addEventListener('click', backToPortal);
   publishButton?.addEventListener('click', () => requestAccess(publishCurrent));
-  publishedButton?.addEventListener('click', () => loadPublished({keepLocalOnError:true}));
+  publishedButton?.addEventListener('click', async () => {
+    const page=activeDashboardPage();
+    if(page==='pb'){
+      const week=Number(window.CoordinationWeek?.getSelectedWeek?.());
+      if(!window.CoordinationWeek?.canEdit?.()){
+        alert('A Semana '+week+' está encerrada. Ative o lápis e informe a senha master antes de usar a versão publicada nesta semana.');
+        return;
+      }
+      await loadPublished({
+        keepLocalOnError:true,
+        preservePage:true,
+        useForCoordination:true
+      });
+      return;
+    }
+    await loadPublished({keepLocalOnError:true,preservePage:true});
+  });
 
   document.addEventListener('click', event => {
     const page = event.target.closest('[data-page]')?.dataset.page;
