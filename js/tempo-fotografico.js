@@ -154,7 +154,7 @@
       const current=state.weeks.find(w=>w.is_current) || state.weeks.filter(w=>w.has_snapshot).at(-1) || state.weeks.at(-1);
       state.selectedWeek=Number(current?.week_no||1);
 
-      $('tf-week-select').innerHTML=state.weeks.filter(w=>Number(w.week_no)<=Number(state.selectedWeek)+4).map(w=>
+      $('tf-week-select').innerHTML=state.weeks.filter(w=>Number(w.week_no)<=Number(current?.week_no||state.selectedWeek)).map(w=>
         '<option value="'+Number(w.week_no)+'">S-'+Number(w.week_no)+' • '+esc(dmy(w.start_date))+'–'+esc(dmy(w.end_date))+(w.is_current?' • ATUAL':'')+'</option>'
       ).join('');
       $('tf-week-select').value=String(state.selectedWeek);
