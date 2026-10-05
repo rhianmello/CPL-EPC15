@@ -362,7 +362,7 @@
     const unitButton = event.target.closest('[data-unit-index]');
     const unitIndex = unitButton?.dataset.unitIndex;
     if (page) {
-      if (!hasData && page !== 'executive') return;
+      if (!hasData && !['executive','photo-time'].includes(page)) return;
       Dashboard.showPage(page);
     }
     if (unitIndex != null && hasData) {
