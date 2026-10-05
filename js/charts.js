@@ -58,14 +58,53 @@
     };
   }
 
+  function excelSerial(value) {
+    const date=value instanceof Date ? value : new Date(value);
+    if(Number.isNaN(date.valueOf())) return null;
+    return Math.round((Date.UTC(date.getUTCFullYear(),date.getUTCMonth(),date.getUTCDate()) - Date.UTC(1899,11,30)) / 86400000);
+  }
+
+  function normalizeFinancialCurve(curve, options={}) {
+    if(!curve?.series?.length) return null;
+    const labels=curve.labels || curve.series.find(s=>s.categories?.length)?.categories || [];
+    const rawSource=curve.source === 'financial-sheets' || curve.source === 'blplanataq-direct';
+    const allRaw=curve.series.flatMap(s=>s.values || []).filter(Number.isFinite);
+    if(!allRaw.length) return null;
+    const asPercent=rawSource || Math.max(...allRaw.map(v=>Math.abs(v))) <= 1.5;
+    const dataSerial=Number.isFinite(Number(curve?.summary?.dataSerial))
+      ? Number(curve.summary.dataSerial)
+      : excelSerial(options.dataBase);
+    const serials=Array.isArray(curve.serials) ? curve.serials : null;
+
+    const series=curve.series.map(s=>({
+      ...s,
+      values:(s.values || []).map((v,index)=>{
+        if(!Number.isFinite(v)) return null;
+
+        // A mesma regra vale para dashboard e apresentação:
+        // Real termina na data-base dinâmica da planilha/publicação.
+        if(s.key==='real' && Number.isFinite(dataSerial) && serials &&
+           Number(serials[index]) > dataSerial) return null;
+
+        const plotted=asPercent ? v*100 : v;
+
+        // Evita fórmula futura/valor inválido gerar salto artificial na curva física.
+        if(asPercent && s.key==='real' && (plotted < -0.001 || plotted > 100.001)) return null;
+        return plotted;
+      })
+    }));
+
+    return {labels,series,asPercent,dataSerial};
+  }
+
   function financialCurve(curve) {
     if (registry.unitCurve) { registry.unitCurve.destroy(); delete registry.unitCurve; }
-    if (!curve?.series?.length) return false;
+    const normalized=normalizeFinancialCurve(curve);
+    if(!normalized) return false;
     const canvas = document.getElementById('unit-curve-chart');
     if (!canvas) return false;
 
-    const labels = curve.labels || curve.series.find(s => s.categories?.length)?.categories || [];
-    const rawSource = curve.source === 'financial-sheets' || curve.source === 'blplanataq-direct';
+    const {labels,series,asPercent}=normalized;
     const styles = {
       planAttack:{color:'#69a9e7',dash:[],width:1.8,points:0},
       contractual:{color:'#0b2f70',dash:[],width:2.0,points:0},
@@ -74,26 +113,11 @@
     };
     const fallback = ['#60a5fa','#0f172a','#22c55e','#f59e0b','#8b5cf6','#ef4444'];
 
-    const allValues = curve.series.flatMap(s => s.values || []).filter(Number.isFinite);
-    const asPercent = rawSource || (allValues.length && Math.max(...allValues.map(v => Math.abs(v))) <= 1.5);
-
-    const dataSerial=Number(curve?.summary?.dataSerial);
-    const datasets = curve.series.map((s,i) => {
+    const datasets = series.map((s,i) => {
       const st = styles[s.key] || {color:fallback[i%fallback.length],dash:[],width:1.8,points:0};
-      const data = (s.values || []).map((v,index) => {
-        if (!Number.isFinite(v)) return null;
-        // Corrige também snapshots já publicados: a série REAL não pode continuar
-        // depois da data-base, mesmo que a célula-fonte futura contenha fórmula/valor.
-        if (s.key==='real' && Number.isFinite(dataSerial) && Array.isArray(curve.serials) &&
-            Number(curve.serials[index]) > dataSerial) return null;
-        const plotted=asPercent ? v*100 : v;
-        // Série percentual válida deve permanecer dentro da escala física.
-        if (asPercent && s.key==='real' && (plotted < -0.001 || plotted > 100.001)) return null;
-        return plotted;
-      });
       return {
         label:s.name,
-        data,
+        data:s.values,
         borderColor:st.color,
         backgroundColor:st.color,
         borderWidth:st.width,
@@ -128,5 +152,5 @@
     return true;
   }
 
-  window.DashboardCharts = { unitProgress, phaseProgress, variance, financialCurve };
+  window.DashboardCharts = { unitProgress, phaseProgress, variance, financialCurve, normalizeFinancialCurve };
 }());
