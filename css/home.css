@@ -129,7 +129,7 @@
   letter-spacing:-.01em;
   color:#fff;
 }
-.home-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+.home-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
 .home-card{
   display:flex;
   flex-direction:column;
