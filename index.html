@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#07111f">
   <title>BI EPC-15</title>
-  <link rel="stylesheet" href="css/style.css?v=20261005-positive-deviation1">
+  <link rel="stylesheet" href="css/style.css?v=20261005-coordination-review1">
   <link rel="stylesheet" href="css/home.css?v=20261002-home1">
   <style>
     /* Ajustes CPL / Reunião de Coordenação */
@@ -228,13 +228,13 @@
       <div class="sidebar-brand"><img class="cpl-brand-image cpl-brand-image-sidebar" src="assets/logo-cpl-epc15.png?v=20260929" alt="CPL Construtora EPC-15"><span class="sidebar-brand-name"><span>BI</span> EPC-15</span></div>
       <nav class="main-nav" aria-label="Navegação principal">
         <button class="nav-item active" data-page="executive"><span>01</span> Painel Gerencial</button>
-        <button class="nav-item" data-page="pb"><span>02</span> Reunião de Coordenação</button>
         <div class="nav-group-label">UNIDADES</div>
         <div id="unit-nav"></div>
-        <button class="nav-item" data-page="analysis"><span>03</span> Análises</button>
-        <button class="nav-item" data-action="presentation-executive"><span>04</span> Apresentação Gerencial</button>
-        <button class="nav-item" data-action="presentation-coordination"><span>05</span> Apresentação de Coordenação</button>
-        <a class="nav-item" href="rundown.html" style="text-decoration:none"><span>06</span> BI Rundown</a>\n        <a class="nav-item" href="simulador-andaimes.html" style="text-decoration:none"><span>07</span> Simulador de Andaimes</a>
+        <button class="nav-item" data-page="analysis"><span>02</span> Análises</button>
+        <button class="nav-item" data-action="presentation-executive"><span>03</span> Apresentação Gerencial</button>
+        <button class="nav-item" data-action="presentation-coordination"><span>04</span> Apresentação de Coordenação</button>
+        <a class="nav-item" href="rundown.html" style="text-decoration:none"><span>05</span> BI Rundown</a>
+        <button class="nav-item" data-page="pb"><span>06</span> Reunião de Coordenação</button>
       </nav>
       <div class="sidebar-footer">
         <button id="back-home" class="sidebar-back-button" type="button" title="Voltar à página principal"><span aria-hidden="true">←</span> Voltar</button>
@@ -360,7 +360,18 @@
               </div>
             </article>
 
-            <article class="pb-card pb-offenders-card">
+            <article class="pb-card pb-delay-contribution-card pb-detail-only">
+              <header class="pb-card-head">
+                <div>
+                  <p class="eyebrow pb-delay-eyebrow">POR QUE ESTAMOS ATRASADOS?</p>
+                  <h3>Contribuição para o desvio</h3>
+                </div>
+                <span id="pb-delay-contribution-total" class="pb-muted-chip">0 itens</span>
+              </header>
+              <div id="pb-delay-contribution-list" class="pb-delay-contribution-list"></div>
+            </article>
+
+            <article class="pb-card pb-offenders-card pb-detail-only">
               <header class="pb-card-head">
                 <div class="pb-title-inline"><h3>FRENTES OFENSORAS — DESVIOS CRÍTICOS</h3><span id="pb-offender-count" class="pb-count-red">0 Ofensores</span></div>
                 <div class="pb-right-note"><b>FOCO DE DECISÃO</b><small id="pb-cpm-note">Ordenado pelo desvio da aba Avanço PLATAQ</small></div>
@@ -384,7 +395,7 @@
               <div id="pb-lookahead-pager" class="pb-card-pager hidden"></div>
             </article>
 
-            <article class="pb-card pb-week-highlights-card">
+            <article class="pb-card pb-week-highlights-card pb-detail-only">
               <header class="pb-card-head">
                 <div class="pb-title-inline"><h3 id="pb-week-highlights-title">DESTAQUES DA SEMANA</h3><span id="pb-week-highlights-count" class="pb-count-green">0 destaques</span></div>
                 <span class="pb-focus-week">AVANÇO PLATAQ</span>
@@ -392,9 +403,9 @@
               <div id="pb-week-highlights-list" class="pb-lookahead-list"></div>
             </article>
 
-            <article class="pb-card pb-metrics-card">
+            <article class="pb-card pb-metrics-card pb-detail-only">
               <header class="pb-card-head">
-                <div class="pb-title-inline"><div><h3>ETAPAS NÍVEL 4 — MÉTRICA PONDERADA (AB)</h3><small class="pb-metric-header-note">Agrupamentos e etapas • Valores: V, W, Y, Z e AB</small></div><span id="pb-metric-count" class="pb-muted-chip">0 agrupamentos</span></div>
+                <div class="pb-title-inline"><div><h3>MÉTRICA PONDERADA</h3><small class="pb-metric-header-note">Agrupamentos e etapas • Valores: V, W, Y, Z e AB</small></div><span id="pb-metric-count" class="pb-muted-chip">0 agrupamentos</span></div>
                 <span class="pb-focus-week">AVANÇO PLATAQ</span>
               </header>
               <div id="pb-metric-stage-filter" class="pb-metric-stage-filter hidden">
@@ -410,7 +421,7 @@
           </div>
 
           <div class="pb-column pb-column-full">
-          <article class="pb-card pb-focus-card">
+          <article class="pb-card pb-focus-card pb-detail-only">
           <header class="pb-card-head">
           <div>
           <p class="eyebrow">ITEM EM FOCO PARA A REUNIÃO</p>
@@ -575,7 +586,7 @@
   <script src="js/data-model.js?v=20261005-dynamic-database1"></script>
   <script src="js/charts.js?v=20261005-curvas-excel1"></script>
   <script src="js/dashboard.js?v=20261005-curvas-excel1"></script>
-  <script src="js/pb-dashboard.js?v=20261005-positive-deviation1"></script>
+  <script src="js/pb-dashboard.js?v=20261005-coordination-review1"></script>
   <script src="js/presentation.js?v=20260929-deviation-bars2"></script>
   <script src="js/export.js"></script>
   <script src="vendor/lucide.min.js"></script>
