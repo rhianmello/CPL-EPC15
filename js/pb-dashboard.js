@@ -1236,26 +1236,39 @@
 
   function delayContributionRows() {
     const sel=selection();
-    const fields=['unit','phase','subphase','grouping','component','step'];
-    let rows=allRows()
-      .filter(row=>Number(row.level)===6)
-      .filter(row=>matches(row,sel,fields))
-      .filter(row=>Number.isFinite(row.weightedVariance) && row.weightedVariance<0)
-      .map(row=>({
-        label:String(row.step || row.component || row.grouping || row.phase || rowLabel(row)).trim() || 'Item',
-        impact:Math.abs(row.weightedVariance)
-      }));
+    let rows=[];
 
-    // Se a etapa não tiver AB preenchido, usa o agrupamento selecionado como fallback.
-    if(!rows.length){
+    if(!sel.grouping){
+      // Em "Todos os Agrupamentos", usa exatamente a mesma base do Pareto:
+      // Nível 4 + AB negativo. Assim a explicação do atraso conversa 1:1 com o gráfico.
+      rows=paretoGroupingRows().map(row=>({
+        label:String(row.grouping || rowLabel(row)).trim() || 'Agrupamento',
+        impact:Math.abs(row.weightedVariance),
+        level:4
+      }));
+    }else{
+      // Ao escolher um Agrupamento, abre o motivo por dentro dele:
+      // etapas Nível 6 com AB negativo, respeitando todos os filtros hierárquicos atuais.
+      const fields=['unit','phase','subphase','grouping','component','step'];
       rows=allRows()
-        .filter(row=>Number(row.level)===4)
-        .filter(row=>matches(row,sel,['unit','phase','subphase','grouping']))
+        .filter(row=>Number(row.level)===6)
+        .filter(row=>matches(row,sel,fields))
         .filter(row=>Number.isFinite(row.weightedVariance) && row.weightedVariance<0)
         .map(row=>({
-          label:String(row.grouping || rowLabel(row)).trim() || 'Agrupamento',
-          impact:Math.abs(row.weightedVariance)
+          label:String(row.step || row.component || row.criterion || rowLabel(row)).trim() || 'Etapa',
+          impact:Math.abs(row.weightedVariance),
+          level:6
         }));
+
+      // Fallback: se o agrupamento não possuir AB nas etapas, mantém o próprio
+      // agrupamento (Nível 4) para não contradizer o Pareto.
+      if(!rows.length){
+        rows=paretoGroupingRows().map(row=>({
+          label:String(row.grouping || rowLabel(row)).trim() || 'Agrupamento',
+          impact:Math.abs(row.weightedVariance),
+          level:4
+        }));
+      }
     }
 
     const grouped=new Map();
@@ -1286,6 +1299,13 @@
     }
 
     const rows=delayContributionRows();
+    const sel=selection();
+    const scopeEl=document.getElementById('pb-delay-contribution-scope');
+    if(scopeEl){
+      scopeEl.textContent=sel.grouping
+        ? 'Detalhamento do agrupamento: '+sel.grouping
+        : 'Consolidado por agrupamento • mesma base do Pareto';
+    }
     if(totalEl) totalEl.textContent=rows.length+' '+(rows.length===1?'item':'itens');
 
     if(!rows.length){
