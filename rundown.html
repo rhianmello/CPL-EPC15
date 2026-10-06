@@ -181,6 +181,22 @@ body.mode-rundown:before{
 .mode-rundown th{background:#0d2238;color:#83cbed;border-bottom-color:rgba(125,211,252,.12)}
 .mode-rundown td{color:#bed0e2;border-bottom-color:rgba(125,211,252,.07)}
 .mode-rundown tr:hover td{background:rgba(34,211,238,.035)}
+
+.mode-rundown .rundown-data-map{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
+.rundown-data-map{display:none}
+.mode-rundown .map-chip{
+  display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid rgba(148,163,184,.12);
+  border-radius:999px;background:rgba(4,14,27,.58);color:#8fa8bf;font-size:10px;font-weight:750;letter-spacing:.035em;
+}
+.mode-rundown .map-chip b{
+  display:grid;place-items:center;min-width:20px;height:20px;border-radius:7px;background:rgba(148,163,184,.12);color:#d9ecfb;font-size:10px;
+}
+.mode-rundown .map-chip.blue{border-color:rgba(59,130,246,.20);color:#93c5fd}
+.mode-rundown .map-chip.orange{border-color:rgba(251,146,60,.20);color:#fdba74}
+.mode-rundown .map-chip.green{border-color:rgba(34,197,94,.20);color:#86efac}
+.mode-rundown .map-chip.amber{border-color:rgba(245,158,11,.20);color:#fcd34d}
+.mode-rundown .map-chip.violet{border-color:rgba(167,139,250,.20);color:#c4b5fd}
+
 @media(max-width:1250px){
   .mode-rundown .filters{grid-template-columns:repeat(2,minmax(0,1fr))}
   .mode-rundown #fieldActivity,.mode-rundown #fieldSearch{grid-column:span 1}
@@ -245,6 +261,15 @@ body.mode-rundown:before{
       <div class="field" id="fieldWeekEnd"><label>Semana final</label><select id="fFim"><option value="">Automática</option></select></div>
     </div>
     <div id="status" class="status">Carregue o arquivo “031A Anexo XXXIA Rev”.</div>
+    <div class="rundown-data-map" id="rundownDataMap" aria-label="Mapeamento da aba 20">
+      <span class="map-chip neutral"><b>A</b> Semana</span>
+      <span class="map-chip neutral"><b>C</b> Atividade</span>
+      <span class="map-chip blue"><b>F</b> BL Contratual</span>
+      <span class="map-chip orange"><b>G</b> Realizado</span>
+      <span class="map-chip green"><b>H</b> Projetado</span>
+      <span class="map-chip amber"><b>I</b> Real semanal</span>
+      <span class="map-chip violet"><b>J</b> BL Plano de Ataque</span>
+    </div>
   </section>
 
   <section class="cards">
@@ -349,10 +374,10 @@ function applyViewLabels(){
   }
 
   if($('legendNote'))$('legendNote').textContent=IS_RUNDOWN
-    ?'Leitura fiel da aba 20: A=semana, C=atividade, F=BL Contratual, G=Realizado, H=Projetado, I=real semanal e J=BL Plano de Ataque. A coluna K não é usada.'
+    ?'Leitura da aba 20: A=semana, C=atividade, F=BL Contratual, G=Realizado, H=Projetado, I=real semanal e J=BL Plano de Ataque.'
     :'Na Curva Física, o Realizado é usado até a última semana real e o Projetado continua a trajetória física.';
   if($('status'))$('status').textContent=IS_RUNDOWN
-    ?'Carregue “031A Anexo XXXIA Rev”. Curva Rundown: aba 20_Planejamento-curvas_rundown • atividade=C • semanas=A • dados=F:J • coluna K ignorada.'
+    ?'Carregue “031A Anexo XXXIA Rev”. Curva Rundown: aba 20_Planejamento-curvas_rundown • atividade=C • semanas=A • dados=F:J.'
     :'Carregue “031A Anexo XXXIA Rev”. Fonte da Curva Física: aba 21_Planejamento-curvas_S_Física.';
 }
 
@@ -1139,7 +1164,7 @@ $('fileInput').addEventListener('change',async e=>{
     if(scope&&[...$('fLevel').options].some(o=>String(o.value)===String(scope)))$('fLevel').value=String(scope);
 
     setStatus(IS_RUNDOWN
-      ?'Pronto • '+activities.size+' atividades da coluna C • fonte: '+S20+' • A=semana • F:J=curvas • K ignorada.'
+      ?'Pronto • '+activities.size+' atividades da coluna C • fonte: '+S20+' • A=semana • F:J=curvas.'
       :'Pronto • '+activities.size+' IDs indexados • fonte única: '+S21+'.');
     render();
   }catch(err){
