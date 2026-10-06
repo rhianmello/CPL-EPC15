@@ -24,6 +24,7 @@
   const homeAvatar = document.getElementById('home-avatar');
   const historyToggle = document.getElementById('home-history-toggle');
   const historyList = document.getElementById('home-history-list');
+  const homeNavLinks = [...document.querySelectorAll('[data-home-nav]')];
   let historyLoaded = false;
   const selectDashboard = document.getElementById('select-excel-dashboard');
   const selectEmpty = document.getElementById('select-excel-empty');
@@ -370,6 +371,24 @@
 
   homeAvatar?.addEventListener('click', () => requestPortalAccess(() => {}));
 
+  function setActiveHomeNav(sectionId){
+    homeNavLinks.forEach(link=>link.classList.toggle('active',link.dataset.homeNav===sectionId));
+  }
+
+  function scrollHomeSection(sectionId){
+    const target=document.getElementById(sectionId);
+    if(!target)return;
+    target.scrollIntoView({behavior:'smooth',block:'start'});
+    setActiveHomeNav(sectionId);
+  }
+
+  async function openHomeHistoryFromNav(){
+    if(historyToggle?.getAttribute('aria-expanded')!=='true'){
+      await toggleHomeHistory();
+    }
+    scrollHomeSection('historico');
+  }
+
   async function toggleHomeHistory() {
     const expanded = historyToggle.getAttribute('aria-expanded') === 'true';
     if (expanded) {
@@ -425,6 +444,31 @@
     event.preventDefault();
     requestPortalAccess(toggleHomeHistory);
   });
+
+  homeNavLinks.forEach(link=>{
+    link.addEventListener('click',event=>{
+      event.preventDefault();
+      const sectionId=link.dataset.homeNav;
+      if(sectionId==='historico'){
+        requestPortalAccess(openHomeHistoryFromNav);
+        return;
+      }
+      scrollHomeSection(sectionId);
+    });
+  });
+
+  const homeSections=['topo','paineis','historico']
+    .map(id=>document.getElementById(id))
+    .filter(Boolean);
+  if('IntersectionObserver' in window && homeSections.length){
+    const navObserver=new IntersectionObserver(entries=>{
+      const visible=entries
+        .filter(entry=>entry.isIntersecting)
+        .sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];
+      if(visible?.target?.id)setActiveHomeNav(visible.target.id);
+    },{root:null,rootMargin:'-18% 0px -55% 0px',threshold:[0,.15,.35,.6]});
+    homeSections.forEach(section=>navObserver.observe(section));
+  }
   // Dentro do dashboard, publicação/edição continua com a autenticação própria de editor.
   selectDashboard?.addEventListener('click', () => input.click());
   selectEmpty?.addEventListener('click', () => input.click());
