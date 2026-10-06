@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>BI Curvas — V2.15</title>
+<title>BI Curvas — V2.16</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=20261006-rundown-db1"></script>
-<script src="js/cloud-sync.js?v=20261006-rundown-db1"></script>
+<script src="js/supabase-config.js?v=20261006-rundown-db2"></script>
+<script src="js/cloud-sync.js?v=20261006-rundown-db2"></script>
 <style>
 :root{--bg:#06101e;--card:#0b1728;--card2:#101f33;--text:#eef6ff;--muted:#8fa4bd;--line:rgba(148,163,184,.16);--blue:#3b82f6;--orange:#f59e0b;--green:#22c55e;--red:#ef4444;--dark:#071321;--cyan:#22d3ee;--violet:#8b5cf6}
 *{box-sizing:border-box}
@@ -402,12 +402,12 @@ function applyViewLabels(){
   const name=viewName();
   document.body.classList.toggle('mode-rundown',IS_RUNDOWN);
   document.body.classList.toggle('mode-curva-fisica',!IS_RUNDOWN);
-  document.title='BI '+name+' — V2.15';
+  document.title='BI '+name+' — V2.16';
 
   if($('rundownCloudControls'))$('rundownCloudControls').style.display=IS_RUNDOWN?'flex':'none';
   if($('loginTitle'))$('loginTitle').textContent='Entrar no BI '+name;
   if($('viewSidebarBrand'))$('viewSidebarBrand').innerHTML='<span>BI</span> '+(IS_RUNDOWN?'CURVA RUNDOWN':'CURVA FÍSICA');
-  if($('viewMainTitle'))$('viewMainTitle').textContent='BI '+name+' — V2.15';
+  if($('viewMainTitle'))$('viewMainTitle').textContent='BI '+name+' — V2.16';
   if($('viewMainSubtitle'))$('viewMainSubtitle').textContent=IS_RUNDOWN
     ?'Aba 20 • atividade pela coluna C • semanas e curvas A / F:J'
     :'Primavera • aba 21 • barras + linhas • leitura sob demanda';
@@ -1316,9 +1316,18 @@ function hydrateRundownDataset(dataset,snapshot,weekNo){
   setCloudBadge('BANCO • S'+weekNo+(snapshot?.version_no?' • V'+snapshot.version_no:''),'saved');
   updateCloudButtons();
 }
+function withTimeout(promise,ms,label='Operação'){
+  return Promise.race([
+    promise,
+    new Promise((_,reject)=>setTimeout(()=>reject(new Error(label+' demorou mais que '+Math.round(ms/1000)+'s.')),ms))
+  ]);
+}
 async function refreshRundownWeeks(preferred=null){
   if(!IS_RUNDOWN||!window.CloudSync?.ready?.())return [];
-  rundownWeeks=await window.CloudSync.listRundownWeeks();
+  if(typeof window.CloudSync.listRundownWeeks!=='function'){
+    throw new Error('Módulo de sincronização desatualizado. Recarregue a página.');
+  }
+  rundownWeeks=await withTimeout(window.CloudSync.listRundownWeeks(),10000,'Consulta das semanas');
   fillRundownWeekOptions(preferred);
   return rundownWeeks;
 }
@@ -1378,8 +1387,11 @@ async function initRundownCloud(){
     }
   }catch(error){
     console.error('Falha ao iniciar banco da Curva Rundown',error);
-    setCloudBadge('BANCO • INDISPONÍVEL','offline');
-    setStatus('Banco indisponível. Você ainda pode carregar o Excel localmente.');
+    const stale=String(error?.message||'').toLowerCase().includes('desatualizado');
+    setCloudBadge(stale?'BANCO • ATUALIZE A PÁGINA':'BANCO • INDISPONÍVEL','offline');
+    setStatus(stale
+      ?'O navegador está usando uma versão antiga do módulo do banco. Use Ctrl+F5 uma vez.'
+      :'Não foi possível carregar as semanas do banco. Você ainda pode carregar o Excel localmente.');
   }
 }
 function openRundownSaveModal(){
