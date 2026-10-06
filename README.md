@@ -112,3 +112,15 @@ O arquivo `rundown.html` contém o painel de rundown desenvolvido para leitura l
 O painel cruza as atividades pelo ID Primavera, exibe produção semanal e curvas de saldo restante, monta a Rundown consolidada, permite busca direta por ID e exportação dos gráficos em PNG/PDF.
 
 A navegação para este painel está disponível diretamente no `index.html`, tanto na tela inicial quanto no menu lateral.
+
+## Gestão de Frota & Equipamentos
+
+O card **Gestão de Frota & Equipamentos** e o item **08 • Gestão de Frota** abrem `frota.html` no mesmo BI. O módulo lê o Supabase automaticamente, organiza ativos por UUID e mantém PTRANs, inspeções, manutenção, documentos, movimentações e auditoria histórica. A planilha `Planilha1` é uma entrada de importação com comparação e revisão antes de publicar; novas cargas não removem ativos ausentes.
+
+A página começa em modo leitura. O lápis solicita a senha master já validada pelo banco e o nome do operador. A sessão de edição dura 15 minutos e sua autorização é validada em cada escrita. Senha e autorização não são persistidas no navegador. O nome do operador é declarado, pois o acesso atual usa senha compartilhada.
+
+As regras do semáforo estão em `js/frota-core.js`. Informações ausentes geram atenção: PTRAN pronto sem validade informada não comprova vigência. Uma renovação substitui o registro vigente para os indicadores e preserva o anterior na ficha e no histórico.
+
+Instalação, segurança, contrato das RPCs e testes: [supabase/FROTA.md](supabase/FROTA.md). A migration é aditiva e não altera tabelas, senhas ou funções dos dashboards existentes. A carga inicial exige revisão humana dos conflitos do Excel.
+
+A carga inicial de 35 registros fica pendente no banco: use **Revisar carga inicial**, libere a edição e confira todas as linhas antes de **Publicar atualização**. Até essa confirmação, os ativos oficiais permanecem vazios.
