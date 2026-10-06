@@ -274,7 +274,7 @@
 
   async function photoRequest(method, payload, formData) {
     if (!ready()) throw new Error('Supabase ainda não está configurado.');
-    const publicList=Boolean(payload?.action==='list');
+    const publicList=Boolean(payload?.action==='list' || payload?.action==='history');
     const masterFromPayload=String(payload?.master_password || formData?.get?.('master_password') || '');
     if (!hasCredentials() && !publicList && !masterFromPayload) {
       throw new Error('Entre como editor ou use a senha master para alterar fotos.');
@@ -306,6 +306,16 @@
     const data = await photoRequest('POST', {
       action:'list',
       week_no:Number(weekNo),
+      unit_key:String(unitKey || ''),
+      phase_key:String(phaseKey || ''),
+      grouping_key:String(groupingKey || '')
+    });
+    return Array.isArray(data?.photos) ? data.photos : [];
+  }
+
+  async function listCoordinationPhotoHistory(unitKey='', phaseKey='', groupingKey='') {
+    const data = await photoRequest('POST', {
+      action:'history',
       unit_key:String(unitKey || ''),
       phase_key:String(phaseKey || ''),
       grouping_key:String(groupingKey || '')
@@ -383,6 +393,7 @@
     loadCoordinationLayout,
     saveCoordinationLayout,
     listCoordinationPhotos,
+    listCoordinationPhotoHistory,
     uploadCoordinationPhoto,
     replaceCoordinationPhoto,
     deleteCoordinationPhoto,
