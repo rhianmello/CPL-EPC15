@@ -2790,3 +2790,14 @@
 .pb-event-group .pb-highlight-event-badge{
   display:none!important;
 }
+
+
+/* ===== Escopo da contribuição para o desvio (06/10/2026) ===== */
+.pb-delay-contribution-scope{
+  display:block;
+  margin-top:4px;
+  color:#7f98b1;
+  font-size:.52rem;
+  font-weight:750;
+  letter-spacing:.02em;
+}
