@@ -137,7 +137,9 @@
         .sort((a,b)=>Number(b.week_no)-Number(a.week_no));
       select.innerHTML='<option value="">'+escapeHtml(currentLabel)+'</option>'+
         available.map(w=>{
-          const db=w.excel_data_base ? ' • base '+date(new Date(String(w.excel_data_base)+'T00:00:00Z')) : '';
+          const rawBase=String(w.excel_data_base || '').trim();
+          const parsedBase=rawBase ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(rawBase) ? rawBase+'T00:00:00Z' : rawBase) : null;
+          const db=parsedBase && !Number.isNaN(parsedBase.valueOf()) ? ' • base '+date(parsedBase) : '';
           return '<option value="'+Number(w.week_no)+'">Semana '+Number(w.week_no)+db+'</option>';
         }).join('');
       select.value=executiveWeek ? String(executiveWeek) : '';
