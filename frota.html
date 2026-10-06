@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <title>Gestão de Frota &amp; Equipamentos • CPL EPC-15</title>
+  <link rel="stylesheet" href="css/style.css?v=20261006-executive-filters1">
+  <link rel="stylesheet" href="css/frota.css?v=20261006-fleet1">
+</head>
+<body class="fleet-page">
+  <a class="fleet-skip" href="#fleet-main">Ir para o conteúdo</a>
+  <div class="app-shell fleet-shell">
+    <aside class="sidebar fleet-sidebar" aria-label="Navegação principal">
+      <a class="sidebar-brand fleet-brand" href="index.html"><img src="assets/logo-cpl-epc15.png" alt="CPL Construtora EPC-15"><span><b>BI</b> EPC-15</span></a>
+      <nav class="main-nav">
+        <p class="nav-group-label">PAINÉIS CPL</p>
+        <a class="nav-item" href="index.html" title="Abrir portal CPL"><span>01</span> Painel Gerencial</a>
+        <a class="nav-item" href="index.html" title="Abrir portal CPL"><span>02</span> Análises</a>
+        <a class="nav-item" href="index.html" title="Abrir portal CPL"><span>03</span> Apresentação Gerencial</a>
+        <a class="nav-item" href="index.html" title="Abrir portal CPL"><span>04</span> Apresentação de Coordenação</a>
+        <a class="nav-item" href="rundown.html"><span>05</span> BI Rundown</a>
+        <a class="nav-item" href="index.html" title="Abrir portal CPL"><span>06</span> Reunião de Coordenação</a>
+        <a class="nav-item" href="index.html" title="Abrir portal CPL"><span>07</span> Tempo Fotográfico</a>
+        <a class="nav-item active" href="frota.html" aria-current="page"><span>08</span> Gestão de Frota</a>
+        <p class="nav-group-label">GESTÃO DE FROTA</p>
+        <button class="fleet-subnav active" data-view="dashboard"><i data-lucide="layout-dashboard"></i> Visão geral</button>
+        <button class="fleet-subnav" data-view="alerts"><i data-lucide="bell"></i> Central de Alertas <span id="nav-alert-count" class="fleet-nav-count">—</span></button>
+        <button class="fleet-subnav" data-view="quality"><i data-lucide="shield-check"></i> Qualidade da Base <span id="nav-quality-count" class="fleet-nav-count">—</span></button>
+        <button class="fleet-subnav" data-view="history"><i data-lucide="history"></i> Histórico da Frota</button>
+      </nav>
+      <div class="sidebar-footer">
+        <a class="fleet-back" href="index.html"><i data-lucide="arrow-left"></i> Voltar</a>
+        <span>CPL • EPC-15</span>
+        <span>Frota, veículos e equipamentos</span>
+      </div>
+    </aside>
+
+    <main class="fleet-main" id="fleet-main">
+      <header class="fleet-topbar">
+        <div class="fleet-breadcrumb">CPL • EPC-15 <span>/</span> Operação <span>/</span> <strong>Frota &amp; equipamentos</strong></div>
+        <div class="fleet-top-actions">
+          <span class="fleet-mode" id="edit-mode"><i data-lucide="lock-keyhole"></i> Somente leitura</span>
+          <button class="fleet-icon-button" id="refresh-button" title="Atualizar dados do banco" aria-label="Atualizar dados do banco"><i data-lucide="refresh-cw"></i></button>
+          <button class="fleet-icon-button fleet-edit-button" id="unlock-button" title="Liberar edição" aria-label="Liberar edição"><i data-lucide="pencil"></i></button>
+        </div>
+      </header>
+
+      <div class="fleet-content">
+        <section class="fleet-hero">
+          <div class="fleet-hero-icon" aria-hidden="true"><i data-lucide="truck"></i></div>
+          <div class="fleet-hero-copy"><p class="eyebrow">GESTÃO OPERACIONAL • CPL EPC-15</p><h1>GESTÃO DE FROTA <span>&amp; EQUIPAMENTOS</span></h1><p>PTRAN, inspeções, manutenção e documentação em uma visão integrada.</p></div>
+          <div class="fleet-data-source"><span id="connection-status" class="fleet-connection" data-status="loading"><span class="fleet-dot"></span> Consultando banco</span><small>Fonte: Banco de Dados</small><small id="last-update">Última atualização: —</small></div>
+        </section>
+
+        <div id="page-notice" class="fleet-notice hidden" role="status"></div>
+        <div class="fleet-tabbar" role="tablist" aria-label="Áreas da gestão de frota">
+          <button class="active" role="tab" aria-selected="true" aria-controls="view-dashboard" id="tab-dashboard" data-view="dashboard">Visão geral</button>
+          <button role="tab" aria-selected="false" aria-controls="view-alerts" id="tab-alerts" data-view="alerts">Alertas <span id="tab-alert-count">—</span></button>
+          <button role="tab" aria-selected="false" aria-controls="view-quality" id="tab-quality" data-view="quality">Qualidade da Base <span id="tab-quality-count">—</span></button>
+          <button role="tab" aria-selected="false" aria-controls="view-history" id="tab-history" data-view="history">Histórico da Frota</button>
+        </div>
+
+        <section id="view-dashboard" class="fleet-view" role="tabpanel" aria-labelledby="tab-dashboard">
+          <section class="fleet-filterbar" aria-label="Filtros da frota">
+            <div class="fleet-filter-top"><label class="fleet-search"><i data-lucide="search"></i><input id="fleet-search" data-filter="search" type="search" placeholder="Buscar placa, equipamento, modelo, PTRAN ou ISC..." aria-label="Busca global da frota"></label><button class="fleet-button" id="filter-toggle" aria-expanded="false" aria-controls="fleet-advanced-filters"><i data-lucide="sliders-horizontal"></i> Filtros <span id="active-filter-count" class="fleet-chip">0</span></button><button class="fleet-link-button" id="clear-filters">Limpar</button><button class="fleet-button" id="import-button"><i data-lucide="file-spreadsheet"></i> Importar Excel</button><button class="fleet-button primary hidden" id="pending-import-button"><i data-lucide="clipboard-list"></i> Revisar carga inicial</button><button class="fleet-button primary edit-only hidden" id="new-asset-button"><i data-lucide="plus"></i> Cadastrar ativo</button></div>
+            <div class="fleet-quick-filters"><label>Situação<select data-filter="situation"><option value="">Todas as situações</option><option value="green">Regular</option><option value="yellow">Atenção</option><option value="red">Crítico</option><option value="gray">Inativo</option></select></label><label>Tipo<select data-filter="tipo"><option value="">Todos os tipos</option></select></label><label>Status PTRAN<select data-filter="ptran_status"><option value="">Todos os status</option></select></label><label>Responsável CPL<select data-filter="responsavel_cpl"><option value="">Todos os responsáveis</option></select></label><label class="fleet-check"><input type="checkbox" data-filter="only_pending"> Somente pendências</label></div>
+            <div id="fleet-advanced-filters" class="fleet-advanced-filters hidden"><label>Categoria<select data-filter="categoria"><option value="">Todas as categorias</option></select></label><label>Placa / identificador<input data-filter="placa_identificador" placeholder="Placa, serial ou patrimônio"></label><label>Modelo<select data-filter="modelo"><option value="">Todos os modelos</option></select></label><label>Gerência<select data-filter="gerencia"><option value="">Todas as gerências</option></select></label><label>Empresa<select data-filter="empresa"><option value="">Todas as empresas</option></select></label><label>Status operacional<select data-filter="status_operacional"><option value="">Todos os status</option></select></label><label>Vencimentos<select data-filter="expiry"><option value="">Todos os prazos</option><option value="expired">Vencidos</option><option value="7">Até 7 dias</option><option value="15">Até 15 dias</option><option value="30">Até 30 dias</option><option value="60">Até 60 dias</option><option value="90">Até 90 dias</option></select></label></div>
+          </section>
+
+          <div class="fleet-section-label"><span>INDICADORES DA FROTA</span><small id="filter-result">Aguardando dados do banco</small></div>
+          <div id="fleet-kpis" class="fleet-kpis" aria-live="polite"></div>
+
+          <div class="fleet-chart-grid">
+            <section class="fleet-panel"><header><div><p class="eyebrow">PRONTIDÃO OPERACIONAL</p><h2>Situação da Frota</h2></div><span class="fleet-chip">Semáforo</span></header><div class="fleet-donut-layout"><div class="fleet-chart-shell"><canvas id="situation-chart" aria-label="Situação da frota" role="img"></canvas><div id="situation-empty" class="fleet-chart-empty">Aguardando dados do banco</div><div id="situation-center" class="fleet-donut-center"><strong>—</strong><span>ativos</span></div></div><div id="situation-legend" class="fleet-chart-legend"></div></div><footer>Crítico prevalece sobre atenção. Ativos fora do contrato ficam inativos.</footer></section>
+            <section class="fleet-panel"><header><div><p class="eyebrow">AUTORIZAÇÃO &amp; CONTROLE</p><h2>PTRAN &amp; Documentação</h2></div><i class="fleet-panel-icon" data-lucide="file-check-2"></i></header><div class="fleet-chart-shell fleet-bar-shell"><canvas id="ptran-chart" aria-label="Distribuição de status PTRAN" role="img"></canvas><div id="ptran-empty" class="fleet-chart-empty">Nenhum PTRAN registrado</div></div><div id="document-overview" class="fleet-mini-strip"></div></section>
+            <section class="fleet-panel"><header><div><p class="eyebrow">COMPOSIÇÃO DA BASE</p><h2>Frota por categoria</h2></div><i class="fleet-panel-icon" data-lucide="layers-3"></i></header><div class="fleet-chart-shell fleet-bar-shell"><canvas id="category-chart" aria-label="Frota por categoria" role="img"></canvas><div id="category-empty" class="fleet-chart-empty">Nenhuma categoria disponível</div></div></section>
+            <section class="fleet-panel"><header><div><p class="eyebrow">PLANEJAMENTO PREVENTIVO</p><h2>Vencimentos próximos</h2></div><span class="fleet-chip">90 dias</span></header><div class="fleet-chart-shell fleet-bar-shell"><canvas id="expiry-chart" aria-label="Vencimentos em até 90 dias" role="img"></canvas><div id="expiry-empty" class="fleet-chart-empty">Nenhum prazo cadastrado nos próximos 90 dias</div></div><footer>Faixas de 0–30, 31–60 e 61–90 dias • PTRAN, inspeções, revisões e documentos.</footer></section>
+            <section id="maintenance-panel" class="fleet-panel hidden"><header><div><p class="eyebrow">HISTÓRICO DE EXECUÇÃO</p><h2>Manutenções por mês</h2></div><i class="fleet-panel-icon" data-lucide="wrench"></i></header><div class="fleet-chart-shell fleet-bar-shell"><canvas id="maintenance-chart" aria-label="Manutenções realizadas por mês" role="img"></canvas></div></section>
+            <section id="availability-panel" class="fleet-panel hidden"><header><div><p class="eyebrow">FROTA NO CONTRATO</p><h2>Disponibilidade operacional</h2></div><i class="fleet-panel-icon" data-lucide="activity"></i></header><div id="availability-content" class="fleet-availability"></div></section>
+          </div>
+
+          <section class="fleet-panel fleet-alert-preview"><header><div class="fleet-inline-title"><i data-lucide="bell-ring"></i><h2>Alertas e vencimentos</h2><span id="alert-preview-count" class="fleet-chip">—</span></div><button class="fleet-link-button" data-view="alerts">Ver central de alertas <i data-lucide="arrow-up-right"></i></button></header><div id="alert-preview" class="fleet-alert-preview-grid"></div></section>
+
+          <section class="fleet-panel fleet-table-panel"><header><div><p class="eyebrow">CADASTRO &amp; ACOMPANHAMENTO</p><h2>Frota cadastrada <span id="table-count" class="fleet-chip">—</span></h2></div><div class="fleet-table-actions"><button class="fleet-button" id="export-button"><i data-lucide="download"></i> Exportar visão</button></div></header><div id="fleet-table-empty" class="fleet-empty hidden"></div><div class="fleet-table-wrap" id="fleet-table-wrap"><table class="fleet-table"><thead><tr><th scope="col"><span class="fleet-sr-only">Semáforo</span></th><th scope="col">Identificação / modelo</th><th scope="col">Categoria</th><th scope="col">PTRAN / ISC</th><th scope="col">Status PTRAN</th><th scope="col">Responsável CPL</th><th scope="col">Inspeção</th><th scope="col">Próxima revisão</th><th scope="col">Situação</th><th scope="col">Atualização</th><th scope="col">Ações</th></tr></thead><tbody id="fleet-table-body"></tbody></table></div><footer class="fleet-table-footer"><span id="table-page-info">—</span><div><button class="fleet-icon-button" id="table-prev" aria-label="Página anterior"><i data-lucide="chevron-left"></i></button><button class="fleet-icon-button" id="table-next" aria-label="Próxima página"><i data-lucide="chevron-right"></i></button></div></footer></section>
+        </section>
+
+        <section id="view-alerts" class="fleet-view hidden" role="tabpanel" aria-labelledby="tab-alerts"><div class="fleet-view-heading"><div><p class="eyebrow">AÇÃO &amp; PREVENÇÃO</p><h2>Central de Alertas</h2><p>Todos os ativos da base. Abra um alerta para consultar a ficha e seu histórico.</p></div><span id="alerts-total" class="fleet-chip">—</span></div><div id="alerts-content" class="fleet-alert-groups"></div></section>
+        <section id="view-quality" class="fleet-view hidden" role="tabpanel" aria-labelledby="tab-quality"><div class="fleet-view-heading"><div><p class="eyebrow">CONFIABILIDADE DOS DADOS</p><h2>Qualidade da Base</h2><p>Inconsistências sinalizadas para conferência humana, sem correções automáticas.</p></div><span id="quality-total" class="fleet-chip">—</span></div><div id="quality-summary" class="fleet-quality-summary"></div><section class="fleet-panel"><header><h2>Itens para revisão</h2><label class="fleet-inline-filter">Tipo<select id="quality-type"><option value="">Todas as inconsistências</option></select></label></header><div id="quality-content"></div></section></section>
+        <section id="view-history" class="fleet-view hidden" role="tabpanel" aria-labelledby="tab-history"><div class="fleet-view-heading"><div><p class="eyebrow">RASTREABILIDADE &amp; AUDITORIA</p><h2>Histórico da Frota</h2><p>Entradas, saídas e alterações preservadas com data, responsável e origem.</p></div><i data-lucide="history"></i></div><form id="history-filters" class="fleet-history-filters fleet-panel"><label>De<input type="date" name="from"></label><label>Até<input type="date" name="to"></label><label>Ativo<select name="asset_id" id="history-asset"><option value="">Todos os ativos</option></select></label><label>Tipo de evento<select name="kind"><option value="">Todos os eventos</option><option value="assets">Cadastro do ativo</option><option value="ptrans">PTRAN</option><option value="inspections">Inspeção</option><option value="maintenance">Manutenção</option><option value="documents">Documento</option><option value="movements">Movimentação</option></select></label><label>Responsável<input name="responsavel" placeholder="Nome do responsável"></label><label>Usuário<input name="actor" placeholder="Autor da alteração"></label><label>Origem<select name="origem"><option value="">Todas as origens</option><option value="manual">Manual</option><option value="excel_import">Importação Excel</option><option value="system">Sistema</option></select></label><button class="fleet-button primary" type="submit"><i data-lucide="filter"></i> Consultar</button><button class="fleet-link-button" type="reset">Limpar</button></form><section class="fleet-panel"><header><h2>Eventos registrados</h2><span id="history-count" class="fleet-chip">—</span></header><div id="history-content" class="fleet-timeline"></div><footer class="fleet-center-footer"><button class="fleet-button hidden" id="history-more">Carregar mais eventos</button></footer></section></section>
+        <footer class="fleet-page-footer"><span>CPL CONSTRUTORA • EPC-15</span><span>Gestão de Frota &amp; Equipamentos</span></footer>
+      </div>
+    </main>
+  </div>
+
+  <div id="fleet-drawer-overlay" class="fleet-overlay hidden"><aside id="fleet-drawer" class="fleet-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" tabindex="-1"><div id="drawer-content"></div></aside></div>
+  <div id="fleet-modal-overlay" class="fleet-overlay fleet-modal-overlay hidden"><section id="fleet-modal" class="fleet-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1"><div id="modal-content"></div></section></div>
+  <div id="fleet-confirm-overlay" class="fleet-overlay fleet-confirm-overlay hidden"><section class="fleet-modal fleet-confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" tabindex="-1"><div id="confirm-content"></div></section></div>
+  <div id="fleet-toasts" class="fleet-toasts" aria-live="polite" aria-atomic="false"></div>
+  <input type="file" id="fleet-import-file" accept=".xlsx,.xlsm,.xlsb" hidden>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.min.js"></script>
+  <script src="vendor/xlsx-frota-0.20.3.min.js"></script>
+  <script src="vendor/chart.umd.min.js"></script>
+  <script src="vendor/lucide.min.js"></script>
+  <script src="js/supabase-config.js?v=20261006-fleet1"></script>
+  <script src="js/frota-api.js?v=20261006-fleet1"></script>
+  <script src="js/frota-core.js?v=20261006-fleet1"></script>
+  <script src="js/frota-import.js?v=20261006-fleet1"></script>
+  <script src="js/frota.js?v=20261006-fleet1"></script>
+</body>
+</html>
