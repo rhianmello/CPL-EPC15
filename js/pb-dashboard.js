@@ -1243,16 +1243,16 @@
     let rows=[];
 
     if(!sel.grouping){
-      // Em "Todos os Agrupamentos", usa exatamente a mesma base do Pareto:
-      // Nível 4 + AB negativo. Assim a explicação do atraso conversa 1:1 com o gráfico.
+      // Mesmo universo do Pareto (Nível 4 / AB negativo).
+      // O AB define relevância/ordenação; o número exibido é o desvio real (Real - Previsto).
       rows=paretoGroupingRows().map(row=>({
         label:String(row.grouping || rowLabel(row)).trim() || 'Agrupamento',
         impact:Math.abs(row.weightedVariance),
+        deviation:Number.isFinite(row.variance) ? row.variance : null,
         level:4
       }));
     }else{
-      // Ao escolher um Agrupamento, abre o motivo por dentro dele:
-      // etapas Nível 6 com AB negativo, respeitando todos os filtros hierárquicos atuais.
+      // Dentro de um agrupamento, detalha as etapas Nível 6.
       const fields=['unit','phase','subphase','grouping','component','step'];
       rows=allRows()
         .filter(row=>Number(row.level)===6)
@@ -1261,34 +1261,36 @@
         .map(row=>({
           label:String(row.step || row.component || row.criterion || rowLabel(row)).trim() || 'Etapa',
           impact:Math.abs(row.weightedVariance),
+          deviation:Number.isFinite(row.variance) ? row.variance : null,
           level:6
         }));
 
-      // Fallback: se o agrupamento não possuir AB nas etapas, mantém o próprio
-      // agrupamento (Nível 4) para não contradizer o Pareto.
       if(!rows.length){
         rows=paretoGroupingRows().map(row=>({
           label:String(row.grouping || rowLabel(row)).trim() || 'Agrupamento',
           impact:Math.abs(row.weightedVariance),
+          deviation:Number.isFinite(row.variance) ? row.variance : null,
           level:4
         }));
       }
     }
 
-    const grouped=new Map();
-    rows.forEach(item=>grouped.set(item.label,(grouped.get(item.label)||0)+item.impact));
-    let items=[...grouped.entries()]
-      .map(([label,impact])=>({label,impact}))
-      .sort((a,b)=>b.impact-a.impact);
+    // Se houver rótulos repetidos, mantém a ocorrência de maior contribuição ponderada.
+    const byLabel=new Map();
+    rows.forEach(item=>{
+      const current=byLabel.get(item.label);
+      if(!current || item.impact>current.impact) byLabel.set(item.label,item);
+    });
 
-    if(items.length>5){
-      const head=items.slice(0,4);
-      const others=items.slice(4).reduce((sum,item)=>sum+item.impact,0);
-      items=head.concat({label:'Outros',impact:others});
-    }
+    const items=[...byLabel.values()]
+      .sort((a,b)=>b.impact-a.impact)
+      .slice(0,5);
 
-    const total=items.reduce((sum,item)=>sum+item.impact,0);
-    return items.map(item=>({...item,share:total>0 ? item.impact/total*100 : 0}));
+    const maxImpact=Math.max(0,...items.map(item=>item.impact));
+    return items.map(item=>({
+      ...item,
+      barRatio:maxImpact>0 ? item.impact/maxImpact*100 : 0
+    }));
   }
 
   function renderDelayContribution() {
@@ -1307,8 +1309,8 @@
     const scopeEl=document.getElementById('pb-delay-contribution-scope');
     if(scopeEl){
       scopeEl.textContent=sel.grouping
-        ? 'Detalhamento do agrupamento: '+sel.grouping
-        : 'Consolidado por agrupamento • mesma base do Pareto';
+        ? 'Detalhamento: '+sel.grouping+' • número = desvio real (Real − Previsto)'
+        : 'Número = desvio real (Real − Previsto) • barras ordenadas pela contribuição ponderada (AB)';
     }
     if(totalEl) totalEl.textContent=rows.length+' '+(rows.length===1?'item':'itens');
 
@@ -1320,8 +1322,8 @@
     host.innerHTML=rows.map(row=>
       '<div class="pb-delay-contribution-row">'+
         '<span class="pb-delay-contribution-label" title="'+esc(row.label)+'">'+esc(row.label)+'</span>'+
-        '<div class="pb-delay-contribution-track"><i style="width:'+Math.max(2,Math.min(100,row.share))+'%"></i></div>'+
-        '<strong>'+pt0.format(row.share)+'%</strong>'+
+        '<div class="pb-delay-contribution-track" title="Magnitude da contribuição ponderada (AB)"><i style="width:'+Math.max(2,Math.min(100,row.barRatio))+'%"></i></div>'+
+        '<strong class="pb-delay-real-deviation '+deviationTone(row.deviation)+'" title="Desvio real = Real − Previsto">'+esc(pts(row.deviation))+'</strong>'+
       '</div>'
     ).join('');
   }
