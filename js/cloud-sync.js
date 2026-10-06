@@ -294,7 +294,7 @@
       p_master_password:String(masterPassword || ''),
       p_week_no:Number(weekNo),
       p_file_name:fileName || null,
-      p_file_size:Number.isFinite(Number(fileSize)) ? Number(fileSize) : null,
+      p_file_size:fileSize==null ? null : (Number.isFinite(Number(fileSize)) ? Number(fileSize) : null),
       p_schema_version:'epc15_rundown_week_v1',
       p_dataset:dataset
     };
