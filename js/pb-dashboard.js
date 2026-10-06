@@ -837,6 +837,10 @@
       if(field==='description') return {...item,description:clean};
       if(field==='title') return {...item,title:clean||item.title||'Novo destaque'};
       if(field==='subtitle') return {...item,subtitle:clean};
+      if(field==='event'){
+        const allowed=['Destaque','Pontos de Atenção','Próximas Ações'];
+        return {...item,event:allowed.includes(clean)?clean:'Destaque'};
+      }
       return item;
     });
     await persistManualHighlights(items);
@@ -1641,7 +1645,17 @@
       const subtitle=String(item.subtitle || '').trim();
       const copy=curationMode
         ? '<div class="pb-highlight-edit-stack">'+
-            '<label><span>'+esc(eventInfo.label.toUpperCase())+'</span><input class="pb-highlight-title-input" type="text" value="'+esc(description)+'" data-manual-highlight="'+esc(item.id)+'" data-manual-field="description" aria-label="Descrição do item"></label>'+
+            '<div class="pb-event-edit-row">'+
+              '<label class="pb-event-edit-label"><span>EVENTO</span>'+
+                '<select class="pb-event-edit-select" data-manual-event-select="'+esc(item.id)+'" aria-label="Tipo de evento">'+
+                  '<option value="Destaque"'+(eventInfo.key==='highlight'?' selected':'')+'>Destaque</option>'+
+                  '<option value="Pontos de Atenção"'+(eventInfo.key==='attention'?' selected':'')+'>Ponto de Atenção</option>'+
+                  '<option value="Próximas Ações"'+(eventInfo.key==='next-action'?' selected':'')+'>Próxima Ação</option>'+
+                '</select>'+
+              '</label>'+
+              '<button type="button" class="pb-event-edit-confirm" data-confirm-manual-event="'+esc(item.id)+'" title="Confirmar alteração do evento" aria-label="Confirmar alteração do evento">✓</button>'+
+            '</div>'+
+            '<label><span>DESCRIÇÃO</span><input class="pb-highlight-title-input" type="text" value="'+esc(description)+'" data-manual-highlight="'+esc(item.id)+'" data-manual-field="description" aria-label="Descrição do item"></label>'+
           '</div>'
         : '<div class="pb-highlight-display"><strong class="pb-highlight-title">'+esc(description)+'</strong>'+
             (subtitle?'<small class="pb-highlight-subtitle">'+esc(subtitle)+'</small>':'')+
@@ -2146,6 +2160,13 @@
         const titleInput=document.getElementById('pb-new-highlight-title');
         const subtitleInput=document.getElementById('pb-new-highlight-subtitle');
         addManualHighlight(titleInput?.value || '',subtitleInput?.value || '');
+        return;
+      }
+      const confirmEvent=event.target.closest('[data-confirm-manual-event]');
+      if(confirmEvent){
+        const id=String(confirmEvent.dataset.confirmManualEvent || '');
+        const select=document.querySelector('[data-manual-event-select="'+CSS.escape(id)+'"]');
+        if(select) updateManualHighlight(id,'event',select.value);
         return;
       }
       const deleteManual=event.target.closest('[data-delete-manual-highlight]');
