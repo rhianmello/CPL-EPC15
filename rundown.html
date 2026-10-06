@@ -640,11 +640,11 @@ function render(){
   const realPct=b.base>0?Math.min(100,b.realMax/b.base*100):null;
   const saldoQty=b.currentSaldoQty;
   const status=!b.hasReal?'Não iniciado':b.completed?'Concluído':'Em andamento';
-  const lastReal=b.lastR>=0?b.rows[b.lastR].label:'—';
+  const lastReal=b.lastR>=0&&b.rows[b.lastR]?b.rows[b.lastR].label:'—';
   const z=b.rows.find(x=>x.run===0);
 
   $('kTotal').textContent=fmt(b.total);
-  $('kUnid').textContent='unidades de trabalho • aba 21';
+  $('kUnid').textContent=IS_RUNDOWN?(b.unit+' • aba 20'):'unidades de trabalho • aba 21';
   $('kExec').textContent=realPct==null?'—':fmt(realPct,1)+'%';
   $('kSaldo').textContent=saldoQty!=null?fmt(saldoQty):'—';
   $('kStatus').textContent=status;
@@ -652,7 +652,9 @@ function render(){
   $('kFimRun').textContent=z?z.label:'—';
 
   $('title').textContent=b.name;
-  $('subtitle').textContent=`Nível ${b.level??'—'} • ID ${b.id} • fonte exclusiva: ${S21}`;
+  $('subtitle').textContent=IS_RUNDOWN
+    ?((b.disc||'Sem disciplina')+' • ID '+b.id+' • fonte exclusiva: '+S20+' • A=semana • F:J=curvas')
+    :('Nível '+(b.level??'—')+' • ID '+b.id+' • fonte exclusiva: '+S21);
   $('badge').textContent=b.id;
 
   drawMix(view,b.unit);
@@ -662,7 +664,21 @@ function render(){
   $('btnPng').disabled=false;
   $('btnPdf').disabled=false;
 }
-function clearRender(){current=null;['kTotal','kExec','kSaldo','kStatus','kUltReal','kFimRun'].forEach(x=>$(x).textContent='—');$('kUnid').textContent='—';$('title').textContent='Rundown';$('subtitle').textContent='Selecione uma atividade.';$('badge').textContent='SEM DADOS';$('emptyMix').style.display='grid';$('emptyRun').style.display='grid';$('emptySem').style.display='grid';$('tableWrap').style.display='none';if(chartMix){chartMix.destroy();chartMix=null}if(chartRun){chartRun.destroy();chartRun=null}if(chartSem){chartSem.destroy();chartSem=null}}
+function clearRender(){
+  current=null;
+  ['kTotal','kExec','kSaldo','kStatus','kUltReal','kFimRun'].forEach(x=>$(x).textContent='—');
+  $('kUnid').textContent='—';
+  $('title').textContent=viewName();
+  $('subtitle').textContent='Selecione uma atividade.';
+  $('badge').textContent='SEM DADOS';
+  $('emptyMix').style.display='grid';
+  $('emptyRun').style.display='grid';
+  $('emptySem').style.display='grid';
+  $('tableWrap').style.display='none';
+  if(chartMix){chartMix.destroy();chartMix=null}
+  if(chartRun){chartRun.destroy();chartRun=null}
+  if(chartSem){chartSem.destroy();chartSem=null}
+}
 function chartData(view,key){return view.map(x=>x.gap?null:x[key])}
 function labels(view){return view.map(x=>x.gap?'…':x.label)}
 function drawMix(view,unit){
@@ -671,7 +687,7 @@ function drawMix(view,unit){
   if(!view.length)return;
   chartMix=new Chart($('chartMix'),{
     data:{labels:labels(view),datasets:[
-      {type:'line',label:'Rundown atual',data:chartData(view,'run'),borderColor:'#c23b3b',backgroundColor:'#c23b3b',borderWidth:4,pointRadius:3,pointHoverRadius:5,spanGaps:false,tension:.18,yAxisID:'yPct',order:0},
+      {type:'line',label:curveSeriesLabel(),data:chartData(view,'run'),borderColor:'#c23b3b',backgroundColor:'#c23b3b',borderWidth:4,pointRadius:3,pointHoverRadius:5,spanGaps:false,tension:.18,yAxisID:'yPct',order:0},
       {type:'bar',label:'Previsto sem.',data:chartData(view,'prevSem'),backgroundColor:'rgba(11,94,168,.78)',borderColor:'#0b5ea8',borderWidth:1,yAxisID:'yQty',order:3},
       {type:'bar',label:'Realizado sem.',data:chartData(view,'realSem'),backgroundColor:'rgba(230,121,25,.86)',borderColor:'#e67919',borderWidth:1,yAxisID:'yQty',order:3},
       {type:'bar',label:'Projetado sem.',data:chartData(view,'projSem'),backgroundColor:'rgba(26,155,97,.72)',borderColor:'#1a9b61',borderWidth:1,yAxisID:'yQty',order:3},
@@ -679,14 +695,14 @@ function drawMix(view,unit){
       {type:'line',label:'Realizado restante',data:chartData(view,'real'),borderColor:'#e67919',backgroundColor:'#e67919',borderWidth:2.5,pointRadius:3,spanGaps:false,tension:.18,yAxisID:'yPct',order:1},
       {type:'line',label:'Projetado restante',data:chartData(view,'proj'),borderColor:'#1a9b61',backgroundColor:'#1a9b61',borderWidth:2,borderDash:[3,4],pointRadius:2,spanGaps:false,tension:.18,yAxisID:'yPct',order:1}
     ]},
-    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:10,generateLabels:(chart)=>{const order=['Rundown atual','Previsto sem.','Realizado sem.','Projetado sem.','Previsto restante','Realizado restante','Projetado restante'];return Chart.defaults.plugins.legend.labels.generateLabels(chart).sort((a,b)=>order.indexOf(a.text)-order.indexOf(b.text));}}},tooltip:{callbacks:{label:c=>{const v=c.parsed.y;if(v==null)return `${c.dataset.label}: —`;return c.dataset.yAxisID==='yPct'?`${c.dataset.label}: ${fmt(v,1)}%`:`${c.dataset.label}: ${fmt(v,1)} ${unit||'unid'}`}}}},scales:{yQty:{beginAtZero:true,position:'left',title:{display:true,text:`Quantidade semanal (${unit||'unid'})`},grid:{drawOnChartArea:true}},yPct:{min:0,max:100,position:'right',title:{display:true,text:'Saldo restante (%)'},ticks:{callback:v=>v+'%'},grid:{drawOnChartArea:false}},x:{title:{display:true,text:'Semana'}}}}
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:10,generateLabels:(chart)=>{const order=[curveSeriesLabel(),'Previsto sem.','Realizado sem.','Projetado sem.','Previsto restante','Realizado restante','Projetado restante'];return Chart.defaults.plugins.legend.labels.generateLabels(chart).sort((a,b)=>order.indexOf(a.text)-order.indexOf(b.text));}}},tooltip:{callbacks:{label:c=>{const v=c.parsed.y;if(v==null)return `${c.dataset.label}: —`;return c.dataset.yAxisID==='yPct'?`${c.dataset.label}: ${fmt(v,1)}%`:`${c.dataset.label}: ${fmt(v,1)} ${unit||'unid'}`}}}},scales:{yQty:{beginAtZero:true,position:'left',title:{display:true,text:`Quantidade semanal (${unit||'unid'})`},grid:{drawOnChartArea:true}},yPct:{min:0,max:100,position:'right',title:{display:true,text:'Saldo restante (%)'},ticks:{callback:v=>v+'%'},grid:{drawOnChartArea:false}},x:{title:{display:true,text:'Semana'}}}}
   });
 }
 function drawRun(view){$('emptyRun').style.display=view.length?'none':'grid';if(chartRun)chartRun.destroy();if(!view.length)return;chartRun=new Chart($('chartRun'),{type:'line',data:{labels:labels(view),datasets:[
   {label:'Previsto restante',data:chartData(view,'prev'),borderColor:'#0b5ea8',backgroundColor:'#0b5ea8',borderWidth:2,borderDash:[6,5],pointRadius:2,spanGaps:false,tension:.18},
   {label:'Realizado restante',data:chartData(view,'real'),borderColor:'#e67919',backgroundColor:'#e67919',borderWidth:2.5,pointRadius:3,spanGaps:false,tension:.18},
   {label:'Projetado restante',data:chartData(view,'proj'),borderColor:'#1a9b61',backgroundColor:'#1a9b61',borderWidth:2,borderDash:[3,4],pointRadius:2,spanGaps:false,tension:.18},
-  {label:'Rundown atual',data:chartData(view,'run'),borderColor:'#c23b3b',backgroundColor:'#c23b3b',borderWidth:4,pointRadius:3,pointHoverRadius:5,spanGaps:false,tension:.18}
+  {label:curveSeriesLabel(),data:chartData(view,'run'),borderColor:'#c23b3b',backgroundColor:'#c23b3b',borderWidth:4,pointRadius:3,pointHoverRadius:5,spanGaps:false,tension:.18}
 ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y==null?'—':fmt(c.parsed.y,1)+'%'}`}}},scales:{y:{min:0,max:100,title:{display:true,text:'Saldo restante (%)'},ticks:{callback:v=>v+'%'}},x:{title:{display:true,text:'Semana'}}}}})}
 function drawSem(view,unit){$('emptySem').style.display=view.length?'none':'grid';if(chartSem)chartSem.destroy();if(!view.length)return;chartSem=new Chart($('chartSem'),{type:'bar',data:{labels:labels(view),datasets:[
   {label:'Previsto sem.',data:chartData(view,'prevSem'),backgroundColor:'#0b5ea8'},
@@ -696,6 +712,8 @@ function drawSem(view,unit){$('emptySem').style.display=view.length?'none':'grid
 function drawTable(view,unit){$('tableWrap').style.display=view.length?'block':'none';$('tbody').innerHTML=view.map(x=>x.gap?'<tr class="sep"><td colspan="8">… semanas sem informação …</td></tr>':`<tr><td>${esc(x.label)}</td><td>${x.prev==null?'—':fmt(x.prev,1)+'%'}</td><td>${x.real==null?'—':fmt(x.real,1)+'%'}</td><td>${x.proj==null?'—':fmt(x.proj,1)+'%'}</td><td><b>${x.run==null?'—':fmt(x.run,1)+'%'}</b></td><td>${x.prevSem==null?'—':fmt(x.prevSem,1)}</td><td>${x.realSem==null?'—':fmt(x.realSem,1)}</td><td>${x.projSem==null?'—':fmt(x.projSem,1)}</td></tr>`).join('')}
 function setStatus(msg){$('status').textContent=msg;}
 function nextFrame(){return new Promise(resolve=>requestAnimationFrame(()=>resolve()));}
+applyViewLabels();
+clearRender();
 $('unitAllBtn')?.addEventListener('click',()=>setActiveUnit(''));
 document.addEventListener('click',e=>{const b=e.target.closest('[data-rundown-unit]');if(b)setActiveUnit(b.dataset.rundownUnit||'')});
 $('fileInput').addEventListener('change',async e=>{
@@ -703,30 +721,40 @@ $('fileInput').addEventListener('change',async e=>{
   try{
     setStatus('Abrindo arquivo…');await nextFrame();
     const buf=await f.arrayBuffer();
-    setStatus('Interpretando a aba 21 do Excel…');await nextFrame();
+    setStatus(IS_RUNDOWN?'Interpretando a aba 20 e as colunas A/F:J…':'Interpretando a aba 21 do Excel…');await nextFrame();
     const wb=XLSX.read(buf,{type:'array',cellDates:false,dense:true,cellFormula:false,cellHTML:false,cellNF:false,cellStyles:false,bookVBA:false});
-    const ws21=findSheet(wb,S21);
-    if(!ws21)throw new Error(`O arquivo precisa conter a aba “${S21}”. A aba 20 não é mais utilizada no Rundown.`);
 
-    await nextFrame();
-    activities=parseSheet21(ws21);fileName=f.name;activeUnit='';
-    if(!activities.size)throw new Error('Nenhuma atividade válida foi encontrada na aba 21.');
+    let source=null;
+    if(IS_RUNDOWN){
+      source=findSheetAny(wb,[S20,S20_ALIAS]);
+      if(!source)throw new Error('A Curva Rundown precisa da aba “'+S20+'” (também aceito “'+S20_ALIAS+'”). Abas disponíveis: '+wb.SheetNames.join(', '));
+      activities=parseSheet20(source.ws);
+    }else{
+      const ws21=findSheet(wb,S21);
+      if(!ws21)throw new Error('A Curva Física precisa da aba “'+S21+'”. Abas disponíveis: '+wb.SheetNames.join(', '));
+      source={ws:ws21,name:S21};
+      activities=parseSheet21(ws21);
+    }
 
-    setStatus(`Montando filtros — ${activities.size} IDs encontrados na aba 21…`);await nextFrame();
+    fileName=f.name;activeUnit='';
+    if(!activities.size)throw new Error('Nenhuma atividade válida foi encontrada em '+(source?.name||sourceSheetName())+'.');
+
+    setStatus('Montando filtros — '+activities.size+' IDs encontrados em '+(source?.name||sourceSheetName())+'…');await nextFrame();
     loadFilters();
 
     const first=[...activities.values()][0];
     $('fAtiv').value=first.name;
     $('fId').value=first.id;
     $('idSearch').value=first.id;
-    if(first.level!=null&&[...$('fLevel').options].some(o=>String(o.value)===String(first.level)))$('fLevel').value=String(first.level);
+    const scope=scopeLabelValue(first);
+    if(scope&&[...$('fLevel').options].some(o=>String(o.value)===String(scope)))$('fLevel').value=String(scope);
 
-    setStatus(`Pronto • ${activities.size} IDs indexados • fonte única: ${S21} • nenhuma leitura da aba 20.`);
+    setStatus('Pronto • '+activities.size+' IDs indexados • fonte única: '+(source?.name||sourceSheetName())+(IS_RUNDOWN?' • semana=A • curvas=F:G:H:I:J.':'.'));
     render();
   }catch(err){
     console.error(err);
     show(err.message||'Falha ao ler o arquivo.');
-    setStatus('Falha na leitura da aba 21.');
+    setStatus('Falha na leitura de '+sourceSheetName()+'.');
     clearRender();
   }
 });
