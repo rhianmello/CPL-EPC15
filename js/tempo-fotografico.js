@@ -1,12 +1,20 @@
 (function(){
   const $=id=>document.getElementById(id);
-  const state={weeks:[],photosByWeek:new Map(),selectedWeek:null,unit:'',phase:'',grouping:''};
+  const state={weeks:[],photos:[],selectedWeek:null};
 
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const norm=v=>String(v||'').trim().toLocaleLowerCase('pt-BR');
-  const dmy=v=>{const d=new Date(String(v||'')+'T12:00:00');return Number.isNaN(d.valueOf())?'—':d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});};
-  const weekByNo=no=>state.weeks.find(w=>Number(w.week_no)===Number(no));
-  const selectedFilters=()=>({unit:$('tf-unit-select').value,phase:$('tf-phase-select').value,grouping:$('tf-grouping-select').value});
+  const dmy=v=>{
+    if(!v) return '—';
+    const d=new Date(String(v)+'T12:00:00');
+    return Number.isNaN(d.valueOf())?'—':d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+  };
+  const weekByNo=no=>state.weeks.find(w=>Number(w.week_no)===Number(no)) || {week_no:Number(no),start_date:null,end_date:null,is_current:false};
+  const selectedFilters=()=>({
+    unit:$('tf-unit-select')?.value||'',
+    phase:$('tf-phase-select')?.value||'',
+    grouping:$('tf-grouping-select')?.value||''
+  });
 
   function photoMatches(photo,filters=selectedFilters()){
     if(filters.unit && norm(photo.unit_key||photo.unit_name)!==filters.unit) return false;
@@ -16,72 +24,111 @@
     return true;
   }
 
-  function windowWeeks(center=state.selectedWeek){
-    const current=Math.max(1,Number(center)||1);
-    const min=Math.max(1,current-4);
-    return state.weeks.filter(w=>Number(w.week_no)>=min && Number(w.week_no)<=current);
+  function allFilteredPhotos(){
+    return state.photos
+      .filter(photoMatches)
+      .map(p=>({...p,_week:Number(p.week_no),_weekInfo:weekByNo(p.week_no)}))
+      .filter(p=>Number.isFinite(p._week))
+      .sort((a,b)=>a._week-b._week || Number(a.sort_order||0)-Number(b.sort_order||0));
   }
 
-  async function ensureWeekPhotos(weekNo){
-    const n=Number(weekNo);
-    if(state.photosByWeek.has(n)) return state.photosByWeek.get(n);
-    try{
-      const photos=await window.CloudSync.listCoordinationPhotos(n,'','','');
-      state.photosByWeek.set(n,Array.isArray(photos)?photos:[]);
-    }catch(error){
-      console.error('Tempo Fotográfico: falha ao ler semana',n,error);
-      state.photosByWeek.set(n,[]);
-    }
-    return state.photosByWeek.get(n);
-  }
-
-  async function ensureWindow(){
-    await Promise.all(windowWeeks().map(w=>ensureWeekPhotos(w.week_no)));
-  }
-
-  function allWindowPhotos(){
-    return windowWeeks().flatMap(w=>(state.photosByWeek.get(Number(w.week_no))||[]));
+  function evidenceWeeks(){
+    const unique=[...new Set(allFilteredPhotos().map(p=>p._week))];
+    return unique.sort((a,b)=>a-b).map(weekByNo);
   }
 
   function setOptions(select,items,allLabel,valueOf,labelOf){
+    if(!select) return;
     const current=select.value;
-    select.innerHTML='<option value="">'+allLabel+'</option>'+items.map(item=>'<option value="'+esc(valueOf(item))+'">'+esc(labelOf(item))+'</option>').join('');
+    select.innerHTML='<option value="">'+esc(allLabel)+'</option>'+
+      items.map(item=>'<option value="'+esc(valueOf(item))+'">'+esc(labelOf(item))+'</option>').join('');
     if([...select.options].some(o=>o.value===current)) select.value=current;
   }
 
   function populateFilters(){
-    const photos=allWindowPhotos();
-    const units=[...new Map(photos.filter(p=>p.unit_name).map(p=>[norm(p.unit_key||p.unit_name),p.unit_name])).entries()].sort((a,b)=>a[1].localeCompare(b[1],'pt-BR'));
+    const photos=state.photos;
+    const units=[...new Map(
+      photos.filter(p=>p.unit_name)
+        .map(p=>[norm(p.unit_key||p.unit_name),p.unit_name])
+    ).entries()].sort((a,b)=>a[1].localeCompare(b[1],'pt-BR'));
     setOptions($('tf-unit-select'),units,'Todas as Entregas',x=>x[0],x=>x[1]);
 
-    const uf=$('tf-unit-select').value;
-    const phases=[...new Map(photos.filter(p=>(!uf||norm(p.unit_key||p.unit_name)===uf)&&p.phase_name).map(p=>[norm(p.phase_key||p.phase_name),p.phase_name])).entries()].sort((a,b)=>a[1].localeCompare(b[1],'pt-BR'));
+    const uf=$('tf-unit-select')?.value||'';
+    const phases=[...new Map(
+      photos.filter(p=>(!uf||norm(p.unit_key||p.unit_name)===uf)&&p.phase_name)
+        .map(p=>[norm(p.phase_key||p.phase_name),p.phase_name])
+    ).entries()].sort((a,b)=>a[1].localeCompare(b[1],'pt-BR'));
     setOptions($('tf-phase-select'),phases,'Todas as Fases',x=>x[0],x=>x[1]);
 
-    const pf=$('tf-phase-select').value;
-    const scoped=photos.filter(p=>(!uf||norm(p.unit_key||p.unit_name)===uf)&&(!pf||norm(p.phase_key||p.phase_name)===pf));
-    const groups=[...new Map(scoped.filter(p=>p.grouping_name).map(p=>[norm(p.grouping_key||p.grouping_name),p.grouping_name])).entries()].sort((a,b)=>a[1].localeCompare(b[1],'pt-BR'));
+    const pf=$('tf-phase-select')?.value||'';
+    const scoped=photos.filter(p=>
+      (!uf||norm(p.unit_key||p.unit_name)===uf) &&
+      (!pf||norm(p.phase_key||p.phase_name)===pf)
+    );
+    const groups=[...new Map(
+      scoped.filter(p=>p.grouping_name)
+        .map(p=>[norm(p.grouping_key||p.grouping_name),p.grouping_name])
+    ).entries()].sort((a,b)=>a[1].localeCompare(b[1],'pt-BR'));
     const hasLegacy=scoped.some(p=>!p.grouping_name);
-    $('tf-grouping-select').innerHTML='<option value="">Todos os Agrupamentos</option>'+
-      groups.map(x=>'<option value="'+esc(x[0])+'">'+esc(x[1])+'</option>').join('')+
-      (hasLegacy?'<option value="__none__">Sem agrupamento (fotos antigas)</option>':'');
+    const select=$('tf-grouping-select');
+    if(select){
+      const current=select.value;
+      select.innerHTML='<option value="">Todos os Agrupamentos</option>'+
+        groups.map(x=>'<option value="'+esc(x[0])+'">'+esc(x[1])+'</option>').join('')+
+        (hasLegacy?'<option value="__none__">Sem agrupamento (fotos antigas)</option>':'');
+      if([...select.options].some(o=>o.value===current)) select.value=current;
+    }
+  }
+
+  function syncWeekChoices(){
+    const weeks=evidenceWeeks();
+    const select=$('tf-week-select');
+    if(!select) return;
+
+    const selected=Number.isFinite(Number(state.selectedWeek)) && state.selectedWeek!==null
+      ? Number(state.selectedWeek)
+      : null;
+    const available=new Set(weeks.map(w=>Number(w.week_no)));
+    if(selected!==null && !available.has(selected)) state.selectedWeek=null;
+
+    select.innerHTML=
+      '<option value="">Todas as semanas com fotos ('+weeks.length+')</option>'+
+      weeks.map(w=>
+        '<option value="'+Number(w.week_no)+'">S-'+Number(w.week_no)+
+        (w.start_date?' • '+esc(dmy(w.start_date))+(w.end_date?'–'+esc(dmy(w.end_date)):''):'')+
+        (w.is_current?' • ATUAL':'')+
+        '</option>'
+      ).join('');
+    select.value=state.selectedWeek===null?'':String(state.selectedWeek);
   }
 
   function renderTimeline(){
-    const filters=selectedFilters();
-    $('tf-timeline').innerHTML=windowWeeks().map(w=>{
-      const no=Number(w.week_no);
-      const has=(state.photosByWeek.get(no)||[]).some(p=>photoMatches(p,filters));
-      return '<button class="tf-week-node '+(has?'has-photo ':'')+(no===Number(state.selectedWeek)?'selected':'')+'" data-week="'+no+'" type="button">'+
-        (has?'<i class="dot"></i>':'')+
-        '<span><strong>S-'+no+'</strong><small>'+esc(dmy(w.start_date))+'</small></span>'+
-      '</button>';
-    }).join('');
-    $('tf-timeline').querySelectorAll('[data-week]').forEach(btn=>btn.addEventListener('click',async()=>{
-      state.selectedWeek=Number(btn.dataset.week);
-      $('tf-week-select').value=String(state.selectedWeek);
-      await ensureWindow();
-      populateFilters(); renderAll();
+    const host=$('tf-timeline');
+    if(!host) return;
+    const weeks=evidenceWeeks();
+
+    if(!weeks.length){
+      host.innerHTML='<div class="tf-timeline-empty">Nenhuma semana com registro fotográfico nesta seleção.</div>';
+      return;
+    }
+
+    host.innerHTML=
+      '<button class="tf-week-node tf-week-node-all '+(state.selectedWeek===null?'selected':'')+'" data-week="" type="button">'+
+        '<span><strong>TODAS</strong><small>'+weeks.length+' semana'+(weeks.length===1?'':'s')+'</small></span>'+
+      '</button>'+
+      weeks.map(w=>{
+        const no=Number(w.week_no);
+        return '<button class="tf-week-node has-photo '+(no===Number(state.selectedWeek)?'selected':'')+'" data-week="'+no+'" type="button">'+
+          '<i class="dot"></i>'+
+          '<span><strong>S-'+no+'</strong><small>'+esc(w.start_date?dmy(w.start_date):'com fotos')+'</small></span>'+
+        '</button>';
+      }).join('');
+
+    host.querySelectorAll('[data-week]').forEach(btn=>btn.addEventListener('click',()=>{
+      const raw=btn.dataset.week;
+      state.selectedWeek=raw===''?null:Number(raw);
+      syncWeekChoices();
+      renderAll();
     }));
   }
 
@@ -89,29 +136,68 @@
     return [photo.phase_name,photo.grouping_name].filter(Boolean).join(' • ');
   }
 
+  function photoCard(photo){
+    return '<figure class="tf-photo">'+
+      '<img src="'+esc(photo.signed_url||'')+'" alt="Registro fotográfico">'+
+      '<figcaption>'+
+        '<strong>'+esc(photo.unit_name||'Entrega não identificada')+'</strong>'+
+        '<small>'+esc(photoContext(photo)||'Registro fotográfico')+'</small>'+
+        (photo.caption?'<p>'+esc(photo.caption)+'</p>':'')+
+      '</figcaption>'+
+    '</figure>';
+  }
+
   function renderGallery(){
-    const photos=(state.photosByWeek.get(Number(state.selectedWeek))||[]).filter(p=>photoMatches(p));
     const host=$('tf-gallery'),empty=$('tf-gallery-empty');
-    if(!photos.length){host.innerHTML='';empty.classList.remove('hidden');return;}
+    if(!host||!empty) return;
+
+    let photos=allFilteredPhotos();
+    if(state.selectedWeek!==null){
+      photos=photos.filter(p=>p._week===Number(state.selectedWeek));
+    }
+
+    if(!photos.length){
+      host.innerHTML='';
+      empty.classList.remove('hidden');
+      return;
+    }
+
     empty.classList.add('hidden');
-    host.innerHTML=photos.slice(0,9).map(photo=>
-      '<figure class="tf-photo"><img src="'+esc(photo.signed_url||'')+'" alt="Registro fotográfico">'+
-      '<figcaption><strong>'+esc(photo.unit_name||'Entrega')+'</strong>'+
-      '<small>'+esc(photoContext(photo)||'Registro da semana')+'</small>'+
-      (photo.caption?'<p>'+esc(photo.caption)+'</p>':'')+
-      '</figcaption></figure>'
-    ).join('');
+    const grouped=new Map();
+    photos.forEach(photo=>{
+      if(!grouped.has(photo._week)) grouped.set(photo._week,[]);
+      grouped.get(photo._week).push(photo);
+    });
+
+    const weekNos=[...grouped.keys()].sort((a,b)=>b-a);
+    host.innerHTML=weekNos.map(no=>{
+      const list=grouped.get(no)||[];
+      const w=weekByNo(no);
+      const dateLabel=w.start_date
+        ? dmy(w.start_date)+(w.end_date?' a '+dmy(w.end_date):'')
+        : 'registro histórico';
+      return '<section class="tf-gallery-week">'+
+        '<header class="tf-gallery-week-head">'+
+          '<div><strong>S-'+no+'</strong><span>'+esc(dateLabel)+'</span></div>'+
+          '<b>'+list.length+' foto'+(list.length===1?'':'s')+'</b>'+
+        '</header>'+
+        '<div class="tf-gallery-week-grid">'+list.map(photoCard).join('')+'</div>'+
+      '</section>';
+    }).join('');
   }
 
   function filteredHistoryPhotos(){
-    return windowWeeks().flatMap(w=>(state.photosByWeek.get(Number(w.week_no))||[]).filter(photoMatches).map(p=>({...p,_week:Number(w.week_no),_weekInfo:w})))
-      .sort((a,b)=>a._week-b._week || Number(a.sort_order||0)-Number(b.sort_order||0));
+    return allFilteredPhotos();
   }
 
   function renderCompare(){
     const photos=filteredHistoryPhotos();
     const host=$('tf-compare');
-    if(!photos.length){host.innerHTML='<div class="tf-empty">Ainda não há fotos suficientes para comparação nesta seleção.</div>';return;}
+    if(!host) return;
+    if(!photos.length){
+      host.innerHTML='<div class="tf-empty">Ainda não há fotos suficientes para comparação nesta seleção.</div>';
+      return;
+    }
     const first=photos[0],last=photos[photos.length-1];
     const card=(p,label)=>'<div class="tf-compare-card"><header><span>'+label+' • S-'+p._week+'</span></header>'+
       '<img src="'+esc(p.signed_url||'')+'" alt="'+label+'">'+
@@ -125,7 +211,10 @@
     const groups=new Set(photos.map(p=>p.grouping_key||p.grouping_name).filter(Boolean));
     const weeks=new Set(photos.map(p=>p._week));
     const latest=photos.at(-1);
-    $('tf-memory').innerHTML=
+    const host=$('tf-memory');
+    if(!host) return;
+
+    host.innerHTML=
       '<div class="tf-stat">'+
         '<div><b>'+photos.length+'</b>registros fotográficos</div>'+
         '<div><b>'+weeks.size+'</b>semanas com evidência</div>'+
@@ -133,44 +222,79 @@
         '<div><b>'+groups.size+'</b>agrupamentos identificados</div>'+
       '</div>'+
       (latest?'<p><strong>Último registro:</strong> S-'+latest._week+' • '+esc(latest.unit_name||'Entrega')+(latest.phase_name?' • '+esc(latest.phase_name):'')+'</p>':'')+
-      '<p>A linha do tempo preserva as fotos por <strong>semana, entrega e fase</strong>. Fotos novas também passam a guardar o <strong>agrupamento selecionado</strong> no momento da importação.</p>'+
+      '<p>Ao filtrar uma entrega ou fase, a galeria mostra <strong>todo o histórico disponível</strong>. A linha do tempo exibe somente as semanas que possuem fotos para a seleção atual.</p>'+
       (photos.some(p=>!p.grouping_name)?'<p><strong>Observação:</strong> existem fotos antigas salvas antes do vínculo por agrupamento; elas continuam disponíveis em “Todos os Agrupamentos”.</p>':'');
   }
 
-  function renderAll(){renderTimeline();renderGallery();renderCompare();renderMemory();}
+  function renderAll(){
+    syncWeekChoices();
+    renderTimeline();
+    renderGallery();
+    renderCompare();
+    renderMemory();
+  }
 
-  async function changeWeek(){
-    state.selectedWeek=Number($('tf-week-select').value);
-    await ensureWindow();
-    populateFilters();
+  function resetWeekAndRender(){
+    state.selectedWeek=null;
+    syncWeekChoices();
     renderAll();
+  }
+
+  function bindFilters(){
+    $('tf-week-select')?.addEventListener('change',()=>{
+      const raw=$('tf-week-select').value;
+      state.selectedWeek=raw===''?null:Number(raw);
+      renderAll();
+    });
+
+    $('tf-unit-select')?.addEventListener('change',()=>{
+      if($('tf-phase-select')) $('tf-phase-select').value='';
+      if($('tf-grouping-select')) $('tf-grouping-select').value='';
+      populateFilters();
+      resetWeekAndRender();
+    });
+
+    $('tf-phase-select')?.addEventListener('change',()=>{
+      if($('tf-grouping-select')) $('tf-grouping-select').value='';
+      populateFilters();
+      resetWeekAndRender();
+    });
+
+    $('tf-grouping-select')?.addEventListener('change',resetWeekAndRender);
+    $('tf-compare-button')?.addEventListener('click',()=>$('tf-compare-panel')?.scrollIntoView({behavior:'smooth',block:'start'}));
+  }
+
+  async function loadHistory(){
+    if(window.CloudSync.listCoordinationPhotoHistory){
+      return window.CloudSync.listCoordinationPhotoHistory();
+    }
+    const rows=await Promise.all(state.weeks.map(async w=>{
+      try{return await window.CloudSync.listCoordinationPhotos(Number(w.week_no),'','','');}
+      catch(_){return [];}
+    }));
+    return rows.flat();
   }
 
   async function init(){
     try{
       if(!window.CloudSync?.ready?.()) throw new Error('Supabase indisponível.');
+
       const weeks=await window.CloudSync.listCoordinationWeeks();
-      state.weeks=(Array.isArray(weeks)?weeks:[]).filter(w=>Number(w.week_no)>0);
-      const current=state.weeks.find(w=>w.is_current) || state.weeks.filter(w=>w.has_snapshot).at(-1) || state.weeks.at(-1);
-      state.selectedWeek=Number(current?.week_no||1);
+      state.weeks=(Array.isArray(weeks)?weeks:[])
+        .filter(w=>Number(w.week_no)>0)
+        .sort((a,b)=>Number(a.week_no)-Number(b.week_no));
 
-      $('tf-week-select').innerHTML=state.weeks.filter(w=>Number(w.week_no)<=Number(current?.week_no||state.selectedWeek)).map(w=>
-        '<option value="'+Number(w.week_no)+'">S-'+Number(w.week_no)+' • '+esc(dmy(w.start_date))+'–'+esc(dmy(w.end_date))+(w.is_current?' • ATUAL':'')+'</option>'
-      ).join('');
-      $('tf-week-select').value=String(state.selectedWeek);
+      const history=await loadHistory();
+      state.photos=Array.isArray(history)?history:[];
+      state.selectedWeek=null;
 
-      await ensureWindow();
       populateFilters();
+      bindFilters();
       renderAll();
-
-      $('tf-week-select').addEventListener('change',changeWeek);
-      $('tf-unit-select').addEventListener('change',()=>{populateFilters();renderAll();});
-      $('tf-phase-select').addEventListener('change',()=>{populateFilters();renderAll();});
-      $('tf-grouping-select').addEventListener('change',renderAll);
-      $('tf-compare-button').addEventListener('click',()=>$('tf-compare-panel').scrollIntoView({behavior:'smooth',block:'start'}));
     }catch(error){
       console.error(error);
-      $('tf-memory').innerHTML='<div class="tf-empty">Não foi possível carregar o Tempo Fotográfico. '+esc(error.message||error)+'</div>';
+      const host=$('tf-memory');
+      if(host) host.innerHTML='<div class="tf-empty">Não foi possível carregar o Tempo Fotográfico. '+esc(error.message||error)+'</div>';
     }
   }
 
