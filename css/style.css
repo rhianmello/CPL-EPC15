@@ -2801,3 +2801,59 @@
   font-weight:750;
   letter-spacing:.02em;
 }
+
+
+/* ===== Edição do tipo de evento (06/10/2026) ===== */
+.pb-event-edit-row{
+  display:flex;
+  align-items:end;
+  gap:6px;
+  margin-bottom:6px;
+}
+.pb-event-edit-label{
+  display:grid;
+  gap:4px;
+  min-width:170px;
+}
+.pb-event-edit-label>span{
+  color:#7f98b1;
+  font-size:.48rem;
+  font-weight:900;
+  letter-spacing:.09em;
+}
+.pb-event-edit-select{
+  min-width:170px;
+  height:30px;
+  padding:0 8px;
+  border:1px solid rgba(34,211,238,.30);
+  border-radius:6px;
+  background:#071321;
+  color:#dff7fb;
+  font-size:.58rem;
+  font-weight:850;
+  outline:none;
+}
+.pb-event-edit-select:focus{
+  border-color:#22d3ee;
+  box-shadow:0 0 0 2px rgba(34,211,238,.10);
+}
+.pb-event-edit-confirm{
+  width:30px;
+  height:30px;
+  border:1px solid rgba(52,211,153,.35);
+  border-radius:6px;
+  background:rgba(52,211,153,.10);
+  color:#86efac;
+  font-size:.78rem;
+  font-weight:950;
+  cursor:pointer;
+}
+.pb-event-edit-confirm:hover{
+  background:rgba(52,211,153,.18);
+  border-color:rgba(52,211,153,.60);
+}
+@media(max-width:760px){
+  .pb-event-edit-row{align-items:stretch}
+  .pb-event-edit-label{min-width:0;flex:1}
+  .pb-event-edit-select{width:100%;min-width:0}
+}
