@@ -155,7 +155,7 @@ body.mode-rundown:before{
 .mode-rundown .kpi:nth-child(5):before{background:#f59e0b}
 .mode-rundown .kpi:nth-child(6):before{background:#3b82f6}
 .mode-rundown .kpi .label{color:#86a6c4;font-size:10px;font-weight:800;letter-spacing:.055em;text-transform:uppercase}
-.mode-rundown .kpi .value{font-size:26px;color:#f7fbff;letter-spacing:-.025em}
+.mode-rundown .kpi .value{font-size:26px;color:#f7fbff;letter-spacing:-.025em;line-height:1.08;white-space:normal}
 .mode-rundown .kpi .sub{color:#587895}
 .mode-rundown .report{
   background:linear-gradient(145deg,rgba(10,27,47,.90),rgba(5,16,29,.96));
@@ -940,7 +940,7 @@ function render(){
   $('kUnid').textContent=IS_RUNDOWN?(b.unit+' • quantidade física'):'unidades de trabalho • aba 21';
   $('kExec').textContent=realPct==null?'—':fmt(realPct,1)+'%';
   $('kSaldo').textContent=saldoQty!=null?fmt(saldoQty):'—';
-  $('kStatus').textContent=status;
+  $('kStatus').innerHTML=status.replace(' • ','<br>• ');
   $('kUltReal').textContent=lastReal;
   $('kFimRun').textContent=z?z.label:'—';
 
