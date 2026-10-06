@@ -8,6 +8,13 @@
   const errorBox = document.getElementById('upload-error');
   const openEpc = document.getElementById('open-epc-dashboard');
   const openRundown = document.getElementById('open-rundown-dashboard');
+  const openPhysical = document.getElementById('open-physical-dashboard');
+  const portalLoginGate = document.getElementById('portal-login-gate');
+  const portalLoginForm = document.getElementById('portal-login-form');
+  const portalLoginUser = document.getElementById('portal-login-user');
+  const portalLoginPass = document.getElementById('portal-login-pass');
+  const portalLoginError = document.getElementById('portal-login-error');
+  const portalLoginCancel = document.getElementById('portal-login-cancel');
   const loginGate = document.getElementById('login-gate');
   const loginForm = document.getElementById('login-form');
   const loginUser = document.getElementById('login-user');
@@ -27,6 +34,8 @@
   const AUTH_KEY = 'bi_epc15_basic_auth';
 
   let pendingAccess = null;
+  let pendingPortalAccess = null;
+  let portalValidationPromise = null;
   let hasData = false;
   let currentModel = null;
   let currentFile = null;
@@ -40,13 +49,52 @@
     if (userLabel) userLabel.textContent = 'Usuário';
     if (loginUser) loginUser.placeholder = 'Admin';
     if (loginError) loginError.textContent = 'Usuário ou senha incorretos.';
-  })();
+    // Revalida silenciosamente a sessão persistida no navegador.
+  if (window.PortalAuth?.hasStoredSession?.()) {
+    window.PortalAuth.validate?.().catch(() => false);
+  }
+
+})();
 
   function cloudReady() { return Boolean(window.CloudSync?.ready?.()); }
 
   function isAuthenticated() {
     if (sessionStorage.getItem(AUTH_KEY) !== '1') return false;
     return !cloudReady() || Boolean(window.CloudSync?.hasCredentials?.());
+  }
+
+  async function portalAuthenticated() {
+    if (!window.PortalAuth?.ready?.()) return false;
+    if (window.PortalAuth.isValidated?.()) return true;
+    if (!portalValidationPromise) {
+      portalValidationPromise = Promise.resolve(window.PortalAuth.validate?.())
+        .catch(error => {
+          console.error('Falha ao validar sessão do portal', error);
+          return false;
+        })
+        .finally(() => { portalValidationPromise = null; });
+    }
+    return Boolean(await portalValidationPromise);
+  }
+
+  async function requestPortalAccess(action) {
+    if (await portalAuthenticated()) {
+      portalLoginGate?.classList.add('hidden');
+      await Promise.resolve(action?.());
+      return;
+    }
+    pendingPortalAccess = action || null;
+    portalLoginError?.classList.add('hidden');
+    portalLoginGate?.classList.remove('hidden');
+    if (portalLoginUser && !portalLoginUser.value) portalLoginUser.value = 'admin';
+    setTimeout(() => portalLoginPass?.focus(), 0);
+  }
+
+  function closePortalLogin() {
+    pendingPortalAccess = null;
+    portalLoginGate?.classList.add('hidden');
+    if (portalLoginPass) portalLoginPass.value = '';
+    portalLoginError?.classList.add('hidden');
   }
 
   function setSource(text, tone = 'neutral') {
@@ -241,12 +289,49 @@
     if(file) load(file);
   });
 
-  // Leitura pública; autenticação fica restrita às ações de edição/publicação.
-  openEpc?.addEventListener('click', openEpcDashboard);
+  // A página inicial permanece visível, mas qualquer painel/histórico exige sessão do portal.
+  openEpc?.addEventListener('click', event => {
+    event.preventDefault();
+    requestPortalAccess(openEpcDashboard);
+  });
   openRundown?.addEventListener('click', event => {
     event.preventDefault();
-    window.location.href = openRundown.href;
+    requestPortalAccess(() => { window.location.href = openRundown.href; });
   });
+  openPhysical?.addEventListener('click', event => {
+    event.preventDefault();
+    requestPortalAccess(() => { window.location.href = openPhysical.href; });
+  });
+
+  portalLoginForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const user=(portalLoginUser?.value||'').trim();
+    const pass=portalLoginPass?.value||'';
+    portalLoginError?.classList.add('hidden');
+    const submit=portalLoginForm.querySelector('button[type="submit"]');
+    if(submit) submit.disabled=true;
+    try{
+      const valid=await window.PortalAuth?.login?.(user,pass);
+      if(!valid){
+        portalLoginError?.classList.remove('hidden');
+        portalLoginPass?.select();
+        return;
+      }
+      portalLoginGate?.classList.add('hidden');
+      if(portalLoginPass) portalLoginPass.value='';
+      const action=pendingPortalAccess;
+      pendingPortalAccess=null;
+      if(action) await action();
+    }catch(error){
+      console.error('Falha no login do portal',error);
+      portalLoginError?.classList.remove('hidden');
+      if(portalLoginError) portalLoginError.textContent='Não foi possível validar o acesso agora.';
+    }finally{
+      if(submit) submit.disabled=false;
+    }
+  });
+
+  portalLoginCancel?.addEventListener('click', closePortalLogin);
 
   loginForm?.addEventListener('submit', async event => {
     event.preventDefault();
@@ -283,9 +368,9 @@
 
   loginCancel?.addEventListener('click', closeLogin);
 
-  homeAvatar?.addEventListener('click', () => requestAccess(() => {}));
+  homeAvatar?.addEventListener('click', () => requestPortalAccess(() => {}));
 
-  historyToggle?.addEventListener('click', async () => {
+  async function toggleHomeHistory() {
     const expanded = historyToggle.getAttribute('aria-expanded') === 'true';
     if (expanded) {
       historyToggle.setAttribute('aria-expanded', 'false');
@@ -333,8 +418,14 @@
     } finally {
       historyToggle.disabled = false;
     }
+  
+  }
+
+  historyToggle?.addEventListener('click', event => {
+    event.preventDefault();
+    requestPortalAccess(toggleHomeHistory);
   });
-  // Importação local e leitura são livres; publicação continua protegida.
+  // Dentro do dashboard, publicação/edição continua com a autenticação própria de editor.
   selectDashboard?.addEventListener('click', () => input.click());
   selectEmpty?.addEventListener('click', () => input.click());
   document.getElementById('back-home')?.addEventListener('click', backToPortal);
