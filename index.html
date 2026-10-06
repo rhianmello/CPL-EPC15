@@ -163,7 +163,7 @@
               </div>
             </div>
           </div>
-          <a class="home-cta teal" id="open-rundown-dashboard" href="rundown.html?view=rundown&build=20261006-db2">Consultar Curva Rundown <i data-lucide="arrow-right"></i></a>
+          <a class="home-cta teal" id="open-rundown-dashboard" href="rundown.html?view=rundown&build=20261006-auth1">Consultar Curva Rundown <i data-lucide="arrow-right"></i></a>
         </article>
 
         <article class="home-card">
@@ -189,7 +189,7 @@
               <i class="dim" style="width:34%;margin-left:60%"></i>
             </div>
           </div>
-          <a class="home-cta yellow" href="rundown.html?view=curva-fisica&build=20261006-db2">Consultar Curva Física <i data-lucide="arrow-right"></i></a>
+          <a class="home-cta yellow" id="open-physical-dashboard" href="rundown.html?view=curva-fisica&build=20261006-auth1">Consultar Curva Física <i data-lucide="arrow-right"></i></a>
         </article>
 
         <article class="home-card">
@@ -642,6 +642,23 @@
   </section>
 
 
+  <div id="portal-login-gate" class="login-gate hidden" role="dialog" aria-modal="true" aria-labelledby="portal-login-title">
+    <form id="portal-login-form" class="login-card">
+      <div class="login-badge">ACESSO AO BI EPC-15</div>
+      <h2 id="portal-login-title">Entrar no painel</h2>
+      <p>Informe seu login para abrir os painéis e o histórico.</p>
+      <label for="portal-login-user">Login</label>
+      <input id="portal-login-user" name="username" type="text" autocomplete="username" placeholder="admin" required>
+      <label for="portal-login-pass">Senha</label>
+      <input id="portal-login-pass" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required>
+      <div id="portal-login-error" class="login-error hidden">Login ou senha incorretos.</div>
+      <div class="login-actions">
+        <button type="button" id="portal-login-cancel" class="login-secondary">Cancelar</button>
+        <button type="submit" class="login-primary">Entrar</button>
+      </div>
+    </form>
+  </div>
+
   <div id="login-gate" class="login-gate hidden" role="dialog" aria-modal="true" aria-labelledby="login-title">
     <form id="login-form" class="login-card">
       <div class="login-badge">ACESSO RESTRITO</div>
@@ -668,6 +685,7 @@
   <script src="js/config.js?v=20260928-hierarchy2"></script>
   <script src="js/supabase-config.js?v=20261002-direct-supabase1"></script>
   <script src="js/cloud-sync.js?v=20261006-photo-history1"></script>
+  <script src="js/portal-auth.js?v=20261006-auth1"></script>
   <script src="js/excel-reader.js"></script>
   <script src="js/data-model.js?v=20261005-presentation-curve1"></script>
   <script src="js/charts.js?v=20261005-presentation-curve1"></script>
@@ -676,7 +694,7 @@
   <script src="js/presentation.js?v=20261005-presentation-curve1"></script>
   <script src="js/export.js"></script>
   <script src="vendor/lucide.min.js"></script>
-  <script src="js/app.js?v=20261005-photo-embed2"></script>
+  <script src="js/app.js?v=20261006-auth1"></script>
   <script>if (window.lucide) lucide.createIcons();</script>
   <script src="js/coordination-week.js?v=20261002-stable-sync1"></script>
   <script src="js/tempo-fotografico.js?v=20261006-history2"></script>
