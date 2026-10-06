@@ -36,7 +36,9 @@
     list_coordination_weeks:'list_coordination_weeks_public',
     get_coordination_week:'get_coordination_week_public',
     get_coordination_manual_week:'get_coordination_manual_week_public',
-    get_coordination_layout:'get_coordination_layout_public'
+    get_coordination_layout:'get_coordination_layout_public',
+    list_rundown_weeks:'list_rundown_weeks_public',
+    get_rundown_week:'get_rundown_week_public'
   });
 
   async function rpc(name, args={}) {
@@ -272,6 +274,35 @@
     return typeof data === 'string' ? JSON.parse(data) : data;
   }
 
+  async function listRundownWeeks() {
+    const data = await rpc('list_rundown_weeks', {});
+    return Array.isArray(data) ? data : [];
+  }
+
+  async function loadRundownWeek(weekNo) {
+    const data = await rpc('get_rundown_week', { p_week_no:Number(weekNo) });
+    return typeof data === 'string' ? JSON.parse(data) : data;
+  }
+
+  async function saveRundownWeek({weekNo,fileName,fileSize,dataset,masterPassword}) {
+    if (!dataset || typeof dataset !== 'object') {
+      throw new Error('Nenhum dataset da Curva Rundown foi carregado para salvar.');
+    }
+    const supabase=getClient();
+    if(!supabase) throw new Error('Supabase ainda não está configurado.');
+    const args={
+      p_master_password:String(masterPassword || ''),
+      p_week_no:Number(weekNo),
+      p_file_name:fileName || null,
+      p_file_size:Number.isFinite(Number(fileSize)) ? Number(fileSize) : null,
+      p_schema_version:'epc15_rundown_week_v1',
+      p_dataset:dataset
+    };
+    const {data,error}=await supabase.rpc('save_rundown_week_master_public',args);
+    if(error) throw new Error(error.message || 'Falha ao salvar a Curva Rundown.');
+    return typeof data === 'string' ? JSON.parse(data) : data;
+  }
+
   async function photoRequest(method, payload, formData) {
     if (!ready()) throw new Error('Supabase ainda não está configurado.');
     const publicList=Boolean(payload?.action==='list' || payload?.action==='history');
@@ -392,6 +423,9 @@
     saveCoordinationManualWeek,
     loadCoordinationLayout,
     saveCoordinationLayout,
+    listRundownWeeks,
+    loadRundownWeek,
+    saveRundownWeek,
     listCoordinationPhotos,
     listCoordinationPhotoHistory,
     uploadCoordinationPhoto,
