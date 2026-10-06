@@ -115,7 +115,7 @@ A navegação para este painel está disponível diretamente no `index.html`, ta
 
 ## Gestão de Frota & Equipamentos
 
-O card **Gestão de Frota & Equipamentos** e o item **08 • Gestão de Frota** abrem `frota.html` no mesmo BI. O módulo lê o Supabase automaticamente, organiza ativos por UUID e mantém PTRANs, inspeções, manutenção, documentos, movimentações e auditoria histórica. A planilha `Planilha1` é uma entrada de importação com comparação e revisão antes de publicar; novas cargas não removem ativos ausentes.
+A Gestão de Frota & Equipamentos tem acesso independente pelo link direto https://rhianmello.github.io/CPL-EPC15/frota.html. Não há card ou botão de acesso à Frota nos painéis do BI; a página possui somente sua própria navegação. O módulo lê o Supabase automaticamente, organiza ativos por UUID e mantém PTRANs, inspeções, manutenção, documentos, movimentações e auditoria histórica. A planilha `Planilha1` é uma entrada de importação com comparação e revisão antes de publicar; novas cargas não removem ativos ausentes.
 
 A página começa em modo leitura. O lápis solicita a senha master já validada pelo banco e o nome do operador. A sessão de edição dura 15 minutos e sua autorização é validada em cada escrita. Senha e autorização não são persistidas no navegador. O nome do operador é declarado, pois o acesso atual usa senha compartilhada.
 
