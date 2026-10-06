@@ -431,11 +431,11 @@ function applyViewLabels(){
 
   if($('chartMixHeading'))$('chartMixHeading').textContent=IS_RUNDOWN?'Visão integrada — Curva Rundown + produção semanal':'Visão integrada — produção semanal + Curva Física';
   if($('chartMixText'))$('chartMixText').textContent=IS_RUNDOWN
-    ?'Linhas: BL Contratual (F), Realizado (G), Projetado (H), BL Plano de Ataque (J) e Curva Rundown. Barras: Real semanal (I).'
+    ?'Linhas: Plano de Ataque (J), BL Contratual (F), Real (G) e Projetado (H). Barras: Real semanal (I).'
     :'Barras e linhas calculadas exclusivamente com as curvas da aba 21.';
-  if($('chartRunHeading'))$('chartRunHeading').textContent=IS_RUNDOWN?'Curvas de saldo restante (%)':'Curva Física — saldo restante (%)';
+  if($('chartRunHeading'))$('chartRunHeading').textContent=IS_RUNDOWN?'Curva Rundown — % Acumulado':'Curva Física — saldo restante (%)';
   if($('chartRunText'))$('chartRunText').textContent=IS_RUNDOWN
-    ?'A Curva Rundown acompanha o Realizado e continua no Projetado. As duas linhas-base permanecem visíveis para comparação.'
+    ?'Padrão visual da Curva Rundown: Plano de Ataque, BL Contratual, Real e Projetado, cada um com cor própria.'
     :'Previsto permanece como referência; a Curva Física combina Realizado e Projetado da aba 21.';
   if($('chartSemText'))$('chartSemText').textContent=IS_RUNDOWN
     ?'Produção efetiva da semana diretamente da coluna I (real_sem).'
@@ -1052,6 +1052,14 @@ function labels(view){return view.map(x=>x.gap?'…':x.label)}
 function rundownChartText(){
   return {text:'#d9e8f6',muted:'#8ba7c1',grid:'rgba(148,163,184,.12)'};
 }
+function rundownLinePalette(){
+  return {
+    attack:'#69b7f5',
+    contractual:'#0b3f8f',
+    real:'#00b96b',
+    projected:'#facc15'
+  };
+}
 function drawMix(view,unit){
   $('emptyMix').style.display=view.length?'none':'grid';
   if(chartMix)chartMix.destroy();
@@ -1060,14 +1068,16 @@ function drawMix(view,unit){
   if(IS_RUNDOWN){
     const c=rundownChartText();
     chartMix=new Chart($('chartMix'),{
-      data:{labels:labels(view),datasets:[
-        {type:'bar',label:'Real semanal • I',data:chartData(view,'realSem'),backgroundColor:'rgba(245,158,11,.68)',borderColor:'#f59e0b',borderWidth:1,borderRadius:5,yAxisID:'yQty',order:5},
-        {type:'line',label:'Curva Rundown',data:chartData(view,'run'),borderColor:'#22d3ee',backgroundColor:'#22d3ee',borderWidth:4,pointRadius:3,pointHoverRadius:6,spanGaps:false,tension:.18,yAxisID:'yPct',order:0},
-        {type:'line',label:'BL Contratual • F',data:chartData(view,'prev'),borderColor:'#3b82f6',backgroundColor:'#3b82f6',borderWidth:2,borderDash:[7,5],pointRadius:1.8,spanGaps:false,tension:.18,yAxisID:'yPct',order:2},
-        {type:'line',label:'Realizado • G',data:chartData(view,'real'),borderColor:'#fb923c',backgroundColor:'#fb923c',borderWidth:2.5,pointRadius:2.5,spanGaps:false,tension:.18,yAxisID:'yPct',order:1},
-        {type:'line',label:'Projetado • H',data:chartData(view,'proj'),borderColor:'#22c55e',backgroundColor:'#22c55e',borderWidth:2.5,borderDash:[4,4],pointRadius:2,spanGaps:false,tension:.18,yAxisID:'yPct',order:1},
-        {type:'line',label:'BL Plano de Ataque • J',data:chartData(view,'attack'),borderColor:'#a78bfa',backgroundColor:'#a78bfa',borderWidth:2,borderDash:[2,5],pointRadius:1.5,spanGaps:false,tension:.18,yAxisID:'yPct',order:3}
-      ]},
+      data:{labels:labels(view),datasets:(()=>{
+        const p=rundownLinePalette();
+        return [
+          {type:'line',label:'Plan.Ataq - % Acum',data:chartData(view,'attack'),borderColor:p.attack,backgroundColor:p.attack,borderWidth:2.2,pointRadius:0,pointHoverRadius:4,spanGaps:false,tension:.14,yAxisID:'yPct',order:1},
+          {type:'line',label:'BLContratual - % Acum',data:chartData(view,'prev'),borderColor:p.contractual,backgroundColor:p.contractual,borderWidth:2.2,pointRadius:0,pointHoverRadius:4,spanGaps:false,tension:.14,yAxisID:'yPct',order:2},
+          {type:'line',label:'Real - % Acum',data:chartData(view,'real'),borderColor:p.real,backgroundColor:p.real,borderWidth:2.7,pointRadius:0,pointHoverRadius:4,spanGaps:false,tension:.14,yAxisID:'yPct',order:0},
+          {type:'line',label:'Projetado - % Acum',data:chartData(view,'proj'),borderColor:p.projected,backgroundColor:p.projected,borderWidth:2.7,borderDash:[8,5],pointRadius:0,pointHoverRadius:4,spanGaps:false,tension:.14,yAxisID:'yPct',order:0},
+          {type:'bar',label:'Real semanal • I',data:chartData(view,'realSem'),backgroundColor:'rgba(245,158,11,.42)',borderColor:'rgba(245,158,11,.8)',borderWidth:1,borderRadius:5,yAxisID:'yQty',order:5}
+        ];
+      })()},
       options:{
         responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
         plugins:{
@@ -1111,13 +1121,15 @@ function drawRun(view){
     const c=rundownChartText();
     chartRun=new Chart($('chartRun'),{
       type:'line',
-      data:{labels:labels(view),datasets:[
-        {label:'Curva Rundown',data:chartData(view,'run'),borderColor:'#22d3ee',backgroundColor:'#22d3ee',borderWidth:4,pointRadius:3,pointHoverRadius:6,spanGaps:false,tension:.18},
-        {label:'BL Contratual • F',data:chartData(view,'prev'),borderColor:'#3b82f6',backgroundColor:'#3b82f6',borderWidth:2,borderDash:[7,5],pointRadius:2,spanGaps:false,tension:.18},
-        {label:'Realizado • G',data:chartData(view,'real'),borderColor:'#fb923c',backgroundColor:'#fb923c',borderWidth:2.5,pointRadius:2.5,spanGaps:false,tension:.18},
-        {label:'Projetado • H',data:chartData(view,'proj'),borderColor:'#22c55e',backgroundColor:'#22c55e',borderWidth:2.5,borderDash:[4,4],pointRadius:2,spanGaps:false,tension:.18},
-        {label:'BL Plano de Ataque • J',data:chartData(view,'attack'),borderColor:'#a78bfa',backgroundColor:'#a78bfa',borderWidth:2,borderDash:[2,5],pointRadius:1.5,spanGaps:false,tension:.18}
-      ]},
+      data:{labels:labels(view),datasets:(()=>{
+        const p=rundownLinePalette();
+        return [
+          {label:'Plan.Ataq - % Acum',data:chartData(view,'attack'),borderColor:p.attack,backgroundColor:p.attack,borderWidth:2.2,pointRadius:0,pointHoverRadius:4,spanGaps:false,tension:.14},
+          {label:'BLContratual - % Acum',data:chartData(view,'prev'),borderColor:p.contractual,backgroundColor:p.contractual,borderWidth:2.2,pointRadius:0,pointHoverRadius:4,spanGaps:false,tension:.14},
+          {label:'Real - % Acum',data:chartData(view,'real'),borderColor:p.real,backgroundColor:p.real,borderWidth:2.7,pointRadius:0,pointHoverRadius:4,spanGaps:false,tension:.14},
+          {label:'Projetado - % Acum',data:chartData(view,'proj'),borderColor:p.projected,backgroundColor:p.projected,borderWidth:2.7,borderDash:[8,5],pointRadius:0,pointHoverRadius:4,spanGaps:false,tension:.14}
+        ];
+      })()},
       options:{
         responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
         plugins:{legend:{position:'bottom',labels:{color:c.text,usePointStyle:true,padding:16}},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+(ctx.parsed.y==null?'—':fmt(ctx.parsed.y,1)+'%')}}},
