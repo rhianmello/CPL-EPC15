@@ -1,5 +1,10 @@
 (function () {
   let model;
+  let executiveBaseModel;
+  let executiveModel;
+  let executiveUnitCode = '';
+  let executiveWeek = '';
+  let executiveFilterBusy = false;
   let currentUnit;
   let currentPhase = '';
   let analysisPhase = '';
@@ -23,9 +28,14 @@
 
   function init(data, fileName) {
     model = data;
+    executiveBaseModel = data;
+    executiveModel = data;
+    executiveUnitCode = '';
+    executiveWeek = '';
     document.getElementById('file-name').textContent = fileName;
     document.getElementById('header-date').textContent = date(model.dataBase);
     renderUnitNavigation();
+    setupExecutiveFilters();
     renderExecutive();
     buildAnalysisPhaseFilter();
     renderAnalyses();
@@ -68,22 +78,151 @@
     }).join('');
   }
 
+  function executiveUnits() {
+    const source=executiveModel || executiveBaseModel || model;
+    if(!source?.units) return [];
+    if(!executiveUnitCode) return source.units;
+    return source.units.filter(unit=>String(unit.code||'')===String(executiveUnitCode));
+  }
+
+  function executiveScope() {
+    const source=executiveModel || executiveBaseModel || model;
+    if(!source) return null;
+    if(!executiveUnitCode) return source.contract;
+    return source.units?.find(unit=>String(unit.code||'')===String(executiveUnitCode)) || null;
+  }
+
+  function executiveUnitLabel() {
+    const unit=(executiveModel?.units || []).find(item=>String(item.code||'')===String(executiveUnitCode));
+    return unit ? titleCaseUnit(unit.rawName || unit.code) : 'Todas as unidades';
+  }
+
+  function executiveFilterStatus() {
+    const el=document.getElementById('executive-filter-status');
+    if(!el) return;
+    if(executiveFilterBusy){
+      el.textContent='Carregando histórico...';
+      el.dataset.tone='loading';
+      return;
+    }
+    const source=executiveModel || executiveBaseModel || model;
+    const weekText=executiveWeek ? 'Semana '+executiveWeek : 'Versão atual';
+    const unitText=executiveUnitCode ? executiveUnitLabel() : 'Todas as unidades';
+    el.textContent=weekText+' • '+unitText+' • Data-base '+date(source?.dataBase);
+    el.dataset.tone='ok';
+  }
+
+  function populateExecutiveUnitFilter() {
+    const select=document.getElementById('executive-unit-filter');
+    if(!select) return;
+    const source=executiveModel || executiveBaseModel || model;
+    const units=source?.units || [];
+    const previous=executiveUnitCode;
+    select.innerHTML='<option value="">Todas as unidades</option>'+
+      units.map(unit=>'<option value="'+escapeHtml(unit.code)+'">'+escapeHtml(titleCaseUnit(unit.rawName || unit.code))+'</option>').join('');
+    executiveUnitCode=units.some(unit=>String(unit.code||'')===String(previous)) ? previous : '';
+    select.value=executiveUnitCode;
+  }
+
+  async function populateExecutiveWeekFilter() {
+    const select=document.getElementById('executive-week-filter');
+    if(!select) return;
+    const currentLabel='Atual • '+date(executiveBaseModel?.dataBase || model?.dataBase);
+    select.innerHTML='<option value="">'+escapeHtml(currentLabel)+'</option>';
+    if(!window.CloudSync?.ready?.()) return;
+    try{
+      const weeks=await window.CloudSync.listCoordinationWeeks();
+      const available=(weeks||[])
+        .filter(w=>Boolean(w.has_snapshot))
+        .sort((a,b)=>Number(b.week_no)-Number(a.week_no));
+      select.innerHTML='<option value="">'+escapeHtml(currentLabel)+'</option>'+
+        available.map(w=>{
+          const db=w.excel_data_base ? ' • base '+date(new Date(String(w.excel_data_base)+'T00:00:00Z')) : '';
+          return '<option value="'+Number(w.week_no)+'">Semana '+Number(w.week_no)+db+'</option>';
+        }).join('');
+      select.value=executiveWeek ? String(executiveWeek) : '';
+    }catch(error){
+      console.error('Falha ao carregar semanas do Painel Gerencial',error);
+    }
+  }
+
+  async function setExecutiveWeek(value) {
+    const week=Number(value);
+    executiveFilterBusy=true;
+    executiveFilterStatus();
+    const weekSelect=document.getElementById('executive-week-filter');
+    const unitSelect=document.getElementById('executive-unit-filter');
+    if(weekSelect) weekSelect.disabled=true;
+    if(unitSelect) unitSelect.disabled=true;
+    try{
+      if(!value || !Number.isFinite(week)){
+        executiveWeek='';
+        executiveModel=executiveBaseModel || model;
+      }else{
+        const result=await window.CloudSync?.loadCoordinationWeek?.(week);
+        const snapshot=result?.snapshot;
+        if(!snapshot?.dataset?.model) throw new Error('A Semana '+week+' não possui snapshot do Excel.');
+        executiveWeek=week;
+        executiveModel=snapshot.dataset.model;
+      }
+      populateExecutiveUnitFilter();
+      renderExecutive();
+    }catch(error){
+      console.error('Falha ao carregar semana no Painel Gerencial',error);
+      executiveWeek='';
+      executiveModel=executiveBaseModel || model;
+      if(weekSelect) weekSelect.value='';
+      populateExecutiveUnitFilter();
+      renderExecutive();
+      alert(error?.message || 'Não foi possível carregar a semana selecionada.');
+    }finally{
+      executiveFilterBusy=false;
+      if(weekSelect) weekSelect.disabled=false;
+      if(unitSelect) unitSelect.disabled=false;
+      executiveFilterStatus();
+    }
+  }
+
+  function setExecutiveUnit(value) {
+    executiveUnitCode=String(value || '');
+    renderExecutive();
+  }
+
+  function setupExecutiveFilters() {
+    populateExecutiveUnitFilter();
+    populateExecutiveWeekFilter();
+    const weekSelect=document.getElementById('executive-week-filter');
+    const unitSelect=document.getElementById('executive-unit-filter');
+    if(weekSelect && !weekSelect.dataset.bound){
+      weekSelect.addEventListener('change',event=>setExecutiveWeek(event.target.value));
+      weekSelect.dataset.bound='1';
+    }
+    if(unitSelect && !unitSelect.dataset.bound){
+      unitSelect.addEventListener('change',event=>setExecutiveUnit(event.target.value));
+      unitSelect.dataset.bound='1';
+    }
+    executiveFilterStatus();
+  }
+
   function renderExecutive() {
-    const c = model.contract;
+    const c = executiveScope();
+    if(!c) return;
+    const selectedUnit=Boolean(executiveUnitCode);
     document.getElementById('executive-kpis').innerHTML = [
-      kpi('Valor total do contrato', currency(c.plannedValue), 'Base consolidada', '#3b82f6'),
-      kpi('Previsto', percent(c.planned), 'Avanço físico', '#60a5fa'),
-      kpi('Realizado', percent(c.actual), 'Avanço físico', '#22d3ee'),
-      kpi('Desvio', pp(c.variance), 'Previsto x realizado', c.variance >= 0 ? '#22c55e' : '#ef4444')
+      kpi(selectedUnit?'Valor previsto da unidade':'Valor total do contrato', currency(c.plannedValue), selectedUnit?executiveUnitLabel():'Base consolidada', '#3b82f6'),
+      kpi('Previsto', percent(c.planned), selectedUnit?'Avanço físico da unidade':'Avanço físico', '#60a5fa'),
+      kpi('Realizado', percent(c.actual), selectedUnit?'Avanço físico da unidade':'Avanço físico', '#22d3ee'),
+      kpi('Desvio', pp(c.variance), 'Realizado − previsto', c.variance >= 0 ? '#22c55e' : '#ef4444')
     ].join('');
 
     renderUnitsTable();
     renderExecutivePhases();
-    DashboardCharts.unitProgress(model.units, 'units-progress-chart', 'executiveUnits');
+    DashboardCharts.unitProgress(executiveUnits(), 'units-progress-chart', 'executiveUnits');
+    executiveFilterStatus();
   }
 
   function renderUnitsTable() {
-    const sorted = [...model.units].sort((a,b) => unitSortAscending ? (a.variance ?? 0) - (b.variance ?? 0) : (b.variance ?? 0) - (a.variance ?? 0));
+    const sorted = [...executiveUnits()].sort((a,b) => unitSortAscending ? (a.variance ?? 0) - (b.variance ?? 0) : (b.variance ?? 0) - (a.variance ?? 0));
     document.getElementById('units-table').innerHTML = sorted.map(unit => `<tr data-unit-code="${escapeHtml(unit.code)}">
       <td><strong>${escapeHtml(unit.code)}</strong><br><span class="muted">${escapeHtml(unit.rawName)}</span></td>
       <td class="numeric">${percent(unit.planned)}</td><td class="numeric">${percent(unit.actual)}</td>
@@ -92,7 +231,7 @@
 
   function renderExecutivePhases() {
     const groups = new Map();
-    model.units.forEach(unit => (unit.phases || []).forEach(row => {
+    executiveUnits().forEach(unit => (unit.phases || []).forEach(row => {
       if (!row.phase) return;
       if (!groups.has(row.phase)) groups.set(row.phase, []);
       groups.get(row.phase).push(row);
@@ -122,6 +261,7 @@
     topbar?.querySelector(':scope > div:first-child')?.classList.toggle('hidden', page === 'pb');
     topbar?.classList.toggle('pb-mode', page === 'pb');
     document.getElementById('pb-topbar-week-tools')?.classList.toggle('hidden', page !== 'pb');
+    if (page === 'executive') executiveFilterStatus();
     if (page === 'pb' && window.PBDashboard) window.PBDashboard.render();
     if (page === 'analysis') {
       buildAnalysisPhaseFilter();
@@ -372,5 +512,5 @@
 
   function toggleSort() { unitSortAscending = !unitSortAscending; renderUnitsTable(); }
 
-  window.Dashboard = { init, showPage, renderUnit, setPhaseFilter, toggleSort, refreshUnitNavigation:renderUnitNavigation, unitHasExecution, format: { percent, pp, currency, quantity, date, escapeHtml }, getModel: () => model };
+  window.Dashboard = { init, showPage, renderUnit, setPhaseFilter, toggleSort, setExecutiveWeek, setExecutiveUnit, refreshUnitNavigation:renderUnitNavigation, unitHasExecution, format: { percent, pp, currency, quantity, date, escapeHtml }, getModel: () => model };
 }());
