@@ -2886,3 +2886,86 @@
   background:#f3f6f4;
   color:#6d7f73!important;
 }
+
+
+/* ===== Filtros do Painel Gerencial (06/10/2026) ===== */
+.executive-filterbar{
+  display:grid;
+  grid-template-columns:minmax(260px,1fr) minmax(180px,.42fr) minmax(220px,.52fr);
+  gap:12px;
+  align-items:end;
+  margin:0 0 16px;
+  padding:14px 16px;
+  border:1px solid rgba(148,163,184,.16);
+  border-radius:14px;
+  background:#0e1f34;
+}
+.executive-filterbar-copy{
+  min-width:0;
+}
+.executive-filterbar-copy .eyebrow{
+  margin:0 0 4px;
+}
+.executive-filterbar-copy strong{
+  display:block;
+  color:#f8fbff;
+  font-size:.78rem;
+}
+.executive-filterbar-copy small{
+  display:block;
+  margin-top:5px;
+  color:#7d95b0;
+  font-size:.58rem;
+  font-weight:700;
+}
+.executive-filterbar-copy small[data-tone="loading"]{
+  color:#fde68a;
+}
+.executive-filterbar-copy small[data-tone="ok"]{
+  color:#8fa8c0;
+}
+.executive-filterbar label{
+  display:grid;
+  gap:5px;
+  color:#8fa8c0;
+  font-size:.56rem;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+.executive-filterbar select{
+  width:100%;
+  min-width:0;
+  height:38px;
+  padding:0 10px;
+  border:1px solid #2b455f;
+  border-radius:8px;
+  background:#071321;
+  color:#f8fbff;
+  font-size:.66rem;
+  font-weight:800;
+  outline:none;
+}
+.executive-filterbar select:focus{
+  border-color:#22d3ee;
+  box-shadow:0 0 0 2px rgba(34,211,238,.09);
+}
+.executive-filterbar select:disabled{
+  opacity:.6;
+  cursor:wait;
+}
+@media(max-width:980px){
+  .executive-filterbar{
+    grid-template-columns:1fr 1fr;
+  }
+  .executive-filterbar-copy{
+    grid-column:1/-1;
+  }
+}
+@media(max-width:620px){
+  .executive-filterbar{
+    grid-template-columns:1fr;
+  }
+  .executive-filterbar-copy{
+    grid-column:auto;
+  }
+}
