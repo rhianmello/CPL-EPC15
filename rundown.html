@@ -198,6 +198,10 @@ body.mode-rundown:before{
   min-width:190px;height:40px;padding:0 10px;border:1px solid rgba(125,211,252,.15);border-radius:9px;
   background:#0a1728;color:#d9e8f6;font-weight:750;font-size:12px;
 }
+.cloud-open{
+  min-height:40px;border-color:rgba(34,211,238,.18)!important;background:rgba(34,211,238,.07)!important;color:#a5f3fc!important;
+}
+.cloud-open:not(:disabled):hover{background:rgba(34,211,238,.13)!important}
 .cloud-save{
   min-height:40px;border-color:rgba(34,197,94,.24)!important;
   background:linear-gradient(135deg,rgba(22,163,74,.92),rgba(13,148,136,.92))!important;
@@ -302,6 +306,7 @@ body.mode-rundown:before{
     <div class="rundown-cloud-controls" id="rundownCloudControls">
       <span class="cloud-pill" id="rundownCloudBadge">BANCO • CONECTANDO</span>
       <select id="rundownWeekSelect" class="cloud-week" title="Semana EPC-15"><option value="">Semana...</option></select>
+      <button id="btnLoadRundownWeek" class="cloud-open" type="button" disabled>Abrir salva</button>
       <button id="btnSaveRundownWeek" class="cloud-save" type="button" disabled>Salvar semana</button>
     </div>
     <label class="file-label" for="fileInput">Carregar Excel</label>
@@ -384,7 +389,8 @@ Chart.defaults.color='#64748b';Chart.defaults.borderColor='rgba(15,23,42,.12)';C
 const VIEW_MODE=new URLSearchParams(window.location.search).get('view')==='curva-fisica'?'curva-fisica':'rundown';
 const IS_RUNDOWN=VIEW_MODE==='rundown';
 const S20='20_Planejamento-curvas_rundown', S21='21_Planejamento-curvas_S_Física';
-let activities=new Map(), chartMix=null, chartRun=null, chartSem=null, current=null, fileName='', ws21Ref=null, activeUnit='';
+let activities=new Map(), chartMix=null, chartRun=null, chartSem=null, current=null, fileName='', fileSize=null, ws21Ref=null, activeUnit='';
+let dataOrigin='none', rundownWeeks=[], selectedRundownWeek=null, rundownSnapshotMeta=null, savingRundown=false;
 const $=id=>document.getElementById(id);
 function viewName(){return IS_RUNDOWN?'Curva Rundown':'Curva Física'}
 function curveSeriesLabel(){return IS_RUNDOWN?'Curva Rundown':'Curva Física'}
@@ -396,11 +402,12 @@ function applyViewLabels(){
   const name=viewName();
   document.body.classList.toggle('mode-rundown',IS_RUNDOWN);
   document.body.classList.toggle('mode-curva-fisica',!IS_RUNDOWN);
-  document.title='BI '+name+' — V2.14';
+  document.title='BI '+name+' — V2.15';
 
+  if($('rundownCloudControls'))$('rundownCloudControls').style.display=IS_RUNDOWN?'flex':'none';
   if($('loginTitle'))$('loginTitle').textContent='Entrar no BI '+name;
   if($('viewSidebarBrand'))$('viewSidebarBrand').innerHTML='<span>BI</span> '+(IS_RUNDOWN?'CURVA RUNDOWN':'CURVA FÍSICA');
-  if($('viewMainTitle'))$('viewMainTitle').textContent='BI '+name+' — V2.14';
+  if($('viewMainTitle'))$('viewMainTitle').textContent='BI '+name+' — V2.15';
   if($('viewMainSubtitle'))$('viewMainSubtitle').textContent=IS_RUNDOWN
     ?'Aba 20 • atividade pela coluna C • semanas e curvas A / F:J'
     :'Primavera • aba 21 • barras + linhas • leitura sob demanda';
@@ -1192,6 +1199,246 @@ function fileToken(v){
 }
 function setStatus(msg){$('status').textContent=msg;}
 function nextFrame(){return new Promise(resolve=>requestAnimationFrame(()=>resolve()));}
+
+function shortIsoDate(iso){
+  if(!iso)return '';
+  const p=String(iso).slice(0,10).split('-');
+  return p.length===3?p[2]+'/'+p[1]:String(iso);
+}
+function fmtCloudTime(iso){
+  if(!iso)return '';
+  const d=new Date(iso);
+  if(Number.isNaN(d.valueOf()))return '';
+  try{
+    return new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(d);
+  }catch(_){return d.toLocaleString('pt-BR');}
+}
+function currentRundownWeek(){
+  return rundownWeeks.find(w=>Boolean(w.is_current)) || null;
+}
+function selectedWeekInfo(){
+  const n=Number($('rundownWeekSelect')?.value || selectedRundownWeek);
+  return rundownWeeks.find(w=>Number(w.week_no)===n) || null;
+}
+function setCloudBadge(text,state=''){
+  const el=$('rundownCloudBadge');if(!el)return;
+  el.textContent=text;
+  el.classList.remove('offline','saved');
+  if(state)el.classList.add(state);
+}
+function updateCloudButtons(){
+  const info=selectedWeekInfo();
+  if($('btnLoadRundownWeek'))$('btnLoadRundownWeek').disabled=!IS_RUNDOWN||!info?.has_snapshot||savingRundown;
+  if($('btnSaveRundownWeek'))$('btnSaveRundownWeek').disabled=!IS_RUNDOWN||dataOrigin!=='excel'||!activities.size||savingRundown||!Number($('rundownWeekSelect')?.value);
+}
+function fillRundownWeekOptions(preferred=null){
+  const select=$('rundownWeekSelect');if(!select)return;
+  const previous=Number(preferred||select.value||selectedRundownWeek);
+  select.innerHTML=rundownWeeks.map(w=>{
+    const marks=[w.is_current?'ATUAL':'',w.has_snapshot?'SALVA':''].filter(Boolean);
+    const range=shortIsoDate(w.start_date)+'–'+shortIsoDate(w.end_date);
+    return '<option value="'+w.week_no+'">Semana '+w.week_no+' • '+range+(marks.length?' • '+marks.join(' • '):'')+'</option>';
+  }).join('');
+  const current=currentRundownWeek();
+  const target=rundownWeeks.some(w=>Number(w.week_no)===previous)?previous:(current?.week_no||rundownWeeks[0]?.week_no||'');
+  if(target)select.value=String(target);
+  selectedRundownWeek=Number(select.value)||null;
+  updateCloudButtons();
+}
+function compactRundownDataset(){
+  const list=[...activities.values()].map(a=>({
+    source:'20',
+    id:String(a.name||a.id||'').trim(),
+    name:String(a.name||a.id||'').trim(),
+    discipline:String(a.discipline||a.disc||'').trim(),
+    total:nval(a.total),
+    unit:String(a.unit||'und'),
+    rawRows:(Array.isArray(a.rawRows)?a.rawRows:[]).map(r=>({
+      week:nval(r.week),
+      planned:nval(r.planned),
+      realized:nval(r.realized),
+      projected:nval(r.projected),
+      realSem:nval(r.realSem),
+      attack:nval(r.attack)
+    }))
+  })).filter(a=>a.name&&a.rawRows.length);
+  return {
+    schema_version:'epc15_rundown_week_v1',
+    source_sheet:S20,
+    generated_at:new Date().toISOString(),
+    activity_count:list.length,
+    activities:list
+  };
+}
+function hydrateRundownDataset(dataset,snapshot,weekNo){
+  if(!dataset||!Array.isArray(dataset.activities)||!dataset.activities.length){
+    throw new Error('Snapshot da Curva Rundown vazio ou incompatível.');
+  }
+  const map=new Map();
+  for(const item of dataset.activities){
+    const name=String(item?.name||item?.id||'').trim();
+    if(!name)continue;
+    const rows=Array.isArray(item.rawRows)?item.rawRows.map(r=>({
+      week:nval(r.week),
+      planned:nval(r.planned),
+      realized:nval(r.realized),
+      projected:nval(r.projected),
+      realSem:nval(r.realSem),
+      attack:nval(r.attack)
+    })).filter(r=>r.week!=null):[];
+    if(!rows.length)continue;
+    map.set(name,{
+      source:'20',id:name,name,
+      discipline:String(item.discipline||'').trim(),
+      total:nval(item.total),
+      unit:String(item.unit||'und'),
+      rawRows:rows
+    });
+  }
+  if(!map.size)throw new Error('Snapshot da Curva Rundown sem atividades válidas.');
+  activities=map;
+  fileName=snapshot?.file_name||'snapshot-rundown';
+  fileSize=nval(snapshot?.file_size);
+  activeUnit='';
+  dataOrigin='database';
+  selectedRundownWeek=Number(weekNo)||null;
+  rundownSnapshotMeta=snapshot||null;
+  loadFilters();
+  const first=[...activities.values()][0];
+  $('fAtiv').value=first.name;
+  $('fId').value=first.id;
+  $('idSearch').value='';
+  const scope=scopeLabelValue(first);
+  if(scope&&[...$('fLevel').options].some(o=>String(o.value)===String(scope)))$('fLevel').value=String(scope);
+  render();
+  const v=snapshot?.version_no?' • v'+snapshot.version_no:'';
+  setStatus('Banco de dados • Semana '+weekNo+v+' • '+activities.size+' atividades • '+(snapshot?.file_name||'snapshot salvo')+'.');
+  setCloudBadge('BANCO • S'+weekNo+(snapshot?.version_no?' • V'+snapshot.version_no:''),'saved');
+  updateCloudButtons();
+}
+async function refreshRundownWeeks(preferred=null){
+  if(!IS_RUNDOWN||!window.CloudSync?.ready?.())return [];
+  rundownWeeks=await window.CloudSync.listRundownWeeks();
+  fillRundownWeekOptions(preferred);
+  return rundownWeeks;
+}
+async function loadSavedRundownWeek(weekNo){
+  if(!IS_RUNDOWN||!window.CloudSync?.ready?.())return;
+  const n=Number(weekNo);
+  if(!Number.isFinite(n)||n<=0)return;
+  setCloudBadge('BANCO • CARREGANDO');
+  if($('btnLoadRundownWeek'))$('btnLoadRundownWeek').disabled=true;
+  try{
+    const result=await window.CloudSync.loadRundownWeek(n);
+    if(!result?.snapshot){
+      setCloudBadge('BANCO • S'+n+' • SEM DADOS','offline');
+      setStatus('Semana '+n+' ainda não possui Curva Rundown salva no banco.');
+      return;
+    }
+    const dataset=result.snapshot.dataset;
+    hydrateRundownDataset(dataset,result.snapshot,n);
+  }catch(error){
+    console.error('Falha ao carregar Curva Rundown do banco',error);
+    setCloudBadge('BANCO • INDISPONÍVEL','offline');
+    show(error.message||'Falha ao carregar a Curva Rundown salva.');
+  }finally{
+    updateCloudButtons();
+  }
+}
+async function initRundownCloud(){
+  if(!IS_RUNDOWN)return;
+  if(!window.CloudSync?.ready?.()){
+    setCloudBadge('BANCO • OFFLINE','offline');
+    updateCloudButtons();
+    return;
+  }
+  try{
+    setCloudBadge('BANCO • CONECTANDO');
+    await refreshRundownWeeks();
+    const current=currentRundownWeek();
+    let target=current?.has_snapshot?current:null;
+    if(!target){
+      target=rundownWeeks.filter(w=>w.has_snapshot).sort((a,b)=>{
+        const ta=new Date(a.saved_at||0).valueOf(),tb=new Date(b.saved_at||0).valueOf();
+        return tb-ta || Number(b.week_no)-Number(a.week_no);
+      })[0]||null;
+    }
+    if(target){
+      $('rundownWeekSelect').value=String(target.week_no);
+      selectedRundownWeek=Number(target.week_no);
+      await loadSavedRundownWeek(target.week_no);
+    }else{
+      if(current){
+        $('rundownWeekSelect').value=String(current.week_no);
+        selectedRundownWeek=Number(current.week_no);
+      }
+      setCloudBadge('BANCO • SEM SNAPSHOT','offline');
+      setStatus('Nenhuma Curva Rundown salva ainda. Carregue o Excel uma vez e use “Salvar semana”.');
+      updateCloudButtons();
+    }
+  }catch(error){
+    console.error('Falha ao iniciar banco da Curva Rundown',error);
+    setCloudBadge('BANCO • INDISPONÍVEL','offline');
+    setStatus('Banco indisponível. Você ainda pode carregar o Excel localmente.');
+  }
+}
+function openRundownSaveModal(){
+  if(!IS_RUNDOWN||dataOrigin!=='excel'||!activities.size)return;
+  const week=Number($('rundownWeekSelect')?.value);
+  if(!week){show('Selecione a semana antes de salvar.');return;}
+  const dataset=compactRundownDataset();
+  const bytes=new Blob([JSON.stringify(dataset)]).size;
+  $('rundownSaveWeekMeta').textContent='Semana '+week;
+  $('rundownSaveCountMeta').textContent=dataset.activity_count+' atividades';
+  $('rundownSaveSizeMeta').textContent=(bytes/1024).toFixed(1).replace('.',',')+' KB no banco';
+  $('rundownMasterPassword').value='';
+  $('rundownSaveModal').classList.remove('hidden');
+  setTimeout(()=>$('rundownMasterPassword')?.focus(),0);
+}
+function closeRundownSaveModal(){
+  $('rundownSaveModal')?.classList.add('hidden');
+}
+async function confirmRundownSave(){
+  if(savingRundown)return;
+  const week=Number($('rundownWeekSelect')?.value);
+  const password=String($('rundownMasterPassword')?.value||'');
+  if(!week){show('Selecione a semana antes de salvar.');return;}
+  if(!password){$('rundownMasterPassword')?.focus();return;}
+  if(!window.CloudSync?.ready?.()){show('Supabase indisponível no momento.');return;}
+  const dataset=compactRundownDataset();
+  if(!dataset.activities.length){show('Nenhuma atividade válida para salvar.');return;}
+  savingRundown=true;
+  $('btnConfirmRundownSave').disabled=true;
+  updateCloudButtons();
+  setCloudBadge('BANCO • SALVANDO');
+  setStatus('Salvando snapshot compacto da Semana '+week+'…');
+  try{
+    const saved=await window.CloudSync.saveRundownWeek({
+      weekNo:week,
+      fileName:fileName,
+      fileSize:fileSize,
+      dataset,
+      masterPassword:password
+    });
+    rundownSnapshotMeta=saved||null;
+    dataOrigin='database';
+    closeRundownSaveModal();
+    await refreshRundownWeeks(week);
+    $('rundownWeekSelect').value=String(week);
+    selectedRundownWeek=week;
+    setCloudBadge('BANCO • S'+week+' • V'+(saved?.version_no||'1'),'saved');
+    setStatus('Semana '+week+' salva no banco • versão '+(saved?.version_no||'—')+' • Excel não precisa ser carregado novamente para consulta.');
+    show('');
+  }catch(error){
+    console.error('Falha ao salvar Curva Rundown',error);
+    setCloudBadge('BANCO • ERRO','offline');
+    show(error.message||'Falha ao salvar a Curva Rundown.');
+  }finally{
+    savingRundown=false;
+    $('btnConfirmRundownSave').disabled=false;
+    updateCloudButtons();
+  }
+}
 applyViewLabels();
 clearRender();
 $('unitAllBtn')?.addEventListener('click',()=>setActiveUnit(''));
