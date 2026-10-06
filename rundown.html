@@ -1075,7 +1075,7 @@ function drawMix(view,unit){
           {type:'line',label:'BLContratual - % Acum',data:chartData(view,'prev'),borderColor:p.contractual,backgroundColor:p.contractual,borderWidth:2.2,pointRadius:0,pointHoverRadius:4,spanGaps:false,tension:.14,yAxisID:'yPct',order:2},
           {type:'line',label:'Real - % Acum',data:chartData(view,'real'),borderColor:p.real,backgroundColor:p.real,borderWidth:2.7,pointRadius:0,pointHoverRadius:4,spanGaps:false,tension:.14,yAxisID:'yPct',order:0},
           {type:'line',label:'Projetado - % Acum',data:chartData(view,'proj'),borderColor:p.projected,backgroundColor:p.projected,borderWidth:2.7,borderDash:[8,5],pointRadius:0,pointHoverRadius:4,spanGaps:false,tension:.14,yAxisID:'yPct',order:0},
-          {type:'bar',label:'Real semanal • I',data:chartData(view,'realSem'),backgroundColor:'rgba(245,158,11,.42)',borderColor:'rgba(245,158,11,.8)',borderWidth:1,borderRadius:5,yAxisID:'yQty',order:5}
+          {type:'bar',label:'Real semanal • I',data:chartData(view,'realSem'),backgroundColor:'rgba(0,185,107,.48)',borderColor:'#00b96b',borderWidth:1,borderRadius:5,yAxisID:'yQty',order:5}
         ];
       })()},
       options:{
@@ -1159,7 +1159,7 @@ function drawSem(view,unit){
     chartSem=new Chart($('chartSem'),{
       type:'bar',
       data:{labels:labels(view),datasets:[
-        {label:'Real semanal • I',data:chartData(view,'realSem'),backgroundColor:'rgba(245,158,11,.74)',borderColor:'#f59e0b',borderWidth:1,borderRadius:6,maxBarThickness:34}
+        {label:'Real semanal • I',data:chartData(view,'realSem'),backgroundColor:'rgba(0,185,107,.76)',borderColor:'#00b96b',borderWidth:1,borderRadius:6,maxBarThickness:34}
       ]},
       options:{
         responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
