@@ -504,9 +504,7 @@ function setActiveUnit(unit){
     $('fId').value=firstIdOption.value;
     syncById();
     $('idSearch').value=firstIdOption.value;
-    setStatus(activeUnit
-      ?`Unidade ${activeUnit} selecionada • exibindo ${firstIdOption.value} • fonte: aba 21.`
-      :`Todas as unidades • exibindo ${firstIdOption.value} • fonte: aba 21.`);
+    setStatus((activeUnit?'Unidade '+activeUnit+' selecionada':'Todas as unidades')+' • exibindo '+firstIdOption.value+' • fonte: '+sourceSheetName()+'.');
     render();
     return;
   }
@@ -516,33 +514,37 @@ function setActiveUnit(unit){
   $('idSearch').value='';
   clearRender();
   setStatus(activeUnit
-    ?`Nenhuma atividade encontrada para a unidade ${activeUnit} na aba 21.`
-    :'Nenhuma atividade disponível na aba 21.');
+    ?'Nenhuma atividade encontrada para a unidade '+activeUnit+' em '+sourceSheetName()+'.'
+    :'Nenhuma atividade disponível em '+sourceSheetName()+'.');
 }
 function loadFilters(){
-  optionFill($('fLevel'),uniq([...activities.values()].map(a=>a.level).filter(v=>v!=null)),'Todos');
+  const scopes=uniq([...activities.values()].map(scopeValue).filter(v=>v!==''&&v!=null));
+  optionFill($('fLevel'),scopes,IS_RUNDOWN?'Todas':'Todos');
   buildUnitNav();
   refreshActivities();
-  const weeks=uniq([...activities.values()].flatMap(a=>a.times.map(t=>t.week))).sort((a,b)=>a-b);
+  const weeks=uniq([...activities.values()].flatMap(a=>{
+    if(IS_RUNDOWN)return (a.rawRows||[]).map(r=>r.week);
+    return (a.times||[]).map(t=>t.week);
+  })).sort((a,b)=>a-b);
   optionFill($('fIni'),weeks,'Automática');
   optionFill($('fFim'),weeks,'Automática');
 }
 function refreshActivities(){
-  const level=$('fLevel').value;
+  const scope=$('fLevel').value;
   const arr=[...activities.values()].filter(a=>
     (!activeUnit||getUnitFromId(a.id)===activeUnit)&&
-    (!level||String(a.level)===String(level))
+    (!scope||String(scopeValue(a))===String(scope))
   );
   optionFill($('fAtiv'),uniq(arr.map(a=>a.name)),'Selecione...');
   optionFill($('fId'),uniq(arr.map(a=>a.id)),'Selecione...');
 }
 function syncByActivity(){
   const name=$('fAtiv').value;if(!name)return;
-  const level=$('fLevel').value;
+  const scope=$('fLevel').value;
   const ids=[...activities.values()].filter(a=>
     a.name===name&&
     (!activeUnit||getUnitFromId(a.id)===activeUnit)&&
-    (!level||String(a.level)===String(level))
+    (!scope||String(scopeValue(a))===String(scope))
   ).map(a=>a.id);
   if(ids.length===1)$('fId').value=ids[0];
 }
@@ -551,7 +553,8 @@ function syncById(){
   const a=activities.get(id);
   if(a){
     $('fAtiv').value=a.name;
-    if(a.level!=null&&[...$('fLevel').options].some(o=>String(o.value)===String(a.level)))$('fLevel').value=String(a.level);
+    const scope=scopeLabelValue(a);
+    if(scope&&[...$('fLevel').options].some(o=>String(o.value)===String(scope)))$('fLevel').value=String(scope);
     if($('idSearch'))$('idSearch').value=id;
   }
 }
@@ -581,7 +584,8 @@ function selectSearchedId(id){
     $('fAtiv').value=a.name;
   }
 
-  if(a.level!=null&&[...$('fLevel').options].some(o=>String(o.value)===String(a.level)))$('fLevel').value=String(a.level);
+  const scope=scopeLabelValue(a);
+  if(scope&&[...$('fLevel').options].some(o=>String(o.value)===String(scope)))$('fLevel').value=String(scope);
   $('idSearch').value=id;
   return true;
 }
@@ -595,7 +599,7 @@ function searchId(){
 
   if(exact){
     if(selectSearchedId(exact)){
-      setStatus(`ID localizado na aba 21: ${exact}`);
+      setStatus('ID localizado em '+sourceSheetName()+': '+exact);
       render();
     }
     return;
@@ -606,7 +610,7 @@ function searchId(){
   if(matches.length===1){
     const id=matches[0];
     if(selectSearchedId(id)){
-      setStatus(`ID localizado na aba 21: ${id}`);
+      setStatus('ID localizado em '+sourceSheetName()+': '+id);
       render();
     }
     return;
@@ -617,12 +621,12 @@ function searchId(){
     $('fAtiv').value='';
     optionFill($('fId'),matches,'Selecione um dos IDs encontrados');
     $('fId').value='';
-    setStatus(`${matches.length} IDs da aba 21 contêm “${q}”. Selecione um na lista de ID da Atividade.`);
+    setStatus(matches.length+' IDs de '+sourceSheetName()+' contêm “'+q+'”. Selecione um na lista de ID da Atividade.');
     clearRender();
     return;
   }
 
-  setStatus(`Nenhum ID encontrado na aba 21 para “${q}”.`);
+  setStatus('Nenhum ID encontrado em '+sourceSheetName()+' para “'+q+'”.');
 }
 
 function selected(){let id=$('fId').value;if(id&&activities.has(id))return activities.get(id);const name=$('fAtiv').value;if(name){const arr=[...activities.values()].filter(a=>a.name===name);if(arr.length===1){$('fId').value=arr[0].id;return arr[0]}}return null}
