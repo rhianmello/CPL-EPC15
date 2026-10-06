@@ -1039,11 +1039,12 @@
   }
 
   function paged(items,key) {
+    const pageSize=key==='offenders' ? 10 : PAGE_SIZE;
     const total=items.length;
-    const totalPages=Math.max(1,Math.ceil(total/PAGE_SIZE));
+    const totalPages=Math.max(1,Math.ceil(total/pageSize));
     pageState[key]=Math.max(0,Math.min(pageState[key]||0,totalPages-1));
-    const start=pageState[key]*PAGE_SIZE;
-    return {items:items.slice(start,start+PAGE_SIZE),total,totalPages,page:pageState[key],start};
+    const start=pageState[key]*pageSize;
+    return {items:items.slice(start,start+pageSize),total,totalPages,page:pageState[key],start};
   }
 
   function renderPager(id,key,info) {
