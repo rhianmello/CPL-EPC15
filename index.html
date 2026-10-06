@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07111f">
   <title>BI EPC-15</title>
   <link rel="stylesheet" href="css/style.css?v=20261005-event-groups1">
-  <link rel="stylesheet" href="css/home.css?v=20261005-planning-home2">
+  <link rel="stylesheet" href="css/home.css?v=20261006-planning-cards1">
   <link rel="stylesheet" href="css/tempo-fotografico-embed.css?v=20261006-history2">
   <style>
     /* Ajustes CPL / Reunião de Coordenação */
@@ -91,7 +91,7 @@
     <div class="home-hero" id="topo">
       <div class="home-hero-copy">
         <p class="home-eyebrow">CPL • EPC-15</p>
-        <h1>Planejamento e Qualidade</h1>
+        <h1>Painel de Planejamento</h1>
         <p class="home-sub">Acompanhe a evolução do empreendimento.</p>
         <a class="btn-outline" href="#paineis">PRÉVIA VISUAL</a>
       </div>
@@ -137,12 +137,43 @@
 
         <article class="home-card">
           <div class="home-card-top">
-            <span class="home-icon yellow" aria-hidden="true">
-              <i data-lucide="calendar-days"></i>
+            <span class="home-icon teal" aria-hidden="true">
+              <i data-lucide="list-checks"></i>
             </span>
             <div>
-              <h3>Produção e Prazos</h3>
-              <span class="home-tag yellow">RUNDOWN</span>
+              <h3>Rundown</h3>
+              <span class="home-tag teal">ATIVIDADES</span>
+            </div>
+          </div>
+          <p>Acompanhamento das atividades restantes e da evolução do rundown.</p>
+          <div class="home-preview dark">
+            <img src="assets/home-card-prazos-new.jpg" alt="" loading="lazy" onerror="this.remove()">
+            <div class="home-flow" aria-hidden="true">
+              <div class="home-flow-step">
+                <span class="home-flow-dot"><i data-lucide="list-todo"></i></span>
+                <span>Planejado</span>
+              </div>
+              <div class="home-flow-step">
+                <span class="home-flow-dot"><i data-lucide="activity"></i></span>
+                <span>Em execução</span>
+              </div>
+              <div class="home-flow-step">
+                <span class="home-flow-dot"><i data-lucide="circle-check-big"></i></span>
+                <span>Concluído</span>
+              </div>
+            </div>
+          </div>
+          <a class="home-cta teal" id="open-rundown-dashboard" href="rundown.html?view=rundown">Consultar Rundown <i data-lucide="arrow-right"></i></a>
+        </article>
+
+        <article class="home-card">
+          <div class="home-card-top">
+            <span class="home-icon yellow" aria-hidden="true">
+              <i data-lucide="chart-no-axes-combined"></i>
+            </span>
+            <div>
+              <h3>Curva Física</h3>
+              <span class="home-tag yellow">CURVA FÍSICA</span>
             </div>
           </div>
           <p>Produção semanal e atividades restantes.</p>
@@ -158,7 +189,7 @@
               <i class="dim" style="width:34%;margin-left:60%"></i>
             </div>
           </div>
-          <a class="home-cta yellow" id="open-rundown-dashboard" href="rundown.html">Consultar Rundown <i data-lucide="arrow-right"></i></a>
+          <a class="home-cta yellow" href="rundown.html?view=curva-fisica">Consultar Curva Física <i data-lucide="arrow-right"></i></a>
         </article>
 
       </div>
