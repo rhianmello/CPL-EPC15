@@ -454,9 +454,11 @@
     const imp=state.import;if(!imp)return;
     const previousScroll=$('.fleet-import-rows')?.scrollTop||0;
     $('#fleet-modal').classList.add('large');
+    const selection='<div class="fleet-import-selection" aria-label="Conferência em lote"><div class="fleet-import-selection-actions"><button class="fleet-button" type="button" id="import-select-all">'+icon('check')+' Selecionar todos</button><button class="fleet-button" type="button" id="import-deselect-all">'+icon('square')+' Desselecionar todos</button></div><span id="import-selection-count" role="status" aria-live="polite"></span><p>Marque ou desmarque “Registro conferido” em lote. Linhas com destino indefinido precisam de uma escolha antes de serem selecionadas.</p></div>';
     $('#modal-content').innerHTML=modalHead('Resumo da importação','Banco atual × Excel importado • '+state.importFile.name,'CONFERÊNCIA ANTES DA PUBLICAÇÃO')+'<div class="fleet-modal-body"><div class="fleet-import-summary" id="import-summary">'+importSummary().map(([label,value])=>'<div><strong>'+number(value)+'</strong><span>'+esc(label)+'</span></div>').join('')+'</div><div class="fleet-import-info">'+ (state.connected?'Selecione o vínculo dos identificadores ambíguos e marque a revisão humana dos registros sinalizados. A publicação preserva o histórico e nunca exclui ativos ausentes no Excel.':'O banco não respondeu. Esta é uma conferência local do arquivo; a publicação exige uma consulta atual do banco e edição liberada. Atualize o banco e selecione novamente o arquivo para recalcular as diferenças.')+'<br>Lote: <span class="fleet-number">'+esc(state.importBatch)+'</span></div><div class="fleet-import-rows">'+imp.rows.map((row,index)=>importRowHTML(row,index)).join('')+'</div><div class="fleet-form-error hidden" id="import-error" role="alert"></div><div class="fleet-import-footer"><span id="import-progress">'+importProgress()+'</span><button class="fleet-button primary" id="import-publish" '+(canPublish()?'':'disabled')+'>'+icon('upload-cloud')+' Publicar atualização</button></div>'+(!editing()?'<div class="fleet-form-actions"><button class="fleet-button" data-action="unlock-import">'+icon('pencil')+' Liberar edição para publicar</button></div>':'')+'</div>';
     $('#fleet-modal-overlay').classList.remove('hidden');document.body.style.overflow='hidden';
-    bindImportEvents();icons();$('.fleet-import-rows').scrollTop=previousScroll;
+    $('.fleet-import-rows').insertAdjacentHTML('beforebegin',selection);
+    bindImportEvents();updateImportFooter();icons();$('.fleet-import-rows').scrollTop=previousScroll;
   }
   function importProgress() {const rows=state.import.rows;const pending=rows.filter(row=>!row._choiceMade||importNeedsReview(row)&&!row.reviewed).length;return pending?pending+' registro(s) aguardando decisão ou revisão humana.':'Conferência completa. '+rows.filter(r=>r.decision!=='ignore').length+' registro(s) selecionado(s) para publicação.';}
   const ptranCorrectionFields=['status','data_recebimento','data_solicitacao','numero_ptran','numero_isc','provisoria'];
@@ -483,10 +485,12 @@
     return '<details class="fleet-import-row '+(row.issues.length?'has-issues':'')+'" '+(importNeedsReview(row)?'open':'')+' data-import-row="'+index+'"><summary><strong>'+esc(assetLabel(row.asset))+'<small>Linha '+row.row_number+' • '+(row.asset_id?'Ativo existente':'Novo cadastro proposto')+'</small></strong>'+badge(row._choiceMade?(row.decision==='ignore'?'Ignorar':row.decision==='update'?'Atualizar':'Novo'):'Vínculo a definir',!row._choiceMade?'yellow':row.decision==='ignore'?'gray':'green')+(row.issues.length?badge(row.issues.length+' alerta(s)','yellow'):'')+'</summary><div class="fleet-import-row-body">'+(row.issues.length?'<ul class="fleet-import-issues">'+row.issues.map(issue=>'<li>'+esc(issue.message||issue)+'</li>').join(''):'')+'<div class="fleet-form-grid"><label>Destino do registro'+target+'</label><label class="fleet-check"><input type="checkbox" data-import-reviewed="'+index+'" '+(row.reviewed?'checked':'')+' '+(!row._choiceMade?'disabled':'')+'> '+(row.issues.length?'Revisei as inconsistências desta linha':'Registro conferido')+'</label></div><div class="fleet-import-diffs" data-import-diffs="'+index+'">'+(changes||'<p class="fleet-form-note">'+(row.decision==='new'?'Cadastro inicial com os valores da fonte.':'Nenhuma alteração de campos identificada.')+'</p>')+'</div>'+(corrections?'<div class="fleet-import-corrections">'+corrections+'</div>':'')+'<details style="margin-top:14px"><summary class="fleet-form-note">Ver valores originais da planilha</summary><pre class="fleet-import-raw">'+esc(JSON.stringify(row.raw,null,2))+'</pre></details></div></details>';
   }
   function bindImportEvents() {
+    $('#import-select-all').onclick=()=>setImportReviewed(true);
+    $('#import-deselect-all').onclick=()=>setImportReviewed(false);
     $$('[data-import-target]').forEach(select=>select.onchange=()=>{
       const row=state.import.rows[Number(select.dataset.importTarget)],choice=select.value;
       row._choiceMade=Boolean(choice);row.reviewed=false;
-      if(!choice)return;
+      if(!choice){renderImport();return;}
       row.ptran=reviewedPtran(row);
       row.decision=['new','ignore'].includes(choice)?choice:'update';row.asset_id=row.decision==='update'?choice:null;
       const asset=state.assets.find(a=>a.id===row.asset_id);row.expected_updated_at=asset?.updated_at||null;
@@ -517,9 +521,18 @@
     if(matching){row.ptran.supersedes_id=matching.id;Object.entries(row.ptran).filter(([key])=>key!=='supersedes_id').forEach(([field,value])=>{if(value!==''&&value!=null&&display(matching[field])!==display(value))row.changes.push({field:'PTRAN.'+field,before:matching[field],after:value});});if(!row.changes.some(change=>change.field.startsWith('PTRAN.')))row.ptran=null;}
     else delete row.ptran.supersedes_id;
   }
+  function setImportReviewed(checked) {
+    state.import.rows.forEach(row=>{row.reviewed=checked&&row._choiceMade;});
+    $$('[data-import-reviewed]').forEach(input=>{input.checked=state.import.rows[Number(input.dataset.importReviewed)].reviewed;});
+    updateImportFooter();
+  }
   function updateImportFooter() {
     $('#import-summary').innerHTML=importSummary().map(([label,value])=>'<div><strong>'+number(value)+'</strong><span>'+esc(label)+'</span></div>').join('');
     $('#import-progress').textContent=importProgress();$('#import-publish').disabled=!canPublish();
+    const rows=state.import.rows,reviewed=rows.filter(row=>row.reviewed).length;
+    $('#import-selection-count').textContent=reviewed+' de '+rows.length+' registros conferidos';
+    $('#import-select-all').disabled=rows.every(row=>!row._choiceMade||row.reviewed);
+    $('#import-deselect-all').disabled=reviewed===0;
   }
   async function publishImport() {
     if(!canPublish())return;
