@@ -62,3 +62,87 @@
   #page-photo-time .tf-grouping-control label{flex:1}
   #page-photo-time .tf-grouping-control select{width:100%}
 }
+
+/* ===== Histórico fotográfico completo por escopo (06/10/2026) ===== */
+#page-photo-time .tf-gallery{
+  display:block;
+}
+#page-photo-time .tf-gallery-week{
+  margin-top:14px;
+  overflow:hidden;
+  border:1px solid rgba(148,163,184,.14);
+  border-radius:12px;
+  background:rgba(7,19,33,.34);
+}
+#page-photo-time .tf-gallery-week:first-child{
+  margin-top:4px;
+}
+#page-photo-time .tf-gallery-week-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:9px 11px;
+  border-bottom:1px solid rgba(148,163,184,.12);
+  background:rgba(7,19,33,.68);
+}
+#page-photo-time .tf-gallery-week-head>div{
+  display:flex;
+  align-items:baseline;
+  gap:9px;
+}
+#page-photo-time .tf-gallery-week-head strong{
+  color:#67e8f9;
+  font-size:.78rem;
+  font-weight:950;
+}
+#page-photo-time .tf-gallery-week-head span{
+  color:#8299b1;
+  font-size:.56rem;
+  font-weight:750;
+}
+#page-photo-time .tf-gallery-week-head b{
+  padding:3px 7px;
+  border:1px solid rgba(34,211,238,.18);
+  border-radius:999px;
+  color:#a5f3fc;
+  font-size:.52rem;
+  font-weight:900;
+}
+#page-photo-time .tf-gallery-week-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  padding:10px;
+}
+#page-photo-time .tf-week-node-all{
+  border-style:dashed;
+  border-color:#6f879d;
+}
+#page-photo-time .tf-week-node-all strong{
+  font-size:.63rem;
+  letter-spacing:.05em;
+}
+#page-photo-time .tf-week-node-all.selected{
+  border-style:solid;
+}
+#page-photo-time .tf-timeline-empty{
+  position:relative;
+  z-index:1;
+  width:100%;
+  padding:26px 10px;
+  color:#718ba4;
+  text-align:center;
+  font-size:.68rem;
+}
+#page-photo-time .tf-timeline:has(.tf-timeline-empty):before{
+  display:none;
+}
+@media(max-width:1100px){
+  #page-photo-time .tf-gallery-week-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:760px){
+  #page-photo-time .tf-gallery-week-grid{grid-template-columns:1fr}
+  #page-photo-time .tf-gallery-week-head{align-items:flex-start}
+  #page-photo-time .tf-gallery-week-head>div{display:grid;gap:2px}
+}
