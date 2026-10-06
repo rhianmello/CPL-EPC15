@@ -106,21 +106,26 @@
     const host=$('tf-timeline');
     if(!host) return;
     const weeks=evidenceWeeks();
+    const photos=allFilteredPhotos();
 
     if(!weeks.length){
       host.innerHTML='<div class="tf-timeline-empty">Nenhuma semana com registro fotográfico nesta seleção.</div>';
       return;
     }
 
+    const counts=new Map();
+    photos.forEach(photo=>counts.set(photo._week,(counts.get(photo._week)||0)+1));
+
     host.innerHTML=
       '<button class="tf-week-node tf-week-node-all '+(state.selectedWeek===null?'selected':'')+'" data-week="" type="button">'+
-        '<span><strong>TODAS</strong><small>'+weeks.length+' semana'+(weeks.length===1?'':'s')+'</small></span>'+
+        '<span><strong>TODAS</strong><small>'+photos.length+' foto'+(photos.length===1?'':'s')+' • '+weeks.length+' semana'+(weeks.length===1?'':'s')+'</small></span>'+
       '</button>'+
       weeks.map(w=>{
         const no=Number(w.week_no);
-        return '<button class="tf-week-node has-photo '+(no===Number(state.selectedWeek)?'selected':'')+'" data-week="'+no+'" type="button">'+
+        const total=counts.get(no)||0;
+        return '<button class="tf-week-node has-photo '+(no===Number(state.selectedWeek)?'selected':'')+'" data-week="'+no+'" type="button" title="Mostrar somente a Semana '+no+'">'+
           '<i class="dot"></i>'+
-          '<span><strong>S-'+no+'</strong><small>'+esc(w.start_date?dmy(w.start_date):'com fotos')+'</small></span>'+
+          '<span><strong>S-'+no+'</strong><small>'+total+' foto'+(total===1?'':'s')+(w.start_date?' • '+esc(dmy(w.start_date)):'')+'</small></span>'+
         '</button>';
       }).join('');
 
@@ -129,6 +134,7 @@
       state.selectedWeek=raw===''?null:Number(raw);
       syncWeekChoices();
       renderAll();
+      document.querySelector('#page-photo-time .tf-gallery')?.scrollIntoView({behavior:'smooth',block:'nearest'});
     }));
   }
 
@@ -170,7 +176,10 @@
     });
 
     const weekNos=[...grouped.keys()].sort((a,b)=>b-a);
-    host.innerHTML=weekNos.map(no=>{
+    const gallerySummary=state.selectedWeek===null
+      ? '<div class="tf-gallery-summary"><strong>'+photos.length+' foto'+(photos.length===1?'':'s')+'</strong><span>em '+weekNos.length+' semana'+(weekNos.length===1?'':'s')+' com evidência</span></div>'
+      : '<div class="tf-gallery-summary"><strong>S-'+Number(state.selectedWeek)+'</strong><span>'+photos.length+' foto'+(photos.length===1?'':'s')+' nesta semana</span></div>';
+    host.innerHTML=gallerySummary+weekNos.map(no=>{
       const list=grouped.get(no)||[];
       const w=weekByNo(no);
       const dateLabel=w.start_date
