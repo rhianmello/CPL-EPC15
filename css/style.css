@@ -2857,3 +2857,32 @@
   .pb-event-edit-label{min-width:0;flex:1}
   .pb-event-edit-select{width:100%;min-width:0}
 }
+
+
+/* ===== Desvio real na contribuição para o atraso (06/10/2026) ===== */
+.pb-delay-real-deviation{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:54px;
+  padding:4px 7px;
+  border-radius:6px;
+  font-size:.62rem!important;
+  font-weight:950;
+  white-space:nowrap;
+}
+.pb-delay-real-deviation.negative{
+  border:1px solid rgba(239,83,80,.28);
+  background:#fff0f1;
+  color:#b94c56!important;
+}
+.pb-delay-real-deviation.positive{
+  border:1px solid rgba(52,211,153,.28);
+  background:#edf8f0;
+  color:#347349!important;
+}
+.pb-delay-real-deviation.neutral{
+  border:1px solid rgba(148,163,184,.18);
+  background:#f3f6f4;
+  color:#6d7f73!important;
+}
