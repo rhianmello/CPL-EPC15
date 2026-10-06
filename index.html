@@ -276,6 +276,23 @@
           </div>
           <button id="select-excel-empty" class="dashboard-file-button" type="button">Selecionar Excel</button>
         </div>
+        <div class="executive-filterbar" aria-label="Filtros do Painel Gerencial">
+          <div class="executive-filterbar-copy">
+            <p class="eyebrow">FILTROS DO PAINEL</p>
+            <strong>Visão executiva por período e unidade</strong>
+            <small id="executive-filter-status" data-tone="ok">Versão atual • Todas as unidades</small>
+          </div>
+          <label>SEMANA
+            <select id="executive-week-filter">
+              <option value="">Atual</option>
+            </select>
+          </label>
+          <label>UNIDADE
+            <select id="executive-unit-filter">
+              <option value="">Todas as unidades</option>
+            </select>
+          </label>
+        </div>
         <div id="executive-kpis" class="kpi-grid"></div>
         <div class="grid-2 executive-row">
           <article class="panel chart-panel"><div class="panel-heading"><div><p class="eyebrow">AVANÇO FÍSICO</p><h3>Avanço por unidade</h3></div></div><div class="chart-wrap"><canvas id="units-progress-chart"></canvas></div></article>
@@ -638,7 +655,7 @@
   <script src="js/excel-reader.js"></script>
   <script src="js/data-model.js?v=20261005-presentation-curve1"></script>
   <script src="js/charts.js?v=20261005-presentation-curve1"></script>
-  <script src="js/dashboard.js?v=20261005-photo-embed1"></script>
+  <script src="js/dashboard.js?v=20261006-executive-filters1"></script>
   <script src="js/pb-dashboard.js?v=20261006-delay-real1"></script>
   <script src="js/presentation.js?v=20261005-presentation-curve1"></script>
   <script src="js/export.js"></script>
