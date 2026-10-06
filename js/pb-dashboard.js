@@ -458,6 +458,15 @@
     return normalizePbLayout({left:ids(left),right:ids(right),full:ids(full)});
   }
 
+  function syncDelayContributionPlacement() {
+    const offenders=document.querySelector('#page-pb .pb-offenders-card');
+    const contribution=document.querySelector('#page-pb .pb-delay-contribution-card');
+    if(!offenders || !contribution || !offenders.parentElement) return;
+    if(contribution.parentElement!==offenders.parentElement || offenders.nextElementSibling!==contribution){
+      offenders.insertAdjacentElement('afterend',contribution);
+    }
+  }
+
   function applyPbLayout(layout,{store=true}={}) {
     const normalized=normalizePbLayout(layout);
     const columns={
@@ -472,6 +481,7 @@
         if(card) columns[column].appendChild(card);
       });
     });
+    syncDelayContributionPlacement();
     if(store) storeLocalPbLayout(normalized);
     return normalized;
   }
@@ -618,6 +628,7 @@
       document.querySelectorAll('#page-pb .pb-column').forEach(el=>el.classList.remove('pb-layout-dropzone'));
       draggedLayoutCard?.classList.remove('pb-layout-dragging');
       draggedLayoutCard=null;
+      syncDelayContributionPlacement();
       if(layoutDirty) persistPbLayout();
       layoutDirty=false;
     });
