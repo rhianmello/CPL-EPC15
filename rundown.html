@@ -156,9 +156,48 @@ body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);c
 
 <script>
 Chart.defaults.color='#64748b';Chart.defaults.borderColor='rgba(15,23,42,.12)';Chart.defaults.plugins.legend.labels.color='#334155';
-const S21='21_Planejamento-curvas_S_Física';
+const VIEW_MODE=new URLSearchParams(window.location.search).get('view')==='curva-fisica'?'curva-fisica':'rundown';
+const IS_RUNDOWN=VIEW_MODE==='rundown';
+const S20='20_Planejamento-curvas_rundown', S20_ALIAS='20_Planejamento-curvas_S_Física', S21='21_Planejamento-curvas_S_Física';
 let activities=new Map(), chartMix=null, chartRun=null, chartSem=null, current=null, fileName='', ws21Ref=null, activeUnit='';
 const $=id=>document.getElementById(id);
+function viewName(){return IS_RUNDOWN?'Curva Rundown':'Curva Física'}
+function curveSeriesLabel(){return IS_RUNDOWN?'Curva Rundown':'Curva Física'}
+function sourceSheetName(){return IS_RUNDOWN?S20:S21}
+function scopeValue(a){return IS_RUNDOWN?(a.discipline||''):(a.level==null?'':String(a.level))}
+function scopeLabelValue(a){return IS_RUNDOWN?(a.discipline||''):(a.level==null?'':String(a.level))}
+function findSheetAny(wb,names){for(const name of names){const ws=findSheet(wb,name);if(ws)return {ws,name:wb.SheetNames.find(n=>norm(n)===norm(name))||name}}return null}
+function applyViewLabels(){
+  const name=viewName();
+  document.title='BI '+name+' — V2.13';
+  if($('loginTitle'))$('loginTitle').textContent='Entrar no BI '+name;
+  if($('viewSidebarBrand'))$('viewSidebarBrand').innerHTML='<span>BI</span> '+(IS_RUNDOWN?'CURVA RUNDOWN':'CURVA FÍSICA');
+  if($('viewMainTitle'))$('viewMainTitle').textContent='BI '+name+' — V2.13';
+  if($('viewMainSubtitle'))$('viewMainSubtitle').textContent=IS_RUNDOWN
+    ?'Aba 20 • colunas A e F:J • barras + linhas • leitura sob demanda'
+    :'Primavera • aba 21 • barras + linhas • leitura sob demanda';
+  if($('scopeLabel'))$('scopeLabel').textContent=IS_RUNDOWN?'Disciplina (aba 20)':'Nível (aba 21)';
+  if($('kTotalLabel'))$('kTotalLabel').textContent=IS_RUNDOWN?'Quantidade total':'Unidades previstas';
+  if($('kSaldoLabel'))$('kSaldoLabel').textContent=IS_RUNDOWN?'Saldo Rundown':'Saldo Projetado';
+  if($('kSaldoSub'))$('kSaldoSub').textContent=IS_RUNDOWN?'transição Realizado → Projetado':'unidades não trabalho restante';
+  if($('kFimLabel'))$('kFimLabel').textContent=IS_RUNDOWN?'Término Rundown':'Término Curva Física';
+  if($('chartMixHeading'))$('chartMixHeading').textContent='Visão integrada — produção semanal + '+name;
+  if($('chartMixText'))$('chartMixText').textContent=IS_RUNDOWN
+    ?'Barras: produção semanal derivada de F/G/H. Linhas: saldos F/G/H e a Curva Rundown da coluna J.'
+    :'Barras e linhas calculadas exclusivamente com as curvas da aba 21.';
+  if($('chartRunHeading'))$('chartRunHeading').textContent=name+' — saldo restante (%)';
+  if($('chartRunText'))$('chartRunText').textContent=IS_RUNDOWN
+    ?'Previsto (F), Realizado (G), Projetado (H) e Curva Rundown (J), com a semana na coluna A.'
+    :'Previsto permanece como referência; a Curva Física combina Realizado e Projetado da aba 21.';
+  if($('chartSemText'))$('chartSemText').textContent=IS_RUNDOWN
+    ?'Produção semanal derivada dos saldos das colunas F, G e H da aba 20.'
+    :'Variação semanal derivada das curvas acumuladas do Primavera na aba 21.';
+  if($('runTableHeader'))$('runTableHeader').textContent=name;
+  if($('status'))$('status').textContent=IS_RUNDOWN
+    ?'Carregue “031A Anexo XXXIA Rev”. Fonte da Curva Rundown: aba 20_Planejamento-curvas_rundown, colunas A e F:J.'
+    :'Carregue “031A Anexo XXXIA Rev”. Fonte da Curva Física: aba 21_Planejamento-curvas_S_Física.';
+}
+
 const norm=s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
 const nval=v=>{if(v===null||v===undefined||v==='')return null;if(typeof v==='number')return Number.isFinite(v)?v:null;const s=String(v).trim().replace(/\s/g,'');const x=Number(s.includes(',')?s.replace(/\./g,'').replace(',','.'):s);return Number.isFinite(x)?x:null};
 const fmt=(v,d=0)=>v==null?'—':new Intl.NumberFormat('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d}).format(v);
@@ -188,6 +227,51 @@ function colIndexVals(vals,aliases,contains=false){const ns=vals.map(norm);for(c
 function parseDate(v){if(v instanceof Date)return v;if(typeof v==='number'&&v>20000){const d=XLSX.SSF.parse_date_code(v);return d?new Date(Date.UTC(d.y,d.m-1,d.d)):null}if(typeof v==='string'&&/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v.trim())){const [dd,mm,yy]=v.trim().split('/').map(Number);return new Date(Date.UTC(yy,mm-1,dd))}return null}
 function yearOf(v){const d=parseDate(v);return d?d.getUTCFullYear():null}
 function weekLabel(w,y,duplicate){return duplicate&&y?`S-${w}/${String(y).slice(-2)}`:`S-${w}`}
+function parseSheet20(ws){
+  setStatus('Indexando aba 20 — semanas (A) e curvas F:J…');
+  const rg=getRange(ws),hr=findHeaderRowWs(ws,['numero_semana','atividade','quantidade_total'],60);
+  if(hr<0)throw new Error('Cabeçalho da aba 20 não encontrado.');
+  const h=rowValues(ws,hr,rg.s.c,rg.e.c),off=rg.s.c;
+  const idx=(aliases,fallback)=>{const i=colIndexVals(h,aliases,false);return i<0?fallback:i+off};
+  const cWeek=idx(['numero_semana','semana'],0),
+        cDisc=idx(['disciplina'],1),
+        cName=idx(['atividade'],2),
+        cTot=idx(['quantidade_total'],3),
+        cUnit=idx(['unidade_de_medida','unidade_medida','unidade'],4),
+        cPlan=idx(['quantidade_planejada'],5),
+        cReal=idx(['quantidade_realizada'],6),
+        cProj=idx(['quantidade_projetada'],7),
+        cAccum=idx(['real_acumulado'],8),
+        cRun=idx(['comentarios','comentários'],9),
+        cId=idx(['primavera_p6_id_atividade','primavera_p6_id_ativi','id_da_atividade','id'],11);
+  const map=new Map();
+  for(let r=hr+1;r<=rg.e.r;r++){
+    const week=nval(getCell(ws,r,cWeek));
+    const name=String(getCell(ws,r,cName)??'').trim();
+    const id=String(getCell(ws,r,cId)??'').trim()||name;
+    if(week==null||!id||!name)continue;
+    if(!map.has(id))map.set(id,{
+      source:'20',id,name,
+      discipline:String(getCell(ws,r,cDisc)??'').trim(),
+      total:nval(getCell(ws,r,cTot)),
+      unit:String(getCell(ws,r,cUnit)??'').trim()||'und',
+      rawRows:[]
+    });
+    const a=map.get(id);
+    if(a.total==null)a.total=nval(getCell(ws,r,cTot));
+    if(!a.discipline)a.discipline=String(getCell(ws,r,cDisc)??'').trim();
+    if(!a.unit)a.unit=String(getCell(ws,r,cUnit)??'').trim()||'und';
+    a.rawRows.push({
+      excelRow:r+1,week:Math.round(week),
+      planned:nval(getCell(ws,r,cPlan)),
+      realized:nval(getCell(ws,r,cReal)),
+      projected:nval(getCell(ws,r,cProj)),
+      realAccum:nval(getCell(ws,r,cAccum)),
+      rundown:nval(getCell(ws,r,cRun))
+    });
+  }
+  return map;
+}
 function parseSheet21(ws){
   setStatus('Indexando aba 21 — IDs, níveis, unidades e curvas…');
   ws21Ref=ws;
@@ -275,7 +359,7 @@ function absoluteRemaining(vals,base){
 function weeklyQty(vals,base,total){
   const n=vals?.length||0,out=Array(n).fill(null);if(!vals||!base)return out;let prev=0,started=false;for(let i=0;i<n;i++){const v=vals[i];if(v==null){if(started)out[i]=0;continue}const d=Math.max(0,v-prev);if(d>0||started){started=true;out[i]=total!=null?d/base*total:d}prev=Math.max(prev,v)}return out;
 }
-function buildActivity(a){
+function buildActivity21(a){
   const p=curveValues(a,'previsto'),r=curveValues(a,'realizado'),q=curveValues(a,'projetado');
   const base=a.plannedUnits||Math.max(maxCum(p),maxCum(r),maxCum(q));
   const total=a.plannedUnits??base??null;
@@ -331,6 +415,68 @@ function buildActivity(a){
     realMax,completed,hasReal,lastR,firstProj,currentSaldoQty,rows
   };
 }
+function maxNonNull(vals){let out=null;for(const v of vals||[])if(v!=null&&Number.isFinite(v)&&(out==null||v>out))out=v;return out}
+function minNonNull(vals){let out=null;for(const v of vals||[])if(v!=null&&Number.isFinite(v)&&(out==null||v<out))out=v;return out}
+function buildActivity20(a){
+  const byWeek=new Map();
+  for(const row of a.rawRows||[]){
+    if(!byWeek.has(row.week))byWeek.set(row.week,[]);
+    byWeek.get(row.week).push(row);
+  }
+  const agg=[...byWeek.entries()].sort((x,y)=>x[0]-y[0]).map(([week,arr])=>({
+    week,
+    planned:maxNonNull(arr.map(x=>x.planned)),
+    realized:maxNonNull(arr.map(x=>x.realized)),
+    projected:maxNonNull(arr.map(x=>x.projected)),
+    realAccum:maxNonNull(arr.map(x=>x.realAccum)),
+    rundown:maxNonNull(arr.map(x=>x.rundown))
+  }));
+  const total=a.total??maxNonNull(agg.flatMap(x=>[x.planned,x.realized,x.projected,x.rundown]))??0;
+  const unit=a.unit||'und';
+  let lastAccum=null,lastR=-1,realMax=0;
+  const rows=agg.map((x,i)=>{
+    let realSem=null;
+    if(x.realAccum!=null){
+      realSem=lastAccum==null?Math.max(0,x.realAccum):Math.max(0,x.realAccum-lastAccum);
+      if(lastAccum==null||x.realAccum>lastAccum+1e-7)lastR=i;
+      lastAccum=Math.max(lastAccum??0,x.realAccum);
+      realMax=Math.max(realMax,x.realAccum);
+    }
+    const nxt=agg[i+1];
+    const prevSem=x.planned!=null&&nxt&&nxt.planned!=null?Math.max(0,x.planned-nxt.planned):null;
+    let projSem=x.projected!=null&&nxt&&nxt.projected!=null?Math.max(0,x.projected-nxt.projected):null;
+    if(realSem==null&&x.realized!=null&&nxt&&nxt.realized!=null)realSem=Math.max(0,x.realized-nxt.realized);
+    const pct=v=>total>0&&v!=null?Math.max(0,Math.min(100,v/total*100)):null;
+    return {
+      i,week:x.week,label:'S-'+x.week,
+      prev:pct(x.planned),
+      real:pct(x.realized),
+      proj:pct(x.projected),
+      run:pct(x.rundown),
+      prevSem,realSem,projSem,
+      rawPlanned:x.planned,rawRealized:x.realized,rawProjected:x.projected,rawAccum:x.realAccum,rawRundown:x.rundown
+    };
+  });
+  if(realMax<=0){
+    const minReal=minNonNull(agg.map(x=>x.realized));
+    if(total>0&&minReal!=null)realMax=Math.max(0,total-minReal);
+  }
+  const hasReal=realMax>0||lastR>=0;
+  const completed=total>0&&realMax>=total-1e-6;
+  const firstProj=rows.findIndex(x=>x.proj!=null);
+  let currentSaldoQty=null;
+  const firstProjected=agg.find(x=>x.projected!=null);
+  if(firstProjected)currentSaldoQty=firstProjected.projected;
+  else{
+    const realizedVals=agg.map(x=>x.realized).filter(v=>v!=null);
+    if(realizedVals.length)currentSaldoQty=realizedVals[realizedVals.length-1];
+  }
+  return {
+    id:a.id,name:a.name,disc:a.discipline||'',discipline:a.discipline||'',level:null,
+    total,unit,base:total,realMax,completed,hasReal,lastR,firstProj,currentSaldoQty,rows
+  };
+}
+function buildActivity(a){return IS_RUNDOWN?buildActivity20(a):buildActivity21(a)}
 function isRelevant(x){return [x.prev,x.real,x.proj,x.run,x.prevSem,x.realSem,x.projSem].some(v=>v!=null&&(typeof v!=='number'||Math.abs(v)>1e-9))||[x.prev,x.real,x.proj,x.run].some(v=>v===0)}
 function filterWindow(rows){
   let i0=rows.findIndex(isRelevant),i1=-1;for(let i=rows.length-1;i>=0;i--)if(isRelevant(rows[i])){i1=i;break}if(i0<0||i1<0)return[];return rows.slice(i0,i1+1)
