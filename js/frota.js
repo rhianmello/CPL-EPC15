@@ -23,6 +23,18 @@
   function icons() { window.lucide?.createIcons(); }
   function badge(label,tone='gray') { return '<span class="fleet-badge" data-tone="' + esc(tone) + '">' + esc(label || 'Não informado') + '</span>'; }
   function assetLabel(asset) { return [asset?.modelo || 'Ativo',asset?.placa_identificador || asset?.asset_code || 'Sem identificação'].join(' • '); }
+  function vehicleThumb(asset) {
+    const model=norm(asset?.modelo || '');
+    const descriptor=norm([asset?.tipo,asset?.categoria,asset?.modelo,asset?.marca].filter(Boolean).join(' '));
+    if(/actros/.test(model)) return 'assets/frota/mercedes-actros.svg';
+    if(/volvo.*fh|fh\s*540|fh540/.test(model)) return 'assets/frota/volvo-fh-540.svg';
+    if(/iveco.*daily|daily/.test(model)) return 'assets/frota/iveco-daily.svg';
+    if(/constellation/.test(model)) return 'assets/frota/vw-constellation.svg';
+    if(/sprinter/.test(model)) return 'assets/frota/sprinter-416.svg';
+    if(/van|furgao|furgão|minibus|microonibus|micro-?onibus|utilitario|utilitário/.test(descriptor)) return 'assets/frota/default-van.svg';
+    if(/munck|guind|retro|escav|empilh|trator|maquina|máquina|equipamento/.test(descriptor)) return 'assets/frota/default-equipment.svg';
+    return 'assets/frota/default-truck.svg';
+  }
   function latest(asset,kind) { return core.newest(asset?.[kind] || []); }
   function number(value) { return Number(value || 0).toLocaleString('pt-BR'); }
   function fieldLabel(field) { const clean=String(field || '').replace(/^PTRAN\./,''); return (String(field || '').startsWith('PTRAN.')?'PTRAN • ':'')+(fields[clean] || clean || 'Registro'); }
@@ -216,7 +228,7 @@
       const mileage=a.quilometragem!=null&&a.quilometragem!==''?number(a.quilometragem)+' km':a.horimetro!=null&&a.horimetro!==''?number(a.horimetro)+' h':'—';
       const ptranLabel=p?.data_validade?fmt(p.data_validade):(p?.status||'Não cadastrado');
       const ptranTone=p?.data_validade?dateTone(p.data_validade):(p?statusTone(p.status):'gray');
-      return '<tr data-asset="'+esc(a.id)+'" tabindex="0" aria-label="Abrir ficha de '+esc(assetLabel(a))+'"><td><div class="fleet-asset-cell"><span class="fleet-asset-icon">'+icon(a.tipo&&norm(a.tipo).includes('equip')?'construction':'truck')+'</span><div><strong>'+esc(a.modelo||'Modelo não informado')+'</strong><small>'+esc(a.placa_identificador||a.asset_code||'Sem identificação')+'</small></div></div></td><td>'+esc(a.categoria||a.tipo||'—')+'</td><td>'+esc(a.responsavel_cpl||'Não informado')+'<small>'+esc(a.gerencia||'')+'</small></td><td>'+badge(situation.label,situation.tone)+'<small>'+esc(a.status_operacional||'Operação não informada')+'</small></td><td>'+ (revision?badge(fmt(revision),dateTone(revision)):'<small>Não informada</small>')+'</td><td>'+badge(ptranLabel,ptranTone)+(p?.numero_ptran?'<small>PTRAN '+esc(p.numero_ptran)+'</small>':'')+'</td><td>'+ (inspection?badge(fmt(inspection),dateTone(inspection)):'<small>Não registrada</small>')+'</td><td><span class="fleet-km">'+esc(mileage)+'</span></td><td><div class="fleet-row-actions"><button class="fleet-button fleet-table-view" data-open-asset="'+esc(a.id)+'">Ver</button><button class="fleet-icon-button" data-edit-asset="'+esc(a.id)+'" title="Editar ativo" aria-label="Editar ativo">'+icon('ellipsis-vertical')+'</button></div></td></tr>';
+      return '<tr data-asset="'+esc(a.id)+'" tabindex="0" aria-label="Abrir ficha de '+esc(assetLabel(a))+'"><td><div class="fleet-asset-cell"><span class="fleet-asset-thumb" data-tone="'+situation.tone+'"><img src="'+esc(vehicleThumb(a))+'" alt="" loading="lazy" decoding="async"></span><div class="fleet-asset-copy"><strong>'+esc(a.modelo||'Modelo não informado')+'</strong><small>'+esc(a.placa_identificador||a.asset_code||'Sem identificação')+'</small></div></div></td><td>'+esc(a.categoria||a.tipo||'—')+'</td><td>'+esc(a.responsavel_cpl||'Não informado')+'<small>'+esc(a.gerencia||'')+'</small></td><td>'+badge(situation.label,situation.tone)+'<small>'+esc(a.status_operacional||'Operação não informada')+'</small></td><td>'+ (revision?badge(fmt(revision),dateTone(revision)):'<small>Não informada</small>')+'</td><td>'+badge(ptranLabel,ptranTone)+(p?.numero_ptran?'<small>PTRAN '+esc(p.numero_ptran)+'</small>':'')+'</td><td>'+ (inspection?badge(fmt(inspection),dateTone(inspection)):'<small>Não registrada</small>')+'</td><td><span class="fleet-km">'+esc(mileage)+'</span></td><td><div class="fleet-row-actions"><button class="fleet-button fleet-table-view" data-open-asset="'+esc(a.id)+'">Ver</button><button class="fleet-icon-button" data-edit-asset="'+esc(a.id)+'" title="Editar ativo" aria-label="Editar ativo">'+icon('ellipsis-vertical')+'</button></div></td></tr>';
     }).join('');
     $('#table-page-info').textContent=assets.length?(start+1)+'–'+Math.min(start+state.pageSize,assets.length)+' de '+number(assets.length)+' ativos':'Nenhum registro exibido';
     $('#table-prev').disabled=state.page===0;$('#table-next').disabled=state.page>=pages-1;$('#export-button').disabled=!assets.length;
@@ -332,7 +344,7 @@
   }
   function closeDrawer() {$('#fleet-drawer-overlay').classList.add('hidden');state.detail=null;state.drawerRequest=(state.drawerRequest||0)+1;restoreScroll();state.lastFocus?.focus?.();}
   function fullAsset(detail) {return {...detail.asset,ptrans:detail.ptrans||[],inspections:detail.inspections||[],maintenance:detail.maintenance||[],documents:detail.documents||[]};}
-  function detailHeader(asset,title='FICHA DO ATIVO') {return '<header class="fleet-drawer-head"><div><p class="eyebrow">'+esc(title)+'</p><h2 id="drawer-title">'+esc(assetLabel(asset))+'</h2><p>'+esc(asset.categoria||'Categoria não informada')+' • '+esc(asset.empresa||'Empresa não informada')+'</p></div><button class="fleet-icon-button" data-close-drawer aria-label="Fechar ficha">'+icon('x')+'</button></header>';}
+  function detailHeader(asset,title='FICHA DO ATIVO') {return '<header class="fleet-drawer-head fleet-drawer-head-visual"><span class="fleet-drawer-vehicle"><img src="'+esc(vehicleThumb(asset))+'" alt="" loading="lazy"></span><div class="fleet-drawer-title-copy"><p class="eyebrow">'+esc(title)+'</p><h2 id="drawer-title">'+esc(assetLabel(asset))+'</h2><p>'+esc(asset.categoria||'Categoria não informada')+' • '+esc(asset.empresa||'Empresa não informada')+'</p></div><button class="fleet-icon-button" data-close-drawer aria-label="Fechar ficha">'+icon('x')+'</button></header>';}
   function recordSummary(asset,kind) {
     const records=asset[kind]||[];if(!records.length)return {label:'Não cadastrado',tone:'gray'};
     if(kind==='ptrans'){const p=latest(asset,kind);return {label:p?.status||'Revisar status',tone:p?.data_validade&&dateTone(p.data_validade)==='red'?'red':statusTone(p?.status)};}
@@ -579,6 +591,13 @@
     const rows=state.filtered.map(asset=>{const p=latest(asset,'ptrans'),s=core.situation(asset);return {'UUID':asset.id,'Código':asset.asset_code||'','Identificação':asset.placa_identificador||'','Modelo':asset.modelo||'','Tipo':asset.tipo||'','Categoria':asset.categoria||'','Empresa':asset.empresa||'','Gerência':asset.gerencia||'','Responsável CPL':asset.responsavel_cpl||'','No contrato':asset.ativo_no_contrato===true?'Sim':asset.ativo_no_contrato===false?'Não':'Não confirmado','Status operacional':asset.status_operacional||'','Número PTRAN':p?.numero_ptran||'','ISC':p?.numero_isc||'','Status PTRAN':p?.status||'','Validade PTRAN':p?.data_validade||'','Situação':s.label,'Motivos':s.reasons.join('; '),'Atualização':asset.updated_at||''};});
     const workbook=XLSX.utils.book_new();XLSX.utils.book_append_sheet(workbook,XLSX.utils.json_to_sheet(rows),'Frota filtrada');XLSX.writeFile(workbook,'CPL-Frota-'+core.todayISO()+'.xlsx');toast('Visão filtrada exportada.');
   }
+  document.addEventListener('error',event=>{
+    const img=event.target;
+    if(!(img instanceof HTMLImageElement)||!img.closest('.fleet-asset-thumb,.fleet-drawer-vehicle'))return;
+    if(img.dataset.fallbackApplied)return;
+    img.dataset.fallbackApplied='1';
+    img.src='assets/frota/default-truck.svg';
+  },true);
   document.addEventListener('click',event=>{
     const button=event.target.closest('button,a');
     if(button?.dataset.focus){focusDashboard(button.dataset.focus);return;}
