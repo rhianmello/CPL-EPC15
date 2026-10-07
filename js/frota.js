@@ -31,6 +31,7 @@
     if(/iveco.*daily|daily/.test(model)) return 'assets/frota/iveco-daily.svg';
     if(/constellation/.test(model)) return 'assets/frota/vw-constellation.svg';
     if(/sprinter/.test(model)) return 'assets/frota/sprinter-416.svg';
+    if(/veiculo leve|veículo leve|automovel|automóvel|carro|passeio|hatch|sedan|compacto|hb\s*20|hb20|gol|onix|argo|kwid|sandero|logan|voyage|palio|mobi|etios|corolla|yaris|city|civic/.test(descriptor)) return 'assets/frota/default-car.svg';
     if(/van|furgao|furgão|minibus|microonibus|micro-?onibus|utilitario|utilitário/.test(descriptor)) return 'assets/frota/default-van.svg';
     if(/munck|guind|retro|escav|empilh|trator|maquina|máquina|equipamento/.test(descriptor)) return 'assets/frota/default-equipment.svg';
     return 'assets/frota/default-truck.svg';
