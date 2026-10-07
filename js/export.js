@@ -2,6 +2,10 @@
   const PAGE_W = 297;
   const PAGE_H = 167.06;
 
+  function isMobileDevice() {
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '') || window.innerWidth <= 760;
+  }
+
   function cleanName(value) {
     return String(value || '')
       .normalize('NFD')
@@ -30,8 +34,15 @@
   }
 
   async function captureSlide(slide) {
+    const mobile=isMobileDevice();
     return window.html2canvas(slide,{
-      scale:Math.min(2,Math.max(1.25,window.devicePixelRatio || 1)),
+      scale:mobile ? 1 : Math.min(1.6,Math.max(1.15,window.devicePixelRatio || 1)),
+      width:1280,
+      height:720,
+      windowWidth:1280,
+      windowHeight:720,
+      scrollX:0,
+      scrollY:0,
       backgroundColor:'#071321',
       useCORS:true,
       allowTaint:false,
@@ -40,12 +51,48 @@
       removeContainer:true,
       foreignObjectRendering:false,
       onclone:doc=>{
+        doc.body.classList.add('pdf-exporting');
         doc.querySelectorAll('.slide').forEach(node=>{
           node.style.boxShadow='none';
           node.style.transition='none';
         });
       }
     });
+  }
+
+  async function deliverPdf(pdf,fileName) {
+    if(isMobileDevice()){
+      const blob=pdf.output('blob');
+      try{
+        const file=new File([blob],fileName,{type:'application/pdf'});
+        if(navigator.share && navigator.canShare?.({files:[file]})){
+          await navigator.share({
+            files:[file],
+            title:fileName.replace(/\.pdf$/i,''),
+            text:'Relatório EPC-15'
+          });
+          return true;
+        }
+      }catch(error){
+        if(error?.name==='AbortError') return true;
+        console.warn('Compartilhamento nativo indisponível; usando download.',error);
+      }
+
+      const url=URL.createObjectURL(blob);
+      const link=document.createElement('a');
+      link.href=url;
+      link.download=fileName;
+      link.target='_blank';
+      link.rel='noopener';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),60000);
+      return true;
+    }
+
+    pdf.save(fileName);
+    return true;
   }
 
   async function exportPDF() {
@@ -63,6 +110,7 @@
       await ensureLibraries();
       if(!slides.length) throw new Error('Nenhum slide disponível para exportação.');
 
+      document.body.classList.add('pdf-exporting');
       const {jsPDF}=window.jspdf;
       const pdf=new jsPDF({
         orientation:'landscape',
@@ -82,8 +130,11 @@
         if(!canvas?.width || !canvas?.height) throw new Error('Falha ao capturar o slide '+(index+1)+'.');
 
         if(index>0) pdf.addPage([PAGE_W,PAGE_H],'landscape');
-        const image=canvas.toDataURL('image/jpeg',0.92);
+        const image=canvas.toDataURL('image/jpeg',isMobileDevice()?0.84:0.90);
         pdf.addImage(image,'JPEG',0,0,PAGE_W,PAGE_H,undefined,'FAST');
+        canvas.width=1;
+        canvas.height=1;
+        await new Promise(resolve=>setTimeout(resolve,0));
       }
 
       pdf.setProperties({
@@ -91,7 +142,7 @@
         subject:'Relatório semanal do Painel Gerencial e Reunião de Coordenação',
         creator:'BI EPC-15'
       });
-      pdf.save(fileNameForPresentation());
+      await deliverPdf(pdf,fileNameForPresentation());
       return true;
     }catch(error){
       console.error('Falha ao gerar PDF',error);
@@ -99,6 +150,7 @@
       alert('Não foi possível gerar o PDF'+(detail ? ': '+detail : '.')+' Atualize a página e tente novamente.');
       return false;
     }finally{
+      document.body.classList.remove('pdf-exporting');
       slides.forEach(item=>item.classList.remove('active'));
       slides[Math.max(0,activeIndex)]?.classList.add('active');
       if(button){

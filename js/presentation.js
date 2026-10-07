@@ -4,6 +4,7 @@
   let reportWeek = null;
   let reportModel = null;
   const fmt = () => Dashboard.format;
+  const isMobileDevice = () => /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '') || window.innerWidth <= 760;
   const presentationModel = () => reportModel || window.Dashboard?.getPresentationModel?.() || window.Dashboard?.getModel?.();
   const moneyWhole = new Intl.NumberFormat('pt-BR', {
     style:'currency', currency:'BRL', maximumFractionDigits:0, minimumFractionDigits:0
@@ -330,7 +331,15 @@
 
       await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
 
-      if(autoExport){
+      const exportButton=document.getElementById('export-pdf');
+      if(exportButton){
+        exportButton.textContent=isMobileDevice() ? 'Compartilhar PDF' : 'Exportar PDF';
+        exportButton.title=isMobileDevice()
+          ? 'No celular, abre o compartilhamento para salvar em Arquivos, Drive, WhatsApp ou outro app.'
+          : 'Gerar o PDF desta apresentação';
+      }
+
+      if(autoExport && !isMobileDevice()){
         if(!window.PDFExport?.exportPDF) throw new Error('O módulo de PDF não foi carregado.');
         await window.PDFExport.exportPDF();
       }
@@ -368,7 +377,7 @@
     if(event.key==='Escape'&&!document.fullscreenElement) close();
   }
 
-  document.getElementById('executive-week-report')?.addEventListener('click',()=>openWeeklyReport(true));
+  document.getElementById('executive-week-report')?.addEventListener('click',()=>openWeeklyReport(!isMobileDevice()));
 
   window.Presentation = { open, openWeeklyReport, close, next, previous, fullscreen, onKey };
 }());

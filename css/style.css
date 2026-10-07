@@ -2996,3 +2996,247 @@
     grid-column:auto;
   }
 }
+
+
+/* ===== Apresentação/PDF mobile — 07/10/2026 ===== */
+@media(max-width:760px){
+  .presentation{
+    min-height:100dvh;
+    overflow:hidden;
+  }
+  .slides{
+    min-height:0;
+    padding:6px;
+    overflow:auto;
+    place-items:center;
+  }
+  .slide{
+    width:min(100%,calc((100dvh - 104px)*16/9))!important;
+    max-width:100%;
+    aspect-ratio:16/9;
+    padding:3.2%!important;
+    border-radius:5px;
+  }
+  .slide-head{
+    padding-bottom:1.8%!important;
+  }
+  .slide-head-copy{
+    max-width:78%!important;
+  }
+  .slide-head h2,
+  .slide-head h2.slide-title-long,
+  .slide-head h2.slide-title-xlong{
+    margin-top:1px!important;
+    font-size:clamp(.72rem,3.35vw,1.15rem)!important;
+    line-height:1.12!important;
+    padding-bottom:.08em!important;
+  }
+  .slide .eyebrow{
+    margin-bottom:2px!important;
+    font-size:clamp(.34rem,1.5vw,.52rem)!important;
+    letter-spacing:.11em!important;
+  }
+  .slide-date{
+    font-size:clamp(.34rem,1.45vw,.5rem)!important;
+    line-height:1.25!important;
+  }
+  .slide-kpis{
+    gap:1%!important;
+    margin:1.7% 0!important;
+  }
+  .slide-kpi{
+    padding:4.8%!important;
+    border-left-width:2px!important;
+    border-radius:5px!important;
+  }
+  .slide-kpi span{
+    font-size:clamp(.31rem,1.35vw,.48rem)!important;
+    letter-spacing:.04em!important;
+  }
+  .slide-kpi strong{
+    margin-top:5%!important;
+    font-size:clamp(.62rem,2.55vw,.9rem)!important;
+    line-height:1!important;
+  }
+  .slide-grid{
+    height:57%!important;
+    gap:1.5%!important;
+    grid-template-columns:minmax(0,1.18fr) minmax(0,.82fr)!important;
+  }
+  .slide-panel{
+    padding:2.5%!important;
+    border-radius:5px!important;
+  }
+  .slide-panel h3{
+    margin-bottom:2%!important;
+    font-size:clamp(.42rem,1.8vw,.62rem)!important;
+  }
+  .slide-bar-label,
+  .slide-ranking-row{
+    font-size:clamp(.33rem,1.45vw,.5rem)!important;
+  }
+  .slide-bars-compact{
+    gap:3px!important;
+    margin-bottom:5px!important;
+  }
+  .progress-track{
+    height:4px!important;
+  }
+  .slide-curve-label{
+    font-size:clamp(.36rem,1.55vw,.52rem)!important;
+  }
+  .slide-curve-legend{
+    gap:2px 5px!important;
+    margin:1px 0!important;
+    font-size:clamp(.27rem,1.15vw,.4rem)!important;
+  }
+  .slide-curve-legend i{
+    width:8px!important;
+    height:1px!important;
+  }
+  .slide-curve-svg{
+    min-height:55px!important;
+  }
+  .coordination-highlights-panel{
+    height:57%!important;
+    padding:2%!important;
+  }
+  .coordination-highlight-list{
+    gap:4px!important;
+  }
+  .coordination-highlight-row{
+    grid-template-columns:18px minmax(0,1fr)!important;
+    gap:4px!important;
+    padding:4px!important;
+    border-radius:4px!important;
+  }
+  .coordination-highlight-row>span{
+    width:17px!important;
+    height:17px!important;
+    border-radius:4px!important;
+    font-size:.34rem!important;
+  }
+  .coordination-highlight-row strong{
+    font-size:clamp(.34rem,1.42vw,.5rem)!important;
+    line-height:1.08!important;
+  }
+  .coordination-highlight-row small{
+    margin-top:1px!important;
+    font-size:clamp(.29rem,1.18vw,.42rem)!important;
+    line-height:1.08!important;
+  }
+  .presentation-controls{
+    flex:0 0 auto;
+    height:auto!important;
+    min-height:92px;
+    padding:7px 8px calc(7px + env(safe-area-inset-bottom))!important;
+    display:flex!important;
+    flex-wrap:wrap!important;
+    justify-content:center!important;
+    align-content:center;
+    gap:5px!important;
+    overflow:visible!important;
+  }
+  .presentation-controls button{
+    flex:0 0 auto;
+    padding:6px 8px!important;
+    font-size:.66rem!important;
+    border-radius:6px!important;
+  }
+  .presentation-controls span{
+    min-width:44px!important;
+    font-size:.66rem!important;
+  }
+}
+
+/* A captura do PDF usa um canvas fixo 16:9, independente do tamanho do celular. */
+body.pdf-exporting{
+  overflow:hidden!important;
+}
+body.pdf-exporting .presentation{
+  overflow:visible!important;
+}
+body.pdf-exporting .slides{
+  display:block!important;
+  overflow:visible!important;
+  padding:0!important;
+}
+body.pdf-exporting .slide.active{
+  width:1280px!important;
+  height:720px!important;
+  max-width:none!important;
+  aspect-ratio:auto!important;
+  padding:46px 54px!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  position:fixed!important;
+  left:-1400px!important;
+  top:0!important;
+}
+body.pdf-exporting .slide-head{
+  padding-bottom:18px!important;
+}
+body.pdf-exporting .slide-head-copy{
+  max-width:82%!important;
+}
+body.pdf-exporting .slide-head h2,
+body.pdf-exporting .slide-head h2.slide-title-long,
+body.pdf-exporting .slide-head h2.slide-title-xlong{
+  font-size:42px!important;
+  line-height:1.13!important;
+  padding-bottom:4px!important;
+}
+body.pdf-exporting .slide .eyebrow{
+  font-size:10px!important;
+  margin-bottom:5px!important;
+}
+body.pdf-exporting .slide-date{
+  font-size:12px!important;
+}
+body.pdf-exporting .slide-kpis{
+  margin:18px 0!important;
+  gap:14px!important;
+}
+body.pdf-exporting .slide-kpi{
+  padding:18px!important;
+}
+body.pdf-exporting .slide-kpi span{
+  font-size:10px!important;
+}
+body.pdf-exporting .slide-kpi strong{
+  margin-top:10px!important;
+  font-size:26px!important;
+}
+body.pdf-exporting .slide-grid{
+  height:390px!important;
+  gap:18px!important;
+}
+body.pdf-exporting .slide-panel{
+  padding:18px!important;
+}
+body.pdf-exporting .slide-panel h3{
+  font-size:16px!important;
+  margin-bottom:12px!important;
+}
+body.pdf-exporting .slide-bar-label,
+body.pdf-exporting .slide-ranking-row{
+  font-size:11px!important;
+}
+body.pdf-exporting .slide-curve-label{
+  font-size:11px!important;
+}
+body.pdf-exporting .slide-curve-legend{
+  font-size:8px!important;
+}
+body.pdf-exporting .slide-curve-svg{
+  min-height:150px!important;
+}
+body.pdf-exporting .coordination-highlights-panel{
+  height:390px!important;
+}
+body.pdf-exporting .coordination-highlight-row strong{
+  font-size:11px!important;
+}
+body.pdf-exporting .coordination-highlight-row small{
+  font-size:9px!important;
+}
