@@ -1285,7 +1285,8 @@
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
-  line-height:1.04;
+  line-height:1.14;
+  padding-bottom:.10em;
 }
 .slide-head h2.slide-title-long{
   font-size:clamp(1.35rem,2.45vw,2.65rem)!important;
@@ -1453,7 +1454,8 @@
   position:absolute;
   inset:0;
   pointer-events:none;
-  background:linear-gradient(90deg,color-mix(in srgb,var(--slide-kpi-accent,#60a5fa) 10%,transparent),transparent 42%);
+  background:linear-gradient(90deg,var(--slide-kpi-accent,#60a5fa),transparent 42%);
+  opacity:.10;
   border-radius:inherit;
 }
 .slide-kpi>span,
@@ -2891,7 +2893,7 @@
 /* ===== Filtros do Painel Gerencial (06/10/2026) ===== */
 .executive-filterbar{
   display:grid;
-  grid-template-columns:minmax(260px,1fr) minmax(180px,.42fr) minmax(220px,.52fr);
+  grid-template-columns:minmax(260px,1fr) minmax(180px,.42fr) minmax(220px,.52fr) minmax(180px,.40fr);
   gap:12px;
   align-items:end;
   margin:0 0 16px;
@@ -2952,6 +2954,31 @@
 .executive-filterbar select:disabled{
   opacity:.6;
   cursor:wait;
+}
+.executive-week-report-button{
+  height:38px;
+  padding:0 14px;
+  border:1px solid rgba(34,211,238,.38);
+  border-radius:8px;
+  background:linear-gradient(135deg,rgba(37,99,235,.92),rgba(8,145,178,.92));
+  color:#fff;
+  font-size:.66rem;
+  font-weight:900;
+  letter-spacing:.02em;
+  cursor:pointer;
+  box-shadow:0 8px 22px rgba(8,145,178,.14);
+  transition:.18s ease;
+  white-space:nowrap;
+}
+.executive-week-report-button:hover{
+  transform:translateY(-1px);
+  filter:brightness(1.08);
+  border-color:rgba(103,232,249,.72);
+}
+.executive-week-report-button:disabled{
+  opacity:.62;
+  cursor:wait;
+  transform:none;
 }
 @media(max-width:980px){
   .executive-filterbar{

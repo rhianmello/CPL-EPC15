@@ -1,7 +1,10 @@
 (function () {
   let current = 0;
   let mode = 'gerencial';
+  let reportWeek = null;
+  let reportModel = null;
   const fmt = () => Dashboard.format;
+  const presentationModel = () => reportModel || window.Dashboard?.getPresentationModel?.() || window.Dashboard?.getModel?.();
   const moneyWhole = new Intl.NumberFormat('pt-BR', {
     style:'currency', currency:'BRL', maximumFractionDigits:0, minimumFractionDigits:0
   });
@@ -25,8 +28,8 @@
     return '';
   }
 
-  function slideShell(title, subtitle, kpis, body, extraClass='') {
-    const model = Dashboard.getModel();
+  function slideShell(title, subtitle, kpis, body, extraClass='', sourceModel=null) {
+    const model = sourceModel || presentationModel();
     return '<article class="slide '+extraClass+'">'+
       '<div class="slide-head">'+
         '<div class="slide-head-copy"><p class="eyebrow">'+fmt().escapeHtml(subtitle)+'</p><h2 class="'+titleClass(title)+'">'+fmt().escapeHtml(title)+'</h2></div>'+
@@ -144,7 +147,7 @@
   }
 
   function renderGerencial() {
-    const model = Dashboard.getModel();
+    const model = presentationModel();
     const c = model.contract;
     const worst = [...model.units]
       .filter(u=>Number.isFinite(u.variance))
@@ -224,7 +227,8 @@
         progressAndCurve('Avanço físico',scope.planned,scope.actual,deviation,data.curve,data.dataBase)+
         rankingPanel('Principais desvios ponderados',pareto)+
       '</div>',
-      'slide-coordination'
+      'slide-coordination',
+      {dataBase:data.dataBase}
     );
 
     const highlights=data.highlights || [];
@@ -243,7 +247,8 @@
       kpi('Destaques',String(highlights.length), '#22c55e')+
       kpi('Semana',data.selection?.week ? 'Semana '+data.selection.week : 'Atual', '#8b5cf6'),
       '<div class="slide-panel coordination-highlights-panel"><div class="coordination-highlight-list">'+highlightRows+'</div></div>',
-      'slide-coordination slide-highlights'
+      'slide-coordination slide-highlights',
+      {dataBase:data.dataBase}
     );
 
     return overview + highlightsSlide;
@@ -251,7 +256,9 @@
 
   function render() {
     const host=document.getElementById('slides');
-    host.innerHTML = mode==='coordination' ? renderCoordination() : renderGerencial();
+    host.innerHTML = mode==='weekly'
+      ? renderGerencial()+renderCoordination()
+      : (mode==='coordination' ? renderCoordination() : renderGerencial());
     current = 0;
     update();
   }
@@ -264,17 +271,87 @@
   }
 
   function open(nextMode='gerencial') {
+    reportWeek=null;
+    reportModel=null;
     mode=nextMode==='coordination'?'coordination':'gerencial';
     render();
     const el=document.getElementById('presentation');
     el.dataset.presentationMode=mode;
+    delete el.dataset.reportWeek;
     el.classList.remove('hidden');
     document.body.style.overflow='hidden';
+  }
+
+  async function openWeeklyReport(autoExport=false) {
+    const trigger=document.getElementById('executive-week-report');
+    const weekSelect=document.getElementById('executive-week-filter');
+    const rawWeek=String(weekSelect?.value || '').trim();
+    const week=Number(rawWeek);
+    if(!rawWeek || !Number.isFinite(week) || week<1){
+      alert('Selecione no filtro SEMANA uma semana salva antes de emitir o relatório.');
+      return false;
+    }
+    if(!window.CloudSync?.ready?.()){
+      alert('A nuvem não está disponível para carregar o histórico desta semana.');
+      return false;
+    }
+
+    const originalText=trigger?.textContent || '';
+    if(trigger){
+      trigger.disabled=true;
+      trigger.textContent='Preparando PDF...';
+    }
+
+    try{
+      const result=await window.CloudSync.loadCoordinationWeek(week);
+      const snapshot=result?.snapshot;
+      if(!snapshot?.dataset?.model){
+        throw new Error('A Semana '+week+' ainda não possui um snapshot salvo.');
+      }
+
+      reportWeek=week;
+      reportModel=snapshot.dataset.model;
+
+      const pbWeekSelect=document.getElementById('pb-week-filter');
+      if(pbWeekSelect) pbWeekSelect.value=String(week);
+      window.PBDashboard?.useSnapshot?.(
+        reportModel,
+        snapshot.excel_file_name || ('Semana '+week)
+      );
+      window.PBDashboard?.importWeekData?.(snapshot.pb_manual || {},week);
+
+      mode='weekly';
+      render();
+      const el=document.getElementById('presentation');
+      el.dataset.presentationMode='weekly';
+      el.dataset.reportWeek=String(week);
+      el.classList.remove('hidden');
+      document.body.style.overflow='hidden';
+
+      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+
+      if(autoExport){
+        if(!window.PDFExport?.exportPDF) throw new Error('O módulo de PDF não foi carregado.');
+        await window.PDFExport.exportPDF();
+      }
+      return true;
+    }catch(error){
+      console.error('Falha ao preparar relatório semanal',error);
+      alert(error?.message || 'Não foi possível preparar o relatório da semana.');
+      return false;
+    }finally{
+      if(trigger){
+        trigger.disabled=false;
+        trigger.textContent=originalText;
+      }
+    }
   }
 
   function close() {
     document.getElementById('presentation').classList.add('hidden');
     document.body.style.overflow='';
+    reportWeek=null;
+    reportModel=null;
   }
 
   function next() { current += 1; update(); }
@@ -291,5 +368,7 @@
     if(event.key==='Escape'&&!document.fullscreenElement) close();
   }
 
-  window.Presentation = { open, close, next, previous, fullscreen, onKey };
+  document.getElementById('executive-week-report')?.addEventListener('click',()=>openWeeklyReport(true));
+
+  window.Presentation = { open, openWeeklyReport, close, next, previous, fullscreen, onKey };
 }());

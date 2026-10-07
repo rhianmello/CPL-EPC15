@@ -514,5 +514,12 @@
 
   function toggleSort() { unitSortAscending = !unitSortAscending; renderUnitsTable(); }
 
-  window.Dashboard = { init, showPage, renderUnit, setPhaseFilter, toggleSort, setExecutiveWeek, setExecutiveUnit, refreshUnitNavigation:renderUnitNavigation, unitHasExecution, format: { percent, pp, currency, quantity, date, escapeHtml }, getModel: () => model };
+  window.Dashboard = {
+    init, showPage, renderUnit, setPhaseFilter, toggleSort, setExecutiveWeek, setExecutiveUnit,
+    refreshUnitNavigation:renderUnitNavigation, unitHasExecution,
+    format: { percent, pp, currency, quantity, date, escapeHtml },
+    getModel: () => model,
+    getPresentationModel: () => executiveModel || executiveBaseModel || model,
+    getExecutiveWeek: () => executiveWeek
+  };
 }());
