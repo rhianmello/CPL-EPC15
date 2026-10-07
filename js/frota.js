@@ -89,7 +89,7 @@
     $('#history-asset').value=selected;
   }
   function readFilters() {
-    const filters={}; $('[data-filter]').forEach(el=>{ filters[el.dataset.filter]=el.type==='checkbox'?el.checked:el.value; });
+    const filters={}; $$('[data-filter]').forEach(el=>{ filters[el.dataset.filter]=el.type==='checkbox'?el.checked:el.value; });
     state.filters=filters; state.page=0; recalculate();
   }
   function setFilter(key,value) {
@@ -98,7 +98,7 @@
     readFilters();
   }
   function clearFilters() {
-    $('[data-filter]').forEach(el=>el.type==='checkbox'?el.checked=false:el.value='');
+    $$('[data-filter]').forEach(el=>el.type==='checkbox'?el.checked=false:el.value='');
     readFilters();
   }
   function revealAnalytics() {
@@ -111,7 +111,7 @@
   }
   function focusDashboard(area) {
     showView('dashboard');
-    $('.fleet-sidebar .fleet-subnav').forEach(btn=>btn.classList.remove('active'));
+    $$('.fleet-sidebar .fleet-subnav').forEach(btn=>btn.classList.remove('active'));
     const nav=$('.fleet-sidebar [data-focus="'+area+'"]'); if(nav)nav.classList.add('active');
     let targetId='fleet-assets-panel';
     if(area==='maintenance'){revealAnalytics();targetId=$('#maintenance-panel')&&!$('#maintenance-panel').classList.contains('hidden')?'maintenance-panel':'expiry-panel';}
@@ -251,9 +251,9 @@
     state.view=view;
     const labels={dashboard:'Visão Geral',alerts:'Alertas',quality:'Qualidade da Base',history:'Histórico'};
     if($('#fleet-view-label'))$('#fleet-view-label').textContent=labels[view]||'Gestão de Frota';
-    $('.fleet-sidebar [data-focus]').forEach(button=>button.classList.remove('active'));
-    $('[data-view]').forEach(button=>{button.classList.toggle('active',button.dataset.view===view);if(button.getAttribute('role')==='tab')button.setAttribute('aria-selected',String(button.dataset.view===view));});
-    $('.fleet-view').forEach(section=>section.classList.toggle('hidden',section.id!=='view-'+view));
+    $$('.fleet-sidebar [data-focus]').forEach(button=>button.classList.remove('active'));
+    $$('[data-view]').forEach(button=>{button.classList.toggle('active',button.dataset.view===view);if(button.getAttribute('role')==='tab')button.setAttribute('aria-selected',String(button.dataset.view===view));});
+    $$('.fleet-view').forEach(section=>section.classList.toggle('hidden',section.id!=='view-'+view));
     if(view==='history'&&!state.historyLoaded)loadHistory();
     if(view==='dashboard')requestAnimationFrame(()=>Object.values(state.charts).forEach(c=>c.resize()));
   }
