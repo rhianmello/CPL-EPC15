@@ -2478,6 +2478,7 @@
   window.PBDashboard={
     init,render,useSnapshot,useLive,getViewInfo,getCurrentModel,isCurationMode,finishCuration,getPresentationData,
     exportWeekData,importWeekData,exportManualData,importManualData,
-    loadPhotos,savePendingPhotos
+    loadPhotos,savePendingPhotos,
+    getPresentationPhotos:()=>photos.slice()
   };
 }());
