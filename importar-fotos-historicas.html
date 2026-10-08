@@ -16,7 +16,7 @@
 'use strict';
 const $=id=>document.getElementById(id);let tasks=[];
 const units={'8223':'U-8223 – Centro de Resposta a Emergência','8224':'U-8224 – Oficina de Manutenção','8226':'U-8226 – Almoxarifado','8900':'U-8900 – Central de Resíduos'};
-const normalize=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const normalize=v=>String(v||'').trim().toLocaleLowerCase('pt-BR');
 function parse(name) {
  const base=name.split('/').pop().replace(/\.(?:jpe?g|png|webp)$/i,'').trim();
  const id=base.match(/U\s*-\s*(8223|8224|8226|8900)/i)?.[1];
