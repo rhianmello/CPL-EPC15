@@ -34,7 +34,7 @@
     return '<article class="slide '+extraClass+'">'+
       '<div class="slide-head">'+
         '<div class="slide-head-copy"><p class="eyebrow">'+fmt().escapeHtml(subtitle)+'</p><h2 class="'+titleClass(title)+'">'+fmt().escapeHtml(title)+'</h2></div>'+
-        '<div class="slide-date">BI EPC-15<br>Data-base '+fmt().date(model.dataBase)+'</div>'+
+        '<div class="slide-brand"><img src="assets/logo-cpl-epc15.png" alt="Logo CPL" style="max-width:110px;max-height:46px;object-fit:contain;background:#fff;border-radius:6px;padding:4px"/><div class="slide-date">BI EPC-15<br>Data-base '+fmt().date(model.dataBase)+'</div></div>'+ 
       '</div>'+
       '<div class="slide-kpis">'+kpis+'</div>'+
       body+
@@ -212,7 +212,7 @@
     const scope=data.scope || {};
     const deviation=Number.isFinite(scope.weightedVariance) ? scope.weightedVariance : scope.variance;
     const pareto=(data.pareto||[]).map(row=>({
-      label:row.grouping || row.label || 'Agrupamento',
+      label:(row.unit ? row.unit+' — ' : 'Unidade não informada — ')+(row.grouping || row.label || 'Agrupamento'),
       value:fmt().pp(row.weightedVariance)
     }));
     const title=data.title || 'Contrato EPC-15';
@@ -236,7 +236,7 @@
     if(!highlights.length) return overview;
 
     const highlightRows=highlights.slice(0,8).map((item,index)=>
-      '<div class="coordination-highlight-row"><span>'+String(index+1).padStart(2,'0')+'</span><div><strong>'+fmt().escapeHtml(item.title||'Destaque')+'</strong>'+
+      '<div class="coordination-highlight-row"><span>'+String(index+1).padStart(2,'0')+'</span><div><small style="display:block;color:#67e8f9;font-weight:700;margin-bottom:4px">'+fmt().escapeHtml(item.unit || 'Unidade não informada')+(item.phase ? ' · '+fmt().escapeHtml(item.phase) : '')+'</small><strong>'+fmt().escapeHtml(item.title||'Destaque')+'</strong>'+
       (item.subtitle?'<small>'+fmt().escapeHtml(item.subtitle)+'</small>':'')+'</div></div>'
     ).join('');
 
