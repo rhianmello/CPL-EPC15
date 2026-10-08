@@ -257,30 +257,32 @@
 
   function photoSlides() {
     const data=window.PBDashboard?.getPresentationData?.();
-    const photos=window.PBDashboard?.getPresentationPhotos?.() || [];
+    const photos=window.PBDashboard?.getReportPhotos?.() || [];
     if(!photos.length) return '';
+    const totalPages=Math.ceil(photos.length/4);
     const slides=[];
     for(let offset=0;offset<photos.length;offset+=4){
       const batch=photos.slice(offset,offset+4);
       const cards=batch.map(photo=>{
         const src=String(photo.signed_url || '');
-        if(!src || !/^https:\/\//i.test(src)) return '';
         const unit=photo.unit_name || 'Unidade não informada';
         const phase=photo.phase_name || 'Fase não informada';
         const caption=photo.caption || 'Registro fotográfico';
-        return '<figure style="margin:0;min-width:0;background:#0b1b2d;border:1px solid #24354c;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:5px">'+
-          '<img crossorigin="anonymous" src="'+fmt().escapeHtml(src)+'" style="width:100%;height:120px;object-fit:contain;background:#050e19;border-radius:7px" alt="Registro fotográfico"/>'+
-          '<figcaption style="font-size:12px;color:#f8fafc;font-weight:700">'+fmt().escapeHtml(caption)+'</figcaption>'+
-          '<span style="font-size:10px;color:#67e8f9">'+fmt().escapeHtml(unit)+' · '+fmt().escapeHtml(phase)+'</span></figure>';
+        return '<figure class="report-photo-card" style="margin:0;min-width:0;min-height:0;background:#0b1b2d;border:1px solid #24354c;border-radius:10px;padding:9px;display:flex;flex-direction:column;gap:6px;overflow:hidden">'+
+          '<div class="report-photo-frame" style="width:100%;height:148px;flex:none;overflow:hidden;border-radius:7px;background:#050e19;display:flex;align-items:center;justify-content:center">'+
+          (src && /^https:\/\//i.test(src) ? '<img crossorigin="anonymous" src="'+fmt().escapeHtml(src)+'" style="display:block;width:100%;height:100%;object-fit:contain;object-position:center" alt="Foto de '+fmt().escapeHtml(unit)+'"/>' : '<span>Fotografia indisponível</span>')+
+          '</div>'+
+          '<figcaption style="font-size:12px;line-height:1.3;color:#f8fafc;font-weight:700">'+fmt().escapeHtml(caption)+'</figcaption>'+
+          '<span style="font-size:10px;line-height:1.25;color:#67e8f9">'+fmt().escapeHtml(unit)+' · '+fmt().escapeHtml(phase)+'</span></figure>';
       }).join('');
       slides.push(slideShell(
         'Registros fotográficos',
         'REUNIÃO DE COORDENAÇÃO',
-        kpi('Semana',data?.selection?.week ? 'Semana '+data.selection.week : 'Atual','#8b5cf6')+
+        kpi('Semana',reportWeek ? 'Semana '+reportWeek : (data?.selection?.week ? 'Semana '+data.selection.week : 'Atual'),'#8b5cf6')+
         kpi('Fotografias',String(photos.length),'#22c55e')+
-        kpi('Página',String(Math.floor(offset/4)+1)+' / '+Math.ceil(photos.length/4),'#3b82f6')+
+        kpi('Página',String(Math.floor(offset/4)+1)+' / '+totalPages,'#3b82f6')+
         kpi('Origem','Registro fotográfico','#22d3ee'),
-        '<div class="slide-panel"><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">'+cards+'</div></div>',
+        '<div class="slide-panel"><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">'+cards+'</div></div>',
         'slide-coordination slide-photos',
         {dataBase:data?.dataBase}
       ));
@@ -354,7 +356,7 @@
       );
       window.PBDashboard?.importWeekData?.(snapshot.pb_manual || {},week);
 
-      await window.PBDashboard?.loadPhotos?.(week,true);
+      await window.PBDashboard?.loadReportPhotos?.(week,true);
       mode='weekly';
       render();
       const el=document.getElementById('presentation');
