@@ -3281,3 +3281,20 @@ body.pdf-exporting .coordination-highlight-row small{
 .presentation .slide.slide-photos .slide-kpi{
   padding:4%!important;
 }
+
+
+/* Relatório gerencial: categorias de eventos independentes por unidade. */
+.presentation .slide-events-by-unit .report-event-grid{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+  padding:14px!important;
+  align-items:stretch;
+}
+.presentation .slide-events-by-unit .report-event-column{min-width:0;overflow:hidden;border:1px solid #24354c;border-radius:10px;padding:10px;background:#08192b}
+.presentation .slide-events-by-unit .report-event-column h3{font-size:clamp(13px,1.35vw,19px);font-weight:800;color:#facc15;text-align:center;margin:0 0 12px!important}
+.presentation .slide-events-by-unit .report-event-items{display:flex;flex-direction:column;gap:8px}
+.presentation .slide-events-by-unit .coordination-highlight-row{min-width:0;margin:0!important;padding:9px!important;gap:9px!important;overflow:hidden}
+.presentation .slide-events-by-unit .coordination-highlight-row div{min-width:0;overflow-wrap:anywhere}
+.presentation .slide-events-by-unit .coordination-highlight-row strong{white-space:normal;overflow-wrap:anywhere;font-size:clamp(9px,.87vw,13px);line-height:1.25}
+.presentation .slide-events-by-unit .report-event-empty{font-size:12px;color:#94a3b8;padding:18px 7px;text-align:center}
