@@ -1,6 +1,6 @@
 (function(){
   const $=id=>document.getElementById(id);
-  const state={weeks:[],photos:[],selectedWeek:null};
+  const state={weeks:[],photos:[],selectedWeek:null,compareUnit:'',compareBefore:null,compareAfter:null};
 
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const norm=v=>String(v||'').trim().toLocaleLowerCase('pt-BR');
@@ -204,14 +204,43 @@
     const host=$('tf-compare');
     if(!host) return;
     if(!photos.length){
-      host.innerHTML='<div class="tf-empty">Ainda não há fotos suficientes para comparação nesta seleção.</div>';
+      host.innerHTML='<div class="tf-empty">Não há fotos para comparar nesta seleção.</div>';
       return;
     }
-    const first=photos[0],last=photos[photos.length-1];
-    const card=(p,label)=>'<div class="tf-compare-card"><header><span>'+label+' • S-'+p._week+'</span></header>'+
+    const units=[...new Map(photos.map(p=>[norm(p.unit_key||p.unit_name),p.unit_name])).entries()].filter(([key])=>key);
+    const preferred=units.find(([key])=>key===state.compareUnit);
+    const withPairs=units.find(([key])=>new Set(photos.filter(p=>norm(p.unit_key||p.unit_name)===key).map(p=>p._week)).size>=2);
+    const [unitKey]=preferred||withPairs||units[0]||[''];
+    state.compareUnit=unitKey;
+    const unitPhotos=photos.filter(p=>norm(p.unit_key||p.unit_name)===unitKey);
+    const weekNos=[...new Set(unitPhotos.map(p=>p._week))].sort((a,b)=>a-b);
+    const firstWeek=weekNos[0],lastWeek=weekNos[weekNos.length-1];
+    if(!weekNos.includes(state.compareBefore))state.compareBefore=firstWeek;
+    if(!weekNos.includes(state.compareAfter))state.compareAfter=lastWeek;
+    const before=unitPhotos.find(p=>p._week===state.compareBefore);
+    const after=unitPhotos.find(p=>p._week===state.compareAfter);
+    const unitSelect='<label>Unidade <select id="tf-compare-unit">'+units.map(([key,name])=>
+      '<option value="'+esc(key)+'"'+(key===unitKey?' selected':'')+'>'+esc(name)+'</option>').join('')+'</select></label>';
+    const selectWeek=(id,label,selected)=>'<label>'+label+' <select id="'+id+'">'+
+      weekNos.map(no=>'<option value="'+no+'"'+(no===selected?' selected':'')+'>S-'+no+'</option>').join('')+'</select></label>';
+    const card=(p,label)=>p?
+      '<div class="tf-compare-card"><header><span>'+label+' • S-'+p._week+'</span></header>'+
       '<img src="'+esc(p.signed_url||'')+'" alt="'+label+'">'+
-      '<footer><strong>'+esc(p.unit_name||'Entrega')+'</strong>'+esc(p.caption||photoContext(p)||'Registro fotográfico')+'</footer></div>';
-    host.innerHTML=card(first,'ANTES')+card(last,'AGORA');
+      '<footer><strong>'+esc(p.unit_name||'Entrega')+'</strong>'+esc(p.caption||photoContext(p)||'Registro fotográfico')+'</footer></div>':
+      '<div class="tf-empty">Sem registro nesta semana.</div>';
+    host.innerHTML='<div class="tf-compare-controls" style="grid-column:1/-1;display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px">'+
+      unitSelect+selectWeek('tf-compare-before','ANTES',state.compareBefore)+selectWeek('tf-compare-after','AGORA',state.compareAfter)+'</div>'+
+      (weekNos.length<2?'<p style="grid-column:1/-1">Esta unidade tem fotos em apenas uma semana. Selecione outra unidade para comparar a evolução.</p>':'')+
+      card(before,'ANTES')+card(after,'AGORA');
+    const controls=host.querySelector('.tf-compare-controls');
+    controls.querySelectorAll('select').forEach(el=>{
+      el.style.cssText='display:block;max-width:100%;min-width:150px;padding:9px;background:#091827;color:#f0f7ff;border:1px solid #35506b;border-radius:8px;margin-top:5px';
+    });
+    $('tf-compare-unit')?.addEventListener('change',e=>{
+      state.compareUnit=e.target.value;state.compareBefore=null;state.compareAfter=null;renderCompare();
+    });
+    $('tf-compare-before')?.addEventListener('change',e=>{state.compareBefore=Number(e.target.value);renderCompare();});
+    $('tf-compare-after')?.addEventListener('change',e=>{state.compareAfter=Number(e.target.value);renderCompare();});
   }
 
   function renderMemory(){
