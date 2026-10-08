@@ -238,8 +238,8 @@
 
   function reportUnitKey(name) {
     const raw=String(name||'').trim();
-    const match=raw.match(/\\bU[-\\s]?(\\d{4,6})\\b/i);
-    return match ? 'U-'+match[1] : raw.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLocaleLowerCase('pt-BR');
+    const match=raw.match(/\bU[-\s]?(\d{4,6})\b/i);
+    return match ? 'U-'+match[1] : raw.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR');
   }
 
   function reportUnitSections() {
