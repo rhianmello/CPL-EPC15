@@ -36,7 +36,7 @@
   async function captureSlide(slide) {
     const mobile=isMobileDevice();
     return window.html2canvas(slide,{
-      scale:mobile ? 1 : Math.min(1.6,Math.max(1.15,window.devicePixelRatio || 1)),
+      scale:mobile ? 1.25 : Math.min(2,Math.max(1.6,window.devicePixelRatio || 1)),
       width:1280,
       height:720,
       windowWidth:1280,
