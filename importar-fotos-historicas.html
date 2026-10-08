@@ -15,6 +15,7 @@
 (() => {
 'use strict';
 const $=id=>document.getElementById(id);let tasks=[];
+window.addEventListener('error',event=>{const msg=event?.message||'Erro inesperado';$('status').textContent='Erro de inicialização: '+msg;line(msg,true)});
 const units={'8223':'U-8223 – Centro de Resposta a Emergência','8224':'U-8224 – Oficina de Manutenção','8226':'U-8226 – Almoxarifado','8900':'U-8900 – Central de Resíduos'};
 const normalize=v=>String(v||'').trim().toLocaleLowerCase('pt-BR');
 function parse(name) {
@@ -34,9 +35,13 @@ function parse(name) {
  return {id,week,unit:units[id],caption:caption||'Registro fotográfico',fileName:name};
 }
 function line(t,error=false){const d=document.createElement('div');d.textContent=t;if(error)d.className='err';$('log').prepend(d);}
+$('zip').addEventListener('change',()=>{$('status').textContent=$('zip').files[0]?'ZIP selecionado: '+$('zip').files[0].name+' — clique em Conferir fotos.':'Nenhum arquivo selecionado.'});
+$('status').textContent='Página pronta. Selecione o ZIP e clique em Conferir fotos.';
 $('inspect').onclick=async()=>{
+ $('status').textContent='Lendo arquivo ZIP...';
+ if(typeof JSZip==='undefined') {line('Biblioteca JSZip não carregou. Verifique a conexão ou bloqueio ao CDN.',true);$('status').textContent='Erro: biblioteca de ZIP indisponível.';return;}
  tasks=[];$('send').disabled=true;$('rows').replaceChildren();$('log').textContent='';
- const file=$('zip').files[0];if(!file){line('Selecione um ZIP.',true);return}
+ const file=$('zip').files[0];if(!file){line('Selecione um ZIP.',true);$('status').textContent='Selecione o arquivo ZIP antes de conferir.';return}
  try{
  const archive=await JSZip.loadAsync(file);
  for(const [path,entry] of Object.entries(archive.files)){
@@ -50,7 +55,7 @@ $('inspect').onclick=async()=>{
  }
  $('status').textContent=tasks.length+' fotos identificadas, em '+new Set(tasks.map(t=>t.week)).size+' semanas. Confirme a tabela antes do envio.';
  $('send').disabled=!tasks.length;
- }catch(e){line('Erro ao abrir ZIP: '+e.message,true)}
+ }catch(e){line('Erro ao abrir ZIP: '+e.message,true);$('status').textContent='Erro ao abrir ZIP: '+e.message}
 };
 $('send').onclick=async()=>{
  const master=$('master').value.trim();
