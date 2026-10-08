@@ -258,10 +258,12 @@
     const data=window.PBDashboard?.getPresentationData?.();
     return [...groups.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR',{numeric:true})).map(group=>{
       const sectionSlides=[];
-      const chunks=Math.max(1,Math.ceil(group.highlights.length/8));
+      const highlightsPerPage=10;
+      const chunks=Math.max(1,Math.ceil(group.highlights.length/highlightsPerPage));
+      const totalUnitPages=chunks+Math.ceil(group.photos.length/2);
       for(let page=0;page<chunks;page++){
-        const batch=group.highlights.slice(page*8,page*8+8);
-        const rows=batch.map((item,index)=>'<div class="coordination-highlight-row"><span>'+String(page*8+index+1).padStart(2,'0')+'</span><div>'+
+        const batch=group.highlights.slice(page*highlightsPerPage,(page+1)*highlightsPerPage);
+        const rows=batch.map((item,index)=>'<div class="coordination-highlight-row"><span>'+String(page*highlightsPerPage+index+1).padStart(2,'0')+'</span><div>'+
           '<small style="display:block;color:#67e8f9;font-weight:700;margin-bottom:4px">'+fmt().escapeHtml(item.phase||'Destaque')+'</small>'+
           '<strong>'+fmt().escapeHtml(item.title||'Destaque')+'</strong>'+
           (item.subtitle?'<small>'+fmt().escapeHtml(item.subtitle)+'</small>':'')+
@@ -272,7 +274,7 @@
           kpi('Semana','Semana '+week,'#3b82f6')+
           kpi('Destaques',String(group.highlights.length),'#22c55e')+
           kpi('Fotografias',String(group.photos.length),'#8b5cf6')+
-          kpi('Página',String(page+1)+' / '+chunks,'#22d3ee'),
+          kpi('Página',String(page+1)+' / '+totalUnitPages,'#22d3ee'),
           '<div class="slide-panel coordination-highlights-panel"><div class="coordination-highlight-list">'+
           (rows||'<div style="padding:20px;color:#cbd5e1">Sem destaques registrados para esta unidade na semana.</div>')+
           '</div></div>',
@@ -280,17 +282,17 @@
           {dataBase:data?.dataBase},group.name
         ));
       }
-      sectionSlides.push(photoSlides(group.key,group.name,group.highlights.length));
+      sectionSlides.push(photoSlides(group.key,group.name,group.highlights.length,chunks,totalUnitPages));
       return sectionSlides.join('');
     }).join('');
   }
 
-  function photoSlides(unitFilter=null,unitName='',highlightCount=0) {
+  function photoSlides(unitFilter=null,unitName='',highlightCount=0,previousPages=0,totalUnitPages=null) {
     const data=window.PBDashboard?.getPresentationData?.();
     const allPhotos=window.PBDashboard?.getReportPhotos?.() || [];
     const photos=unitFilter===null ? allPhotos : allPhotos.filter(photo=>reportUnitKey(photo.unit_name)===unitFilter);
     if(!photos.length) return '';
-    const totalPages=Math.ceil(photos.length/2);
+    const totalPages=totalUnitPages ?? (previousPages+Math.ceil(photos.length/2));
     const slides=[];
     for(let offset=0;offset<photos.length;offset+=2){
       const batch=photos.slice(offset,offset+2);
@@ -312,7 +314,7 @@
         kpi('Semana',reportWeek ? 'Semana '+reportWeek : (data?.selection?.week ? 'Semana '+data.selection.week : 'Atual'),'#3b82f6')+
         kpi('Destaques',String(highlightCount),'#22c55e')+
         kpi('Fotografias',String(photos.length),'#8b5cf6')+
-        kpi('Página',String(Math.floor(offset/2)+1)+' / '+totalPages,'#22d3ee'),
+        kpi('Página',String(previousPages+Math.floor(offset/2)+1)+' / '+totalPages,'#22d3ee'),
         '<div class="slide-panel"><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">'+cards+'</div></div>',
         'slide-coordination slide-photos',
         {dataBase:data?.dataBase},unitName
