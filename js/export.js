@@ -129,6 +129,7 @@
 
         // Mantém o slide real visível durante a geração. O layout fixo 16:9
         // usado no PDF é aplicado somente à cópia interna do html2canvas.
+        await Promise.all([...slide.querySelectorAll('img')].map(img => img.complete ? Promise.resolve() : new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});setTimeout(resolve,12000);}))); 
         await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
         const canvas=await captureSlide(slide);
         if(!canvas?.width || !canvas?.height) throw new Error('Falha ao capturar o slide '+(index+1)+'.');
