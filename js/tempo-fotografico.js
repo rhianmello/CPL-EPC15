@@ -146,9 +146,8 @@
     return '<figure class="tf-photo">'+
       '<img src="'+esc(photo.signed_url||'')+'" alt="Registro fotográfico">'+
       '<figcaption>'+
-        '<strong>'+esc(photo.unit_name||'Entrega não identificada')+'</strong>'+
-        '<small>'+esc(photoContext(photo)||'Registro fotográfico')+'</small>'+
-        (photo.caption?'<p>'+esc(photo.caption)+'</p>':'')+
+        '<strong>'+esc(photo.caption||'Registro fotográfico')+'</strong>'+
+        '<small>'+esc(photo.unit_name||'Entrega não identificada')+'</small>'+
       '</figcaption>'+
     '</figure>';
   }
