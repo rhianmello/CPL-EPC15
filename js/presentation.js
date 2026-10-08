@@ -29,13 +29,14 @@
     return '';
   }
 
-  function slideShell(title, subtitle, kpis, body, extraClass='', sourceModel=null) {
+  function slideShell(title, subtitle, kpis, body, extraClass='', sourceModel=null, unitName='') {
     const model = sourceModel || presentationModel();
     return '<article class="slide '+extraClass+'">'+
       '<div class="slide-head">'+
         '<div class="slide-head-copy"><p class="eyebrow">'+fmt().escapeHtml(subtitle)+'</p><h2 class="'+titleClass(title)+'">'+fmt().escapeHtml(title)+'</h2></div>'+
         '<div class="slide-brand" style="display:flex;align-items:center;justify-content:flex-end;gap:14px"><img src="assets/logo-cpl-epc15.png" alt="Logo CPL" style="max-width:110px;max-height:46px;object-fit:contain;background:#fff;border-radius:6px;padding:4px"/><div class="slide-date">BI EPC-15<br>Data-base '+fmt().date(model.dataBase)+'</div></div>'+ 
       '</div>'+
+      (unitName ? '<div class="slide-report-unit">'+fmt().escapeHtml(unitName)+'</div>' : '')+
       '<div class="slide-kpis">'+kpis+'</div>'+
       body+
     '</article>';
@@ -266,25 +267,25 @@
           (item.subtitle?'<small>'+fmt().escapeHtml(item.subtitle)+'</small>':'')+
           '</div></div>').join('');
         sectionSlides.push(slideShell(
-          'Destaques da Semana — '+group.name,
+          'Destaques da Semana',
           'REUNIÃO DE COORDENAÇÃO',
-          kpi('Unidade',fmt().escapeHtml(group.name),'#3b82f6')+
+          kpi('Semana','Semana '+week,'#3b82f6')+
           kpi('Destaques',String(group.highlights.length),'#22c55e')+
-          kpi('Semana','Semana '+week,'#8b5cf6')+
+          kpi('Fotografias',String(group.photos.length),'#8b5cf6')+
           kpi('Página',String(page+1)+' / '+chunks,'#22d3ee'),
           '<div class="slide-panel coordination-highlights-panel"><div class="coordination-highlight-list">'+
           (rows||'<div style="padding:20px;color:#cbd5e1">Sem destaques registrados para esta unidade na semana.</div>')+
           '</div></div>',
           'slide-coordination slide-highlights',
-          {dataBase:data?.dataBase}
+          {dataBase:data?.dataBase},group.name
         ));
       }
-      sectionSlides.push(photoSlides(group.key));
+      sectionSlides.push(photoSlides(group.key,group.name,group.highlights.length));
       return sectionSlides.join('');
     }).join('');
   }
 
-  function photoSlides(unitFilter=null) {
+  function photoSlides(unitFilter=null,unitName='',highlightCount=0) {
     const data=window.PBDashboard?.getPresentationData?.();
     const allPhotos=window.PBDashboard?.getReportPhotos?.() || [];
     const photos=unitFilter===null ? allPhotos : allPhotos.filter(photo=>reportUnitKey(photo.unit_name)===unitFilter);
@@ -308,13 +309,13 @@
       slides.push(slideShell(
         'Registros fotográficos',
         'REUNIÃO DE COORDENAÇÃO',
-        kpi('Semana',reportWeek ? 'Semana '+reportWeek : (data?.selection?.week ? 'Semana '+data.selection.week : 'Atual'),'#8b5cf6')+
-        kpi('Fotografias',String(photos.length),'#22c55e')+
-        kpi('Página',String(Math.floor(offset/2)+1)+' / '+totalPages,'#3b82f6')+
-        kpi('Origem','Registro fotográfico','#22d3ee'),
+        kpi('Semana',reportWeek ? 'Semana '+reportWeek : (data?.selection?.week ? 'Semana '+data.selection.week : 'Atual'),'#3b82f6')+
+        kpi('Destaques',String(highlightCount),'#22c55e')+
+        kpi('Fotografias',String(photos.length),'#8b5cf6')+
+        kpi('Página',String(Math.floor(offset/2)+1)+' / '+totalPages,'#22d3ee'),
         '<div class="slide-panel"><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">'+cards+'</div></div>',
         'slide-coordination slide-photos',
-        {dataBase:data?.dataBase}
+        {dataBase:data?.dataBase},unitName
       ));
     }
     return slides.join('');
