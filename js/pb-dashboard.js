@@ -12,6 +12,8 @@
   let curationMode = false;
   let curationMasterPassword = '';
   let photos = [];
+  let reportPhotos = [];
+  let reportPhotosWeek = null;
   let pendingPhotos = [];
   let photosWeek = null;
   let photosUnitKey = '';
@@ -1371,6 +1373,23 @@
     }
   }
 
+  async function loadReportPhotos(weekNo, force=false) {
+    const week=Number(weekNo || window.CoordinationWeek?.getSelectedWeek?.());
+    if(!Number.isFinite(week) || week<1 || !window.CloudSync?.ready?.()) {
+      throw new Error('Não foi possível acessar as fotografias da semana selecionada.');
+    }
+    if(!force && reportPhotosWeek===week) return reportPhotos.slice();
+    // Consulta sem restrições: não usa os filtros da interface ou de outra semana.
+    const rows=await window.CloudSync.listCoordinationPhotos(week,'','','');
+    reportPhotos=(Array.isArray(rows) ? rows : [])
+      .filter(photo=>Number(photo.week_no || week)===week)
+      .sort((a,b)=>String(a.unit_name||'').localeCompare(String(b.unit_name||''),'pt-BR') ||
+        String(a.phase_name||'').localeCompare(String(b.phase_name||''),'pt-BR') ||
+        String(a.caption||'').localeCompare(String(b.caption||''),'pt-BR'));
+    reportPhotosWeek=week;
+    return reportPhotos.slice();
+  }
+
   async function loadPhotos(weekNo, force=false) {
     const week=Number(weekNo || window.CoordinationWeek?.getSelectedWeek?.());
     const scope=photoFilterContext();
@@ -2479,6 +2498,8 @@
     init,render,useSnapshot,useLive,getViewInfo,getCurrentModel,isCurationMode,finishCuration,getPresentationData,
     exportWeekData,importWeekData,exportManualData,importManualData,
     loadPhotos,savePendingPhotos,
-    getPresentationPhotos:()=>photos.slice()
+    loadReportPhotos,
+    getPresentationPhotos:()=>reportPhotosWeek===Number(window.CoordinationWeek?.getSelectedWeek?.()) ? reportPhotos.slice() : [],
+    getReportPhotos:()=>reportPhotos.slice()
   };
 }());
