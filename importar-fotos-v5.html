@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Importação histórica de fotos · CPL EPC-15 · V4</title>
+<style>body{font:15px system-ui;background:#081626;color:#e6f2ff;margin:0;padding:30px}main{max-width:960px;margin:auto}h1{font-size:25px}p,small{color:#aec4db}section{background:#10253b;border:1px solid #2e4b65;border-radius:14px;padding:19px;margin:16px 0}input,button{padding:12px;border-radius:8px;border:1px solid #526c85;background:#071827;color:white}input[type=file]{width:min(90%,500px)}button{background:#087db2;cursor:pointer;font-weight:700}button:disabled{opacity:.4;cursor:not-allowed}table{border-collapse:collapse;width:100%;font-size:13px}td,th{padding:9px;border-bottom:1px solid #314a60;text-align:left}#log{max-height:290px;overflow:auto;white-space:pre-wrap;background:#06111e;padding:12px;border-radius:9px}progress{width:100%;height:20px}b{color:#fff}.err{color:#ff9c9c}</style></head><body><main>
+<a href="./index.html" style="color:#8de1ff">← Voltar ao BI EPC-15</a>
+<h1>Importar fotos históricas da Reunião de Coordenação · V5</h1><p>Importação avulsa; não altera a planilha, a seleção de semana nem os dados da reunião. Usa o mesmo serviço fotográfico do dashboard. Todas as imagens serão cadastradas na fase Serviços de Construção Civil.</p>
+<section><label>Arquivo ZIP com as fotos: <input type="file" id="zip" accept=".zip,application/zip"></label><p><label>Senha master de edição: <input id="master" type="password" placeholder="Senha master" autocomplete="off"></label></p><button id="inspect">Conferir fotos</button> <button id="send" disabled>Enviar fotos ao Supabase</button><p id="status">Versão 5 carregada. Selecione o ZIP e clique em Conferir fotos.</p><progress id="progress" value="0" max="100"></progress></section>
+<section><h3>Conferência da importação</h3><div style="overflow:auto;max-height:420px"><table><thead><tr><th>Arquivo</th><th>Unidade</th><th>Semana</th><th>Legenda</th></tr></thead><tbody id="rows"></tbody></table></div></section>
+<section><h3>Resultado</h3><div id="log"></div></section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="js/config.js"></script><script src="js/supabase-config.js"></script><script src="js/cloud-sync.js"></script>
+<script>
+(() => {
+'use strict';
+const $=id=>document.getElementById(id);let tasks=[];
+window.addEventListener('error',event=>{const msg=event?.message||'Erro inesperado';$('status').textContent='Erro de inicialização: '+msg;line(msg,true)});
+const units={'8223':'U-8223 – Centro de Resposta a Emergência','8224':'U-8224 – Oficina de Manutenção','8226':'U-8226 – Almoxarifado','8900':'U-8900 – Central de Resíduos'};
+const normalize=v=>String(v||'').trim().toLocaleLowerCase('pt-BR');
+function parse(name) {
+ const decoded=name.replace(/#U([0-9a-fA-F]{4,6})/g,(_,hex)=>String.fromCodePoint(parseInt(hex,16)));
+ const base=decoded.split('/').pop().replace(/\.(?:jpe?g|png|webp)$/i,'').trim();
+ const id=base.match(/U\s*-\s*(8223|8224|8226|8900)/i)?.[1];
+ const week=Number(base.match(/Semana\s*0*(\d+)\s*\.*\s*$/i)?.[1]);
+ if(!id||!week)return null;
+ let caption=base.replace(/^.*?U\s*-\s*\d+\s*/i,'').replace(/\s*[-–—]\s*Semana\s*\d+\s*\.*$/i,'').trim();
+ const removals={
+ '8223':[/^central de resposta a emerg[eê]ncia\s*[-–—]?\s*/i,/^centro de resposta a emerg[eê]ncia\s*[-–—]?\s*/i],
+ '8224':[/^oficina(?:s| de manuten[cç][aã]o)?\s*[-–—]?\s*/i],
+ '8226':[/^almoxarifado\s*[-–—]?\s*/i],
+ '8900':[/^central de res[ií]duos\s*[-–—]?\s*/i]
+ };
+ for(const re of removals[id]) caption=caption.replace(re,'').trim();
+ caption=caption.replace(/^[-–—\s]+/,'').trim();
+ return {id,week,unit:units[id],caption:caption||'Registro fotográfico',fileName:name};
+}
+function line(t,error=false){const d=document.createElement('div');d.textContent=t;if(error)d.className='err';$('log').prepend(d);}
+$('zip').addEventListener('change',()=>{$('status').textContent=$('zip').files[0]?'ZIP selecionado: '+$('zip').files[0].name+' — clique em Conferir fotos.':'Nenhum arquivo selecionado.'});
+$('status').textContent='Página pronta. Selecione o ZIP e clique em Conferir fotos.';
+$('inspect').onclick=async()=>{
+ $('status').textContent='Lendo arquivo ZIP...';
+ if(typeof JSZip==='undefined') {line('Biblioteca JSZip não carregou. Verifique a conexão ou bloqueio ao CDN.',true);$('status').textContent='Erro: biblioteca de ZIP indisponível.';return;}
+ tasks=[];$('send').disabled=true;$('rows').replaceChildren();$('log').textContent='';
+ const file=$('zip').files[0];if(!file){line('Selecione um ZIP.',true);$('status').textContent='Selecione o arquivo ZIP antes de conferir.';return}
+ try{
+ $('status').textContent='Etapa 1/3: lendo '+(file.size/1048576).toFixed(1)+' MB do computador...';
+ const buffer=await Promise.race([file.arrayBuffer(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('A leitura local ultrapassou 30 segundos.')),30000))]);
+ $('status').textContent='Etapa 2/3: abrindo estrutura ZIP...';
+ const archive=await Promise.race([JSZip.loadAsync(buffer),new Promise((_,reject)=>setTimeout(()=>reject(new Error('A análise ZIP ultrapassou 30 segundos.')),30000))]);
+ $('status').textContent='Etapa 3/3: identificando unidades, semanas e legendas...';
+ for(const [path,entry] of Object.entries(archive.files)){
+ if(entry.dir||! /\.(jpg|jpeg|png|webp)$/i.test(path))continue;
+ const data=parse(path);
+ if(!data){line('Nome não reconhecido: '+path,true);continue}
+ tasks.push({...data,entry});
+ const tr=document.createElement('tr');
+ for(const val of [path.split('/').pop(),data.unit,'Semana '+data.week,data.caption]){const td=document.createElement('td');td.textContent=val;tr.append(td)}
+ $('rows').append(tr);
+ }
+ $('status').textContent=tasks.length+' fotos identificadas, em '+new Set(tasks.map(t=>t.week)).size+' semanas. Confirme a tabela antes do envio.';
+ $('send').disabled=!tasks.length;
+ }catch(e){line('Erro ao abrir ZIP: '+e.message,true);$('status').textContent='Erro ao abrir ZIP: '+e.message}
+};
+$('send').onclick=async()=>{
+ const master=$('master').value.trim();
+ if(!master){line('Informe a senha master para respeitar a autorização das semanas.',true);return}
+ if(!window.CloudSync?.ready?.()){line('Não foi possível conectar ao Supabase.',true);return}
+ if(!confirm('Enviar '+tasks.length+' fotos para suas respectivas semanas históricas?'))return;
+ $('send').disabled=true;$('inspect').disabled=true;let ok=0,failed=0;
+ for(let i=0;i<tasks.length;i++){
+ const t=tasks[i];$('status').textContent='Enviando '+(i+1)+' de '+tasks.length+' · Semana '+t.week+' · '+t.unit;
+ try{
+ const bytes=await t.entry.async('blob');
+ const file=new File([bytes],t.fileName.split('/').pop(),{type:/\.png$/i.test(t.fileName)?'image/png':/\.webp$/i.test(t.fileName)?'image/webp':'image/jpeg'});
+ const data=await CloudSync.uploadCoordinationPhoto({weekNo:t.week,scope:{unitName:t.unit,unitKey:normalize(t.unit),phaseName:'Serviços de Construção Civil',phaseKey:normalize('Serviços de Construção Civil'),groupingName:'',groupingKey:''},file,masterPassword:master});
+ if(!data?.photo?.id)throw new Error('Registro enviado, mas identificador não retornado; conferir antes de repetir.');
+ await CloudSync.updateCoordinationPhotoCaption({weekNo:t.week,photoId:data.photo.id,caption:t.caption,masterPassword:master});
+ ok++;line('OK · Semana '+t.week+' · '+t.unit+' · '+t.caption);
+ }catch(e){failed++;line('FALHA · '+t.fileName+' · '+e.message,true)}
+ $('progress').value=(i+1)/tasks.length*100;
+ }
+ $('status').textContent='Concluído: '+ok+' fotos completas; '+failed+' falhas. Consulte o resultado abaixo antes de repetir qualquer envio.';
+ $('inspect').disabled=false;$('send').disabled=true;
+};
+})();
+</script></body></html>
