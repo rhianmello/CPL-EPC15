@@ -270,7 +270,7 @@
         const caption=photo.caption || 'Registro fotográfico';
         return '<figure class="report-photo-card" style="margin:0;min-width:0;min-height:0;background:#0b1b2d;border:1px solid #24354c;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px;overflow:hidden">'+
           '<div class="report-photo-frame" style="width:100%;height:320px;flex:none;overflow:hidden;border-radius:8px;background:#050e19;display:flex;align-items:center;justify-content:center">'+
-          (src && /^https:\/\//i.test(src) ? '<img crossorigin="anonymous" src="'+fmt().escapeHtml(src)+'" style="display:block;width:100%;height:100%;object-fit:contain;object-position:center" alt="Foto de '+fmt().escapeHtml(unit)+'"/>' : '<span>Fotografia indisponível</span>')+
+          (src && /^https:\/\//i.test(src) ? '<img class="report-photo-zoomable" tabindex="0" role="button" title="Clique para ampliar a fotografia" crossorigin="anonymous" src="'+fmt().escapeHtml(src)+'" style="display:block;width:100%;height:100%;object-fit:contain;object-position:center;cursor:zoom-in" alt="Ampliar foto de '+fmt().escapeHtml(unit)+'"/>' : '<span>Fotografia indisponível</span>')+
           '</div>'+
           '<figcaption style="font-size:14px;line-height:1.35;color:#f8fafc;font-weight:800">'+fmt().escapeHtml(caption)+'</figcaption>'+
           '<span style="font-size:11px;line-height:1.3;color:#67e8f9">'+fmt().escapeHtml(unit)+' · '+fmt().escapeHtml(phase)+'</span></figure>';
@@ -289,6 +289,61 @@
     }
     return slides.join('');
   }
+
+  function photoZoomLayer() {
+    let layer=document.getElementById('report-photo-zoom');
+    if(layer) return layer;
+    layer=document.createElement('div');
+    layer.id='report-photo-zoom';
+    layer.setAttribute('role','dialog');
+    layer.setAttribute('aria-modal','true');
+    layer.setAttribute('aria-label','Fotografia ampliada');
+    layer.setAttribute('data-html2canvas-ignore','true');
+    layer.style.cssText='position:absolute;inset:0;z-index:99999;background:rgba(0,0,0,.86);display:none;align-items:center;justify-content:center;padding:28px;box-sizing:border-box;overflow:auto';
+    layer.innerHTML='<div style="position:relative;max-width:100%;max-height:100%;display:flex;flex-direction:column;align-items:center;gap:10px">'+
+      '<button type="button" class="report-photo-zoom-close" aria-label="Fechar imagem ampliada" style="position:absolute;right:0;top:0;transform:translate(35%,-35%);border:0;border-radius:50%;background:#172b42;color:white;font-size:24px;width:42px;height:42px;cursor:pointer;z-index:1">×</button>'+
+      '<img alt="Fotografia ampliada" style="display:block;max-width:100%;max-height:75vh;object-fit:contain;border-radius:8px;box-shadow:0 12px 50px rgba(0,0,0,.45)"/>'+
+      '<div class="report-photo-zoom-caption" style="color:#fff;font-size:16px;font-weight:700;text-align:center;max-width:90vw"></div>'+
+      '<div class="report-photo-zoom-meta" style="color:#67e8f9;font-size:12px;text-align:center;max-width:90vw"></div></div>';
+    document.getElementById('presentation').appendChild(layer);
+    layer.addEventListener('click',event=>{
+      if(event.target===layer || event.target.closest('.report-photo-zoom-close')) hidePhotoZoom();
+    });
+    return layer;
+  }
+
+  let photoZoomFocus=null;
+  function showPhotoZoom(img) {
+    if(!img?.src) return;
+    const layer=photoZoomLayer();
+    const card=img.closest('.report-photo-card');
+    layer.querySelector('img').src=img.src;
+    layer.querySelector('.report-photo-zoom-caption').textContent=card?.querySelector('figcaption')?.textContent || '';
+    layer.querySelector('.report-photo-zoom-meta').textContent=card?.querySelector('span')?.textContent || '';
+    photoZoomFocus=document.activeElement;
+    layer.style.display='flex';
+    layer.querySelector('button').focus();
+  }
+  function hidePhotoZoom() {
+    const layer=document.getElementById('report-photo-zoom');
+    if(!layer || layer.style.display==='none') return false;
+    layer.style.display='none';
+    layer.querySelector('img').removeAttribute('src');
+    if(photoZoomFocus?.isConnected) photoZoomFocus.focus();
+    photoZoomFocus=null;
+    return true;
+  }
+
+  document.getElementById('slides')?.addEventListener('click',event=>{
+    const img=event.target.closest('.report-photo-zoomable');
+    if(img) showPhotoZoom(img);
+  });
+  document.getElementById('slides')?.addEventListener('keydown',event=>{
+    if((event.key==='Enter' || event.key===' ') && event.target.matches('.report-photo-zoomable')){
+      event.preventDefault();
+      showPhotoZoom(event.target);
+    }
+  });
 
   function render() {
     const host=document.getElementById('slides');
@@ -393,6 +448,7 @@
   }
 
   function close() {
+    hidePhotoZoom();
     document.getElementById('presentation').classList.add('hidden');
     document.body.style.overflow='';
     reportWeek=null;
@@ -408,6 +464,10 @@
   }
   function onKey(event) {
     if (document.getElementById('presentation').classList.contains('hidden')) return;
+    if(document.getElementById('report-photo-zoom')?.style.display==='flex') {
+      if(event.key==='Escape'){ event.preventDefault(); hidePhotoZoom(); }
+      return;
+    }
     if(event.key==='ArrowRight') next();
     if(event.key==='ArrowLeft') previous();
     if(event.key==='Escape'&&!document.fullscreenElement) close();
