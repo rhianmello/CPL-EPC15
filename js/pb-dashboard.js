@@ -786,7 +786,7 @@
     const sel=selection();
     const itemUnit=String(item?.unit || '').trim();
     const itemPhase=String(item?.phase || '').trim();
-    if(sel.unit && itemUnit && itemUnit!==sel.unit) return false;
+    if(sel.unit && itemUnit!==sel.unit) return false;
     if(sel.phase && itemPhase && itemPhase!==sel.phase) return false;
     return true;
   }
