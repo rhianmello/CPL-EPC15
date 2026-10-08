@@ -34,7 +34,7 @@
     return '<article class="slide '+extraClass+'">'+
       '<div class="slide-head">'+
         '<div class="slide-head-copy"><p class="eyebrow">'+fmt().escapeHtml(subtitle)+'</p><h2 class="'+titleClass(title)+'">'+fmt().escapeHtml(title)+'</h2></div>'+
-        '<div class="slide-brand"><img src="assets/logo-cpl-epc15.png" alt="Logo CPL" style="max-width:110px;max-height:46px;object-fit:contain;background:#fff;border-radius:6px;padding:4px"/><div class="slide-date">BI EPC-15<br>Data-base '+fmt().date(model.dataBase)+'</div></div>'+ 
+        '<div class="slide-brand" style="display:flex;align-items:center;justify-content:flex-end;gap:14px"><img src="assets/logo-cpl-epc15.png" alt="Logo CPL" style="max-width:110px;max-height:46px;object-fit:contain;background:#fff;border-radius:6px;padding:4px"/><div class="slide-date">BI EPC-15<br>Data-base '+fmt().date(model.dataBase)+'</div></div>'+ 
       '</div>'+
       '<div class="slide-kpis">'+kpis+'</div>'+
       body+
