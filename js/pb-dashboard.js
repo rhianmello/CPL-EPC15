@@ -2325,7 +2325,9 @@
         const note=noteFor(row);
         return {
           title:note.highlightTitle || rowLabel(row),
-          subtitle:note.highlightSubtitle || ''
+          subtitle:note.highlightSubtitle || '',
+          unit:row.unit || '',
+          phase:row.phase || ''
         };
       });
     const manual=manualHighlights()
@@ -2334,6 +2336,8 @@
       .map(item=>({
         title:manualHighlightText(item),
         subtitle:item.subtitle || '',
+        unit:item.unit || '',
+        phase:item.phase || '',
         event:item.event || 'Destaque'
       }));
     const selectedUnit=sel.unit
@@ -2350,6 +2354,7 @@
       } : null,
       pareto:paretoGroupingRows().map(row=>({
         grouping:row.grouping || rowLabel(row),
+        unit:row.unit || '',
         weightedVariance:row.weightedVariance
       })),
       highlights:auto.concat(manual),
