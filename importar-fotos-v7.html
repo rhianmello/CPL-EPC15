@@ -16,7 +16,7 @@
 'use strict';
 const $=id=>document.getElementById(id);let tasks=[];
 window.addEventListener('error',event=>{const msg=event?.message||'Erro inesperado';$('status').textContent='Erro de inicialização: '+msg;line(msg,true)});
-const units={'8223':'U-8223 – Centro de Resposta a Emergência','8224':'U-8224 – Oficina de Manutenção','8226':'U-8226 – Almoxarifado','8900':'U-8900 – Central de Resíduos'};
+const units={'8223':'U-8223 – Centro de Resposta a Emergência','8224':'U-8224 – Oficina de Manutenção','8226':'U-8226 - ALMOXARIFADO','8900':'U-8900 – Central de Resíduos'};
 const normalize=v=>String(v||'').trim().toLocaleLowerCase('pt-BR');
 function parse(name) {
  const decoded=name.replace(/#U([0-9a-fA-F]{4,6})/g,(_,hex)=>String.fromCodePoint(parseInt(hex,16)));
@@ -70,7 +70,7 @@ $('send').onclick=async()=>{
  const t=tasks[i];$('status').textContent='Enviando '+(i+1)+' de '+tasks.length+' · Semana '+t.week+' · '+t.unit;
  try{
  const file=t.file;
- const data=await CloudSync.uploadCoordinationPhoto({weekNo:t.week,scope:{unitName:t.unit,unitKey:normalize(t.unit),phaseName:'Serviços de Construção Civil',phaseKey:normalize('Serviços de Construção Civil'),groupingName:'',groupingKey:''},file,masterPassword:master});
+ const data=await CloudSync.uploadCoordinationPhoto({weekNo:t.week,scope:{unitName:t.unit,unitKey:normalize(t.unit),phaseName:'SERVIÇOS DE CONSTRUÇÃO CÍVIL',phaseKey:normalize('SERVIÇOS DE CONSTRUÇÃO CÍVIL'),groupingName:'',groupingKey:''},file,masterPassword:master});
  if(!data?.photo?.id)throw new Error('Registro enviado, mas identificador não retornado; conferir antes de repetir.');
  await CloudSync.updateCoordinationPhotoCaption({weekNo:t.week,photoId:data.photo.id,caption:t.caption,masterPassword:master});
  ok++;line('OK · Semana '+t.week+' · '+t.unit+' · '+t.caption);
