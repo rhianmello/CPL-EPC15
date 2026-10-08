@@ -105,12 +105,13 @@
 
     const slides=[...document.querySelectorAll('#slides .slide')];
     const activeIndex=slides.findIndex(slide=>slide.classList.contains('active'));
+    const counter=document.getElementById('slide-counter');
+    const originalCounter=counter?.textContent || '';
 
     try{
       await ensureLibraries();
       if(!slides.length) throw new Error('Nenhum slide disponível para exportação.');
 
-      document.body.classList.add('pdf-exporting');
       const {jsPDF}=window.jspdf;
       const pdf=new jsPDF({
         orientation:'landscape',
@@ -124,8 +125,11 @@
         const slide=slides[index];
         slides.forEach(item=>item.classList.remove('active'));
         slide.classList.add('active');
+        if(counter) counter.textContent=(index+1)+' / '+slides.length;
 
-        await new Promise(resolve=>requestAnimationFrame(resolve));
+        // Mantém o slide real visível durante a geração. O layout fixo 16:9
+        // usado no PDF é aplicado somente à cópia interna do html2canvas.
+        await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
         const canvas=await captureSlide(slide);
         if(!canvas?.width || !canvas?.height) throw new Error('Falha ao capturar o slide '+(index+1)+'.');
 
@@ -150,9 +154,9 @@
       alert('Não foi possível gerar o PDF'+(detail ? ': '+detail : '.')+' Atualize a página e tente novamente.');
       return false;
     }finally{
-      document.body.classList.remove('pdf-exporting');
       slides.forEach(item=>item.classList.remove('active'));
       slides[Math.max(0,activeIndex)]?.classList.add('active');
+      if(counter) counter.textContent=originalCounter;
       if(button){
         button.disabled=false;
         button.textContent=original;
