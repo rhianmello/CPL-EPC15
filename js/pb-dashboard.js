@@ -2383,6 +2383,22 @@
     };
   }
 
+  // Relatório semanal: todos os destaques registrados na semana, sem filtros do painel.
+  function getReportHighlights(weekNo) {
+    const week=Number(weekNo);
+    if(!Number.isFinite(week) || week<1) return [];
+    const saved=notes(week).__manualHighlights;
+    return (Array.isArray(saved)?saved:[])
+      .filter(item=>manualHighlightText(item))
+      .map(item=>({
+        title:manualHighlightText(item),
+        subtitle:item.subtitle||'',
+        unit:item.unit||'Unidade não informada',
+        phase:item.phase||'',
+        event:item.event||'Destaque'
+      }));
+  }
+
   function getViewInfo() {
     return {fileName,dataBase:model?.dataBase||null,liveFileName,liveDataBase:liveModel?.dataBase||null};
   }
@@ -2495,7 +2511,7 @@
   function importManualData(){}
 
   window.PBDashboard={
-    init,render,useSnapshot,useLive,getViewInfo,getCurrentModel,isCurationMode,finishCuration,getPresentationData,
+    init,render,useSnapshot,useLive,getViewInfo,getCurrentModel,isCurationMode,finishCuration,getPresentationData,getReportHighlights,
     exportWeekData,importWeekData,exportManualData,importManualData,
     loadPhotos,savePendingPhotos,
     loadReportPhotos,
