@@ -282,21 +282,37 @@
         attention:group.highlights.filter(item=>reportEventType(item)==='attention'),
         next:group.highlights.filter(item=>reportEventType(item)==='next')
       };
-      const perColumn=5;
-      const chunks=group.highlights.length ? Math.max(1,...Object.values(categories).map(items=>Math.ceil(items.length/perColumn))) : 0;
+      // Paginação orientada pelo texto: máximo de 10 registros por coluna.
+      // Não reduz a fonte para caber textos extensos; abre outra página quando necessário.
+      const paginate=(items)=>{
+        const pages=[]; let current=[],height=0;
+        items.forEach(item=>{
+          const content=[item.phase,item.title,item.subtitle].filter(Boolean).join(' ');
+          const estimatedLines=Math.max(1,Math.ceil(String(content).length/43));
+          const rowHeight=26+estimatedLines*13;
+          if(current.length && (current.length>=10 || height+rowHeight>390)){
+            pages.push(current);current=[];height=0;
+          }
+          current.push(item);height+=rowHeight;
+        });
+        if(current.length) pages.push(current);
+        return pages;
+      };
+      const pagesByType=Object.fromEntries(Object.entries(categories).map(([type,items])=>[type,paginate(items)]));
+      const chunks=Math.max(0,...Object.values(pagesByType).map(pages=>pages.length));
       const totalUnitPages=chunks+Math.ceil(group.photos.length/2);
       const sectionSlides=[];
       const labels=[['highlight','Destaques'],['attention','Pontos de atenção'],['next','Próximas ações']];
       for(let page=0;page<chunks;page++){
         const columns=labels.map(([type,label])=>{
-          const items=categories[type].slice(page*perColumn,(page+1)*perColumn);
+          const items=pagesByType[type][page] || [];
           const rows=items.map((item,index)=>
-            '<div class="coordination-highlight-row"><span>'+String(page*perColumn+index+1).padStart(2,'0')+'</span><div>'+
+            '<div class="coordination-highlight-row"><span>'+String(pagesByType[type].slice(0,page).reduce((sum,items)=>sum+items.length,0)+index+1).padStart(2,'0')+'</span><div>'+
             '<small style="display:block;color:#67e8f9;font-weight:700;margin-bottom:4px">'+fmt().escapeHtml(item.phase||'')+'</small>'+
             '<strong>'+fmt().escapeHtml(item.title||'')+'</strong>'+
             (item.subtitle?'<small>'+fmt().escapeHtml(item.subtitle)+'</small>':'')+'</div></div>'
           ).join('');
-          return '<section class="report-event-column"><h3>'+label+'</h3><div class="report-event-items">'+
+          return '<section class="report-event-column report-event-'+type+'"><h3><i class="report-event-dot" aria-hidden="true"></i>'+label+'</h3><div class="report-event-items">'+
             (rows||'<div class="report-event-empty">Sem registros nesta categoria</div>')+'</div></section>';
         }).join('');
         sectionSlides.push(slideShell(
@@ -311,12 +327,12 @@
           {dataBase:data?.dataBase},group.name
         ));
       }
-      sectionSlides.push(photoSlides(group.key,group.name,group.highlights.length,chunks,totalUnitPages,group.photos));
+      sectionSlides.push(photoSlides(group.key,group.name,categories,chunks,totalUnitPages,group.photos));
       return sectionSlides.join('');
     }).join('');
   }
 
-  function photoSlides(unitFilter=null,unitName='',highlightCount=0,previousPages=0,totalUnitPages=null,unitPhotos=null) {
+  function photoSlides(unitFilter=null,unitName='',eventGroups={},previousPages=0,totalUnitPages=null,unitPhotos=null) {
     const data=window.PBDashboard?.getPresentationData?.();
     const allPhotos=window.PBDashboard?.getReportPhotos?.() || [];
     const photos=Array.isArray(unitPhotos) ? unitPhotos : (unitFilter===null ? allPhotos : allPhotos.filter(photo=>reportUnitKey(reportPhotoUnit(photo))===unitFilter));
@@ -341,11 +357,13 @@
         'Registros fotográficos',
         'REUNIÃO DE COORDENAÇÃO',
         kpi('Semana',reportWeek ? 'Semana '+reportWeek : (data?.selection?.week ? 'Semana '+data.selection.week : 'Atual'),'#3b82f6')+
-        kpi('Destaques',String(highlightCount),'#22c55e')+
+        kpi('Destaques',String(eventGroups.highlight?.length||0),'#22c55e')+
+        kpi('Pontos de atenção',String(eventGroups.attention?.length||0),'#f59e0b')+
+        kpi('Próximas ações',String(eventGroups.next?.length||0),'#38bdf8')+
         kpi('Fotografias',String(photos.length),'#8b5cf6')+
         kpi('Página',String(previousPages+Math.floor(offset/2)+1)+' / '+totalPages,'#22d3ee'),
         '<div class="slide-panel"><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">'+cards+'</div></div>',
-        'slide-coordination slide-photos',
+        'slide-coordination slide-photos slide-unit-photo-kpis',
         {dataBase:data?.dataBase},unitName
       ));
     }
