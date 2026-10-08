@@ -232,32 +232,62 @@
       {dataBase:data.dataBase}
     );
 
-    const highlights=data.highlights || [];
-    if(!highlights.length) return overview;
-
-    const highlightRows=highlights.slice(0,8).map((item,index)=>
-      '<div class="coordination-highlight-row"><span>'+String(index+1).padStart(2,'0')+'</span><div><small style="display:block;color:#67e8f9;font-weight:700;margin-bottom:4px">'+fmt().escapeHtml(item.unit || 'Unidade não informada')+(item.phase ? ' · '+fmt().escapeHtml(item.phase) : '')+'</small><strong>'+fmt().escapeHtml(item.title||'Destaque')+'</strong>'+
-      (item.subtitle?'<small>'+fmt().escapeHtml(item.subtitle)+'</small>':'')+'</div></div>'
-    ).join('');
-
-    const highlightsSlide=slideShell(
-      'Destaques da Semana',
-      'REUNIÃO DE COORDENAÇÃO',
-      kpi('Unidade',data.selection?.unit ? fmt().escapeHtml(data.selection.unit) : 'Todas', '#3b82f6')+
-      kpi('Fase',data.selection?.phase ? fmt().escapeHtml(data.selection.phase) : 'Todas', '#22d3ee')+
-      kpi('Destaques',String(highlights.length), '#22c55e')+
-      kpi('Semana',data.selection?.week ? 'Semana '+data.selection.week : 'Atual', '#8b5cf6'),
-      '<div class="slide-panel coordination-highlights-panel"><div class="coordination-highlight-list">'+highlightRows+'</div></div>',
-      'slide-coordination slide-highlights',
-      {dataBase:data.dataBase}
-    );
-
-    return overview + highlightsSlide;
+    return overview;
   }
 
-  function photoSlides() {
-    const data=window.PBDashboard?.getPresentationData?.();
+
+  function reportUnitKey(name) {
+    const raw=String(name||'').trim();
+    const match=raw.match(/\\bU[-\\s]?(\\d{4,6})\\b/i);
+    return match ? 'U-'+match[1] : raw.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLocaleLowerCase('pt-BR');
+  }
+
+  function reportUnitSections() {
+    const week=Number(reportWeek || window.CoordinationWeek?.getSelectedWeek?.());
+    const highlights=window.PBDashboard?.getReportHighlights?.(week) || [];
     const photos=window.PBDashboard?.getReportPhotos?.() || [];
+    const groups=new Map();
+    const add=(name,type,item)=>{
+      const key=reportUnitKey(name || 'Unidade não informada');
+      if(!groups.has(key)) groups.set(key,{key,name:name||'Unidade não informada',highlights:[],photos:[]});
+      groups.get(key)[type].push(item);
+    };
+    highlights.forEach(item=>add(item.unit,'highlights',item));
+    photos.forEach(item=>add(item.unit_name,'photos',item));
+    const data=window.PBDashboard?.getPresentationData?.();
+    return [...groups.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR',{numeric:true})).map(group=>{
+      const sectionSlides=[];
+      const chunks=Math.max(1,Math.ceil(group.highlights.length/8));
+      for(let page=0;page<chunks;page++){
+        const batch=group.highlights.slice(page*8,page*8+8);
+        const rows=batch.map((item,index)=>'<div class="coordination-highlight-row"><span>'+String(page*8+index+1).padStart(2,'0')+'</span><div>'+
+          '<small style="display:block;color:#67e8f9;font-weight:700;margin-bottom:4px">'+fmt().escapeHtml(item.phase||'Destaque')+'</small>'+
+          '<strong>'+fmt().escapeHtml(item.title||'Destaque')+'</strong>'+
+          (item.subtitle?'<small>'+fmt().escapeHtml(item.subtitle)+'</small>':'')+
+          '</div></div>').join('');
+        sectionSlides.push(slideShell(
+          'Destaques da Semana — '+group.name,
+          'REUNIÃO DE COORDENAÇÃO',
+          kpi('Unidade',fmt().escapeHtml(group.name),'#3b82f6')+
+          kpi('Destaques',String(group.highlights.length),'#22c55e')+
+          kpi('Semana','Semana '+week,'#8b5cf6')+
+          kpi('Página',String(page+1)+' / '+chunks,'#22d3ee'),
+          '<div class="slide-panel coordination-highlights-panel"><div class="coordination-highlight-list">'+
+          (rows||'<div style="padding:20px;color:#cbd5e1">Sem destaques registrados para esta unidade na semana.</div>')+
+          '</div></div>',
+          'slide-coordination slide-highlights',
+          {dataBase:data?.dataBase}
+        ));
+      }
+      sectionSlides.push(photoSlides(group.key));
+      return sectionSlides.join('');
+    }).join('');
+  }
+
+  function photoSlides(unitFilter=null) {
+    const data=window.PBDashboard?.getPresentationData?.();
+    const allPhotos=window.PBDashboard?.getReportPhotos?.() || [];
+    const photos=unitFilter===null ? allPhotos : allPhotos.filter(photo=>reportUnitKey(photo.unit_name)===unitFilter);
     if(!photos.length) return '';
     const totalPages=Math.ceil(photos.length/2);
     const slides=[];
@@ -348,8 +378,8 @@
   function render() {
     const host=document.getElementById('slides');
     host.innerHTML = mode==='weekly'
-      ? renderGerencial()+renderCoordination()+photoSlides()
-      : (mode==='coordination' ? renderCoordination()+photoSlides() : renderGerencial());
+      ? renderGerencial()+renderCoordination()+reportUnitSections()
+      : (mode==='coordination' ? renderCoordination()+reportUnitSections() : renderGerencial());
     current = 0;
     update();
   }
