@@ -243,6 +243,21 @@
     return match ? 'U-'+match[1] : raw.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR');
   }
 
+  function reportPhotoUnit(photo) {
+    const label=String(photo.unit_name||'').trim();
+    if(label && !/^unidade n[aã]o informada$/i.test(label)) return label;
+    const unitKey=String(photo.unit_key||'').trim();
+    if(unitKey && !/^unidade n[aã]o informada$/i.test(unitKey)) return unitKey;
+    // Somente associa a fotografia se houver código de unidade explícito nos metadados.
+    const identifiers=[photo.caption,photo.file_name,photo.filename,photo.original_name]
+      .map(value=>String(value||''));
+    for(const identifier of identifiers){
+      const match=identifier.match(/\bU[-\s]?(\d{4,6})\b/i);
+      if(match) return 'U-'+match[1];
+    }
+    return 'Unidade não informada';
+  }
+
   function reportUnitSections() {
     const week=Number(reportWeek || window.CoordinationWeek?.getSelectedWeek?.());
     const highlights=window.PBDashboard?.getReportHighlights?.(week) || [];
@@ -254,12 +269,12 @@
       groups.get(key)[type].push(item);
     };
     highlights.forEach(item=>add(item.unit,'highlights',item));
-    photos.forEach(item=>add(item.unit_name,'photos',item));
+    photos.forEach(item=>add(reportPhotoUnit(item),'photos',item));
     const data=window.PBDashboard?.getPresentationData?.();
     return [...groups.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR',{numeric:true})).map(group=>{
       const sectionSlides=[];
       const highlightsPerPage=10;
-      const chunks=Math.max(1,Math.ceil(group.highlights.length/highlightsPerPage));
+      const chunks=Math.ceil(group.highlights.length/highlightsPerPage);
       const totalUnitPages=chunks+Math.ceil(group.photos.length/2);
       for(let page=0;page<chunks;page++){
         const batch=group.highlights.slice(page*highlightsPerPage,(page+1)*highlightsPerPage);
@@ -282,15 +297,15 @@
           {dataBase:data?.dataBase},group.name
         ));
       }
-      sectionSlides.push(photoSlides(group.key,group.name,group.highlights.length,chunks,totalUnitPages));
+      sectionSlides.push(photoSlides(group.key,group.name,group.highlights.length,chunks,totalUnitPages,group.photos));
       return sectionSlides.join('');
     }).join('');
   }
 
-  function photoSlides(unitFilter=null,unitName='',highlightCount=0,previousPages=0,totalUnitPages=null) {
+  function photoSlides(unitFilter=null,unitName='',highlightCount=0,previousPages=0,totalUnitPages=null,unitPhotos=null) {
     const data=window.PBDashboard?.getPresentationData?.();
     const allPhotos=window.PBDashboard?.getReportPhotos?.() || [];
-    const photos=unitFilter===null ? allPhotos : allPhotos.filter(photo=>reportUnitKey(photo.unit_name)===unitFilter);
+    const photos=Array.isArray(unitPhotos) ? unitPhotos : (unitFilter===null ? allPhotos : allPhotos.filter(photo=>reportUnitKey(reportPhotoUnit(photo))===unitFilter));
     if(!photos.length) return '';
     const totalPages=totalUnitPages ?? (previousPages+Math.ceil(photos.length/2));
     const slides=[];
