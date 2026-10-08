@@ -142,9 +142,53 @@
     return [photo.phase_name,photo.grouping_name].filter(Boolean).join(' • ');
   }
 
+  function openPhotoLightbox(img){
+    if(!img?.src) return;
+    let overlay=$('tf-photo-lightbox');
+    if(!overlay){
+      overlay=document.createElement('div');
+      overlay.id='tf-photo-lightbox';
+      overlay.setAttribute('role','dialog');
+      overlay.setAttribute('aria-modal','true');
+      overlay.setAttribute('aria-label','Fotografia ampliada');
+      overlay.style.cssText='position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.84);display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box';
+      overlay.innerHTML='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;max-width:100%;max-height:100%">'+
+        '<button type="button" aria-label="Fechar fotografia" style="position:absolute;right:0;top:0;transform:translate(35%,-35%);border:0;background:#14283e;color:white;border-radius:50%;font-size:24px;width:42px;height:42px;cursor:pointer">×</button>'+
+        '<img alt="Fotografia ampliada" style="display:block;max-width:95vw;max-height:78vh;object-fit:contain;border-radius:10px;box-shadow:0 14px 55px rgba(0,0,0,.5)">'+
+        '<div class="tf-lightbox-caption" style="color:white;font-size:16px;font-weight:700;text-align:center"></div>'+
+        '<div class="tf-lightbox-info" style="color:#67e8f9;font-size:13px;text-align:center"></div></div>';
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click',e=>{
+        if(e.target===overlay || e.target.closest('button')) closePhotoLightbox();
+      });
+    }
+    overlay.querySelector('img').src=img.src;
+    const card=img.closest('.tf-photo,.tf-compare-card');
+    overlay.querySelector('.tf-lightbox-caption').textContent=card?.querySelector('figcaption strong')?.textContent||'Registro fotográfico';
+    overlay.querySelector('.tf-lightbox-info').textContent=card?.querySelector('figcaption small')?.textContent||'';
+    overlay.style.display='flex';
+    overlay.querySelector('button').focus();
+  }
+  function closePhotoLightbox(){
+    const overlay=$('tf-photo-lightbox');
+    if(!overlay || overlay.style.display==='none') return;
+    overlay.style.display='none';
+    overlay.querySelector('img').removeAttribute('src');
+  }
+  document.addEventListener('click',e=>{
+    const img=e.target.closest('#page-photo-time .tf-photo img,#page-photo-time .tf-compare-card img');
+    if(img) openPhotoLightbox(img);
+  });
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape' && $('tf-photo-lightbox')?.style.display==='flex'){
+      e.stopImmediatePropagation();
+      closePhotoLightbox();
+    }
+  },true);
+
   function photoCard(photo){
     return '<figure class="tf-photo">'+
-      '<img src="'+esc(photo.signed_url||'')+'" alt="Registro fotográfico">'+
+      '<img src="'+esc(photo.signed_url||'')+'" alt="Registro fotográfico — clique para ampliar" style="cursor:zoom-in">'+
       '<figcaption>'+
         '<strong>'+esc(photo.caption||'Registro fotográfico')+'</strong>'+
         '<small>'+esc(photo.unit_name||'Entrega não identificada')+'</small>'+
