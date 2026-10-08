@@ -3298,3 +3298,23 @@ body.pdf-exporting .coordination-highlight-row small{
 .presentation .slide-events-by-unit .coordination-highlight-row div{min-width:0;overflow-wrap:anywhere}
 .presentation .slide-events-by-unit .coordination-highlight-row strong{white-space:normal;overflow-wrap:anywhere;font-size:clamp(9px,.87vw,13px);line-height:1.25}
 .presentation .slide-events-by-unit .report-event-empty{font-size:12px;color:#94a3b8;padding:18px 7px;text-align:center}
+
+
+/* Eventos semanais: cores e densidade alinhadas com a lista do painel PB. */
+.presentation .slide-events-by-unit .report-event-grid{gap:10px;padding:10px!important}
+.presentation .slide-events-by-unit .report-event-column{padding:8px!important}
+.presentation .slide-events-by-unit .report-event-column h3{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  color:#f1f5f9!important;font-size:clamp(12px,1.1vw,16px)!important;margin:0 0 8px!important
+}
+.presentation .slide-events-by-unit .report-event-dot{display:inline-block;flex:none;width:8px;height:8px;border-radius:50%;background:#22c55e}
+.presentation .slide-events-by-unit .report-event-attention .report-event-dot{background:#facc15}
+.presentation .slide-events-by-unit .report-event-next .report-event-dot{background:#38bdf8}
+.presentation .slide-events-by-unit .report-event-items{gap:5px!important}
+.presentation .slide-events-by-unit .coordination-highlight-row{padding:6px!important;gap:7px!important}
+.presentation .slide-events-by-unit .coordination-highlight-row small{font-size:clamp(8px,.67vw,10px);margin-bottom:2px!important}
+.presentation .slide-events-by-unit .coordination-highlight-row strong{font-size:clamp(9px,.83vw,12px);line-height:1.2!important}
+.presentation .slide-events-by-unit .coordination-highlight-row>span{flex:0 0 auto;font-size:11px!important}
+.presentation .slide-unit-photo-kpis .slide-kpis{grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:9px!important}
+.presentation .slide-unit-photo-kpis .slide-kpi{padding:8px!important}
+.presentation .slide-unit-photo-kpis .slide-kpi strong{font-size:clamp(13px,1.55vw,23px)!important}
