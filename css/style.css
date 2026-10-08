@@ -3240,3 +3240,44 @@ body.pdf-exporting .coordination-highlight-row strong{
 body.pdf-exporting .coordination-highlight-row small{
   font-size:9px!important;
 }
+
+
+/* Modelo permanente do relatorio semanal por unidade (destaques e fotografias). */
+.presentation .slide.slide-highlights .slide-report-unit,
+.presentation .slide.slide-photos .slide-report-unit{
+  display:block;
+  width:100%;
+  box-sizing:border-box;
+  margin:8px 0 3px;
+  padding:0 2px;
+  color:#f1f5f9;
+  font-size:clamp(17px,2.1vw,29px);
+  line-height:1.15;
+  font-weight:800;
+  letter-spacing:-.035em;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  overflow:visible;
+}
+.presentation .slide.slide-highlights .slide-head h2,
+.presentation .slide.slide-photos .slide-head h2{
+  white-space:normal;
+  overflow:visible;
+  text-overflow:clip;
+  font-size:clamp(22px,2.8vw,37px)!important;
+}
+.presentation .slide.slide-highlights .slide-kpi strong,
+.presentation .slide.slide-photos .slide-kpi strong{
+  white-space:normal;
+  overflow-wrap:anywhere;
+  text-overflow:clip;
+  line-height:1.16;
+}
+.presentation .slide.slide-highlights .slide-kpis,
+.presentation .slide.slide-photos .slide-kpis{
+  margin:1.1% 0!important;
+}
+.presentation .slide.slide-highlights .slide-kpi,
+.presentation .slide.slide-photos .slide-kpi{
+  padding:4%!important;
+}
