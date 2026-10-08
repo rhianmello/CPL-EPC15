@@ -244,18 +244,19 @@
   }
 
   function reportPhotoUnit(photo) {
+    // O vínculo deve vir do cadastro da foto; legendas podem citar várias unidades.
     const label=String(photo.unit_name||'').trim();
     if(label && !/^unidade n[aã]o informada$/i.test(label)) return label;
-    const unitKey=String(photo.unit_key||'').trim();
-    if(unitKey && !/^unidade n[aã]o informada$/i.test(unitKey)) return unitKey;
-    // Somente associa a fotografia se houver código de unidade explícito nos metadados.
-    const identifiers=[photo.caption,photo.file_name,photo.filename,photo.original_name]
-      .map(value=>String(value||''));
-    for(const identifier of identifiers){
-      const match=identifier.match(/\bU[-\s]?(\d{4,6})\b/i);
-      if(match) return 'U-'+match[1];
-    }
-    return 'Unidade não informada';
+    const key=String(photo.unit_key||'').trim();
+    const match=key.match(/^u[-\s]?(\d{4,6})$/i);
+    return match ? 'U-'+match[1] : '';
+  }
+
+  function reportEventType(item) {
+    const value=String(item.event||'Destaque').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    if(value.includes('atenc')) return 'attention';
+    if(value.includes('proxim')) return 'next';
+    return 'highlight';
   }
 
   function reportUnitSections() {
@@ -264,36 +265,49 @@
     const photos=window.PBDashboard?.getReportPhotos?.() || [];
     const groups=new Map();
     const add=(name,type,item)=>{
-      const key=reportUnitKey(name || 'Unidade não informada');
-      if(!groups.has(key)) groups.set(key,{key,name:name||'Unidade não informada',highlights:[],photos:[]});
-      groups.get(key)[type].push(item);
+      const cleanName=String(name||'').trim();
+      if(!cleanName || /^unidade n[aã]o informada$/i.test(cleanName)) return;
+      const key=reportUnitKey(cleanName);
+      if(!groups.has(key)) groups.set(key,{key,name:cleanName,highlights:[],photos:[]});
+      const group=groups.get(key);
+      if(group.name===key && cleanName!==key) group.name=cleanName;
+      group[type].push(item);
     };
     highlights.forEach(item=>add(item.unit,'highlights',item));
     photos.forEach(item=>add(reportPhotoUnit(item),'photos',item));
     const data=window.PBDashboard?.getPresentationData?.();
     return [...groups.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR',{numeric:true})).map(group=>{
-      const sectionSlides=[];
-      const highlightsPerPage=10;
-      const chunks=Math.ceil(group.highlights.length/highlightsPerPage);
+      const categories={
+        highlight:group.highlights.filter(item=>reportEventType(item)==='highlight'),
+        attention:group.highlights.filter(item=>reportEventType(item)==='attention'),
+        next:group.highlights.filter(item=>reportEventType(item)==='next')
+      };
+      const perColumn=5;
+      const chunks=group.highlights.length ? Math.max(1,...Object.values(categories).map(items=>Math.ceil(items.length/perColumn))) : 0;
       const totalUnitPages=chunks+Math.ceil(group.photos.length/2);
+      const sectionSlides=[];
+      const labels=[['highlight','Destaques'],['attention','Pontos de atenção'],['next','Próximas ações']];
       for(let page=0;page<chunks;page++){
-        const batch=group.highlights.slice(page*highlightsPerPage,(page+1)*highlightsPerPage);
-        const rows=batch.map((item,index)=>'<div class="coordination-highlight-row"><span>'+String(page*highlightsPerPage+index+1).padStart(2,'0')+'</span><div>'+
-          '<small style="display:block;color:#67e8f9;font-weight:700;margin-bottom:4px">'+fmt().escapeHtml(item.phase||'Destaque')+'</small>'+
-          '<strong>'+fmt().escapeHtml(item.title||'Destaque')+'</strong>'+
-          (item.subtitle?'<small>'+fmt().escapeHtml(item.subtitle)+'</small>':'')+
-          '</div></div>').join('');
+        const columns=labels.map(([type,label])=>{
+          const items=categories[type].slice(page*perColumn,(page+1)*perColumn);
+          const rows=items.map((item,index)=>
+            '<div class="coordination-highlight-row"><span>'+String(page*perColumn+index+1).padStart(2,'0')+'</span><div>'+
+            '<small style="display:block;color:#67e8f9;font-weight:700;margin-bottom:4px">'+fmt().escapeHtml(item.phase||'')+'</small>'+
+            '<strong>'+fmt().escapeHtml(item.title||'')+'</strong>'+
+            (item.subtitle?'<small>'+fmt().escapeHtml(item.subtitle)+'</small>':'')+'</div></div>'
+          ).join('');
+          return '<section class="report-event-column"><h3>'+label+'</h3><div class="report-event-items">'+
+            (rows||'<div class="report-event-empty">Sem registros nesta categoria</div>')+'</div></section>';
+        }).join('');
         sectionSlides.push(slideShell(
           'Destaques da Semana',
           'REUNIÃO DE COORDENAÇÃO',
           kpi('Semana','Semana '+week,'#3b82f6')+
-          kpi('Destaques',String(group.highlights.length),'#22c55e')+
-          kpi('Fotografias',String(group.photos.length),'#8b5cf6')+
-          kpi('Página',String(page+1)+' / '+totalUnitPages,'#22d3ee'),
-          '<div class="slide-panel coordination-highlights-panel"><div class="coordination-highlight-list">'+
-          (rows||'<div style="padding:20px;color:#cbd5e1">Sem destaques registrados para esta unidade na semana.</div>')+
-          '</div></div>',
-          'slide-coordination slide-highlights',
+          kpi('Destaques',String(categories.highlight.length),'#22c55e')+
+          kpi('Pontos de atenção',String(categories.attention.length),'#f59e0b')+
+          kpi('Próximas ações',String(categories.next.length),'#8b5cf6'),
+          '<div class="slide-panel report-event-grid">'+columns+'</div>',
+          'slide-coordination slide-highlights slide-events-by-unit',
           {dataBase:data?.dataBase},group.name
         ));
       }
