@@ -26,7 +26,7 @@
 
   function allFilteredPhotos(){
     return state.photos
-      .filter(photoMatches)
+      .filter(photo=>photoMatches(photo))
       .map(p=>({...p,_week:Number(p.week_no),_weekInfo:weekByNo(p.week_no)}))
       .filter(p=>Number.isFinite(p._week))
       .sort((a,b)=>a._week-b._week || Number(a.sort_order||0)-Number(b.sort_order||0));
