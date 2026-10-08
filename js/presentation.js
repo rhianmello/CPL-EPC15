@@ -255,11 +255,44 @@
     return overview + highlightsSlide;
   }
 
+  function photoSlides() {
+    const data=window.PBDashboard?.getPresentationData?.();
+    const photos=window.PBDashboard?.getPresentationPhotos?.() || [];
+    if(!photos.length) return '';
+    const slides=[];
+    for(let offset=0;offset<photos.length;offset+=4){
+      const batch=photos.slice(offset,offset+4);
+      const cards=batch.map(photo=>{
+        const src=String(photo.signed_url || '');
+        if(!src || !/^https:\/\//i.test(src)) return '';
+        const unit=photo.unit_name || 'Unidade não informada';
+        const phase=photo.phase_name || 'Fase não informada';
+        const caption=photo.caption || 'Registro fotográfico';
+        return '<figure style="margin:0;min-width:0;background:#0b1b2d;border:1px solid #24354c;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:5px">'+
+          '<img crossorigin="anonymous" src="'+fmt().escapeHtml(src)+'" style="width:100%;height:120px;object-fit:contain;background:#050e19;border-radius:7px" alt="Registro fotográfico"/>'+
+          '<figcaption style="font-size:12px;color:#f8fafc;font-weight:700">'+fmt().escapeHtml(caption)+'</figcaption>'+
+          '<span style="font-size:10px;color:#67e8f9">'+fmt().escapeHtml(unit)+' · '+fmt().escapeHtml(phase)+'</span></figure>';
+      }).join('');
+      slides.push(slideShell(
+        'Registros fotográficos',
+        'REUNIÃO DE COORDENAÇÃO',
+        kpi('Semana',data?.selection?.week ? 'Semana '+data.selection.week : 'Atual','#8b5cf6')+
+        kpi('Fotografias',String(photos.length),'#22c55e')+
+        kpi('Página',String(Math.floor(offset/4)+1)+' / '+Math.ceil(photos.length/4),'#3b82f6')+
+        kpi('Origem','Registro fotográfico','#22d3ee'),
+        '<div class="slide-panel"><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">'+cards+'</div></div>',
+        'slide-coordination slide-photos',
+        {dataBase:data?.dataBase}
+      ));
+    }
+    return slides.join('');
+  }
+
   function render() {
     const host=document.getElementById('slides');
     host.innerHTML = mode==='weekly'
-      ? renderGerencial()+renderCoordination()
-      : (mode==='coordination' ? renderCoordination() : renderGerencial());
+      ? renderGerencial()+renderCoordination()+photoSlides()
+      : (mode==='coordination' ? renderCoordination()+photoSlides() : renderGerencial());
     current = 0;
     update();
   }
@@ -321,6 +354,7 @@
       );
       window.PBDashboard?.importWeekData?.(snapshot.pb_manual || {},week);
 
+      await window.PBDashboard?.loadPhotos?.(week,true);
       mode='weekly';
       render();
       const el=document.getElementById('presentation');
