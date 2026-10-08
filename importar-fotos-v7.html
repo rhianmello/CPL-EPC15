@@ -24,14 +24,16 @@ function parse(name) {
  const id=base.match(/U\s*-\s*(8223|8224|8226|8900)/i)?.[1];
  const week=Number(base.match(/Semana\s*0*(\d+)\s*\.*\s*$/i)?.[1]);
  if(!id||!week)return null;
- let caption=base.replace(/^.*?U\s*-\s*\d+\s*/i,'').replace(/\s*[-–—]\s*Semana\s*\d+\s*\.*$/i,'').trim();
- const removals={
- '8223':[/^central de resposta a emerg[eê]ncia\s*[-–—]?\s*/i,/^centro de resposta a emerg[eê]ncia\s*[-–—]?\s*/i],
- '8224':[/^oficina(?:s| de manuten[cç][aã]o)?\s*[-–—]?\s*/i],
- '8226':[/^almoxarifado\s*[-–—]?\s*/i],
- '8900':[/^central de res[ií]duos\s*[-–—]?\s*/i]
+ const withoutWeek=base.replace(/\s*[-–—]?\s*Semana\s*0*\d+\s*\.*\s*$/i,'').trim();
+ const afterUnitCode=withoutWeek.replace(/^.*?U\s*-\s*\d+\s*[-–—]?\s*/i,'').trim();
+ const unitNames={
+ '8223':[/^(?:Centro|Central) de Resposta a Emergência\s*[-–—]?\s*/i],
+ '8224':[/^Oficina(?:s)?(?: de Manutenção)?\s*[-–—]?\s*/i],
+ '8226':[/^Almoxarifado\s*[-–—]?\s*/i],
+ '8900':[/^Central de Resíduos\s*[-–—]?\s*/i]
  };
- for(const re of removals[id]) caption=caption.replace(re,'').trim();
+ let caption=afterUnitCode;
+ for(const regex of unitNames[id]) caption=caption.replace(regex,'').trim();
  caption=caption.replace(/^[-–—\s]+/,'').trim();
  return {id,week,unit:units[id],caption:caption||'Registro fotográfico',fileName:name};
 }
