@@ -1559,18 +1559,18 @@
       const fallback='Foto '+String(info.start+index+1).padStart(2,'0');
       const caption=String(photo.caption||'').trim() || fallback;
       const showUnit=!scope.unitKey && photo.unit_name;
-      const showPhase=!scope.phaseKey && photo.phase_name;
+      // Phase belongs to the filter; the service caption is the photo title.
       const showGrouping=!scope.groupingKey && photo.grouping_name;
-      const contextLabel=[showUnit ? photo.unit_name : '',showPhase ? photo.phase_name : '',showGrouping ? photo.grouping_name : ''].filter(Boolean).join(' • ');
+      const contextLabel=[showUnit ? photo.unit_name : '',showGrouping ? photo.grouping_name : ''].filter(Boolean).join(' • ');
       const contextMarkup=contextLabel
         ? '<div class="pb-photo-unit-label">'+esc(contextLabel)+'</div>'
         : '';
       const captionMarkup=curationMode && !photo.pending
         ? '<figcaption><input class="pb-photo-caption-input" type="text" value="'+esc(caption)+'" data-photo-caption="'+esc(photo.id)+'" maxlength="500" aria-label="Legenda da foto"></figcaption>'
-        : '<figcaption class="pb-photo-caption">'+esc(caption)+'</figcaption>';
+        : '<figcaption class="pb-photo-caption" style="font-size:.78rem;font-weight:800;color:#f0f7ff;line-height:1.4">'+esc(caption)+'</figcaption>';
       return '<figure class="pb-photo-item'+(photo.pending?' pb-photo-item-pending':'')+'">'+
         '<img src="'+esc(src)+'" alt="Registro fotográfico de '+esc(photo.unit_name || scope.unitName || 'todas as entregas')+' / '+esc(photo.phase_name || scope.phaseName || 'todas as fases')+'">'+
-        contextMarkup+pendingBadge+admin+captionMarkup+
+        pendingBadge+admin+captionMarkup+contextMarkup+
       '</figure>';
     }).join('');
   }
