@@ -152,7 +152,7 @@
             const w=dims.width*k,h=dims.height*k;
             pdf.addImage(receipt.data,'JPEG',M+(imageW-w)/2,imageY+(imageH-h)/2,w,h);
           }catch(error){
-            drawText('A foto não pôde ser renderizada neste PDF.',W/2,imageY+imageH/2,10,C.muted,false,'center');
+            throw new Error('Falha ao inserir a foto da placa '+g.plate+' ('+asDate(r.data_abastecimento)+'). O PDF não foi emitido incompleto: '+(error?.message||error));
           }
         }else{
           drawText('SEM FOTO ANEXADA',W/2,imageY+imageH/2-3,11,C.muted,true,'center');
