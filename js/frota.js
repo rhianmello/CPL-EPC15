@@ -465,9 +465,54 @@
     const message=movement?'A situação no contrato será alterada e a movimentação permanecerá no histórico do ativo.':'O registro será salvo no banco. Os registros anteriores e a auditoria serão preservados.';
     if(!await confirmAction(confirmation,message,'Registrar',record.tipo_movimento==='saída'?'danger':'primary'))return;
     button.disabled=true;$('#record-form-error').classList.add('hidden');
-    try {const id=state.detail.asset.id;await api.addRecord(kind,id,record,state.detail.asset.updated_at);closeModal();state.drawerTab=kind;await refreshAsset(id);toast({ptrans:'PTRAN cadastrado.',inspections:'Inspeção registrada.',maintenance:'Manutenção registrada.',documents:'Documento cadastrado.',movements:'Movimentação registrada.',fuelings:'Abastecimento registrado.'}[kind]);}
-    catch(error){showFormError('record-form-error',errorMessage(error));}
-    finally {button.disabled=false;}
+    let saved=false;
+    const id=state.detail.asset.id;
+    try {
+      await api.addRecord(kind,id,record,state.detail.asset.updated_at);
+      saved=true;
+    } catch(error) {
+      if(kind==='fuelings' && (/failed to fetch|networkerror|load failed/i).test(errorMessage(error))){
+        // A network interruption does not prove a failed write. Read the same asset
+        // again before showing any retry path, preventing duplicate fuel entries.
+        try {
+          const current=await api.detail(id);
+          const matches=core.currentRecords(current.fuelings||[]).filter(r=>
+            r.data_abastecimento===record.data_abastecimento &&
+            String(r.responsavel||'').trim().toLowerCase()===String(record.responsavel||'').trim().toLowerCase() &&
+            Number(r.km_atual)===Number(record.km_atual) &&
+            Math.abs(Number(r.valor)-Number(record.valor))<0.005 &&
+            String(r.combustivel||'')===String(record.combustivel||'')
+          );
+          if(matches.length){
+            saved=true;
+            toast('Abastecimento localizado no banco. Não foi duplicado.');
+          }else{
+            showFormError('record-form-error','A conexão caiu e não foi possível confirmar a gravação. Confira o histórico deste veículo antes de tentar novamente.');
+            button.disabled=true;
+            return;
+          }
+        }catch(_){
+          showFormError('record-form-error','Não foi possível confirmar se o abastecimento foi salvo. Não tente registrar novamente antes de consultar o histórico após restabelecer a conexão.');
+          button.disabled=true;
+          return;
+        }
+      }else{
+        showFormError('record-form-error',errorMessage(error));
+        return;
+      }
+    } finally {
+      if(!saved)button.disabled=false;
+    }
+    if(saved){
+      closeModal();
+      state.drawerTab=kind;
+      try{
+        await refreshAsset(id);
+        toast({ptrans:'PTRAN cadastrado.',inspections:'Inspeção registrada.',maintenance:'Manutenção registrada.',documents:'Documento cadastrado.',movements:'Movimentação registrada.',fuelings:'Abastecimento registrado.'}[kind]);
+      }catch(error){
+        toast('Registro salvo no banco, mas a atualização da ficha falhou. Recarregue a página.','yellow');
+      }
+    }
   }
   async function importFile(file) {
     if(!file)return;
