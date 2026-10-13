@@ -465,7 +465,7 @@
     const message=movement?'A situação no contrato será alterada e a movimentação permanecerá no histórico do ativo.':'O registro será salvo no banco. Os registros anteriores e a auditoria serão preservados.';
     if(!await confirmAction(confirmation,message,'Registrar',record.tipo_movimento==='saída'?'danger':'primary'))return;
     button.disabled=true;$('#record-form-error').classList.add('hidden');
-    let saved=false;
+    let saved=false, uncertain=false;
     const id=state.detail.asset.id;
     try {
       await api.addRecord(kind,id,record,state.detail.asset.updated_at);
@@ -488,11 +488,13 @@
             toast('Abastecimento localizado no banco. Não foi duplicado.');
           }else{
             showFormError('record-form-error','A conexão caiu e não foi possível confirmar a gravação. Confira o histórico deste veículo antes de tentar novamente.');
+            uncertain=true;
             button.disabled=true;
             return;
           }
         }catch(_){
           showFormError('record-form-error','Não foi possível confirmar se o abastecimento foi salvo. Não tente registrar novamente antes de consultar o histórico após restabelecer a conexão.');
+          uncertain=true;
           button.disabled=true;
           return;
         }
@@ -501,7 +503,7 @@
         return;
       }
     } finally {
-      if(!saved)button.disabled=false;
+      if(!saved && !uncertain)button.disabled=false;
     }
     if(saved){
       closeModal();
