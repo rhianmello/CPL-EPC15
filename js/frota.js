@@ -722,7 +722,7 @@
        'Combustível':r.combustivel||'','Litros':r.quantidade==null?'':money(r.quantidade),
        'Preço/L':r.preco_unitario==null?'':Number(r.preco_unitario),
        'Valor (R$)':money(r.valor),'Posto':r.posto||'Não informado',
-       'Nota':r.numero_nota||'','Comprovante':r.extra?.receipt_image?'Anexado':'Sem foto','Observação':r.observacao||''
+       'Nota':r.numero_nota||'','Comprovante':r.has_receipt?'Anexado':'Sem foto','Observação':r.observacao||''
      }));
      function summarize(key,title){
        const grouped=new Map();
@@ -741,11 +741,35 @@
        XLSX.utils.book_append_sheet(wb,sheet,name);
      });return wb;
    }
-   function receiptEntries(records){
-     return records.filter(r=>r.extra?.receipt_image?.startsWith('data:image/jpeg;base64,')).map((r,i)=>({
-       name:'Notas/'+String(i+1).padStart(3,'0')+'_'+String(r.data_abastecimento||'')+'_'+String(r.placa||'sem-placa').replace(/[^a-z0-9-]/gi,'_')+'.jpg',
-       data:r.extra.receipt_image
-     }));
+   async function loadFuelReceiptStatus(records){
+     const ids=records.map(r=>r.id).filter(Boolean);
+     const found=new Set();
+     for(let i=0;i<ids.length;i+=400){
+       const page=await api.fuelReceiptManifest(ids.slice(i,i+400));
+       if(!Array.isArray(page))throw new Error('Falha ao consultar a presença dos comprovantes.');
+       page.forEach(id=>found.add(String(id)));
+     }
+     records.forEach(r=>{r.has_receipt=found.has(String(r.id))||Boolean(r.extra?.receipt_image);});
+   }
+   async function receiptEntries(records){
+     const candidates=records.filter(r=>r.has_receipt);
+     if(candidates.length&&!editing())throw new Error('Para emitir PDF ou ZIP com notas, libere a edição com a senha master no ícone do lápis e tente novamente.');
+     const result=[];
+     for(const [i,r] of candidates.entries()){
+       let data;
+       if(r.extra?.receipt_image?.startsWith('data:image/jpeg;base64,')){
+         data=r.extra.receipt_image;
+       }else{
+         const response=await api.getFuelReceipt(r.id);
+         data=response?.data;
+       }
+       if(!data?.startsWith('data:image/jpeg;base64,'))throw new Error('Não foi possível recuperar a foto da nota '+(r.numero_nota||r.id)+'.');
+       result.push({
+         name:'Notas/'+String(i+1).padStart(3,'0')+'_'+String(r.data_abastecimento||'')+'_'+String(r.placa||'sem-placa').replace(/[^a-z0-9-]/gi,'_')+'.jpg',
+         data
+       });
+     }
+     return result;
    }
    async function exportFuelReport(event){
      event.preventDefault();
@@ -757,7 +781,10 @@
        const all=await getFuelRecords(from,to,assetId);
        const records=all.filter(r=>!posto||String(r.posto||'').trim().toLocaleLowerCase('pt-BR')===posto.toLocaleLowerCase('pt-BR'));
        if(!records.length){msg.textContent='Nenhum abastecimento encontrado nos filtros selecionados.';return;}
-       const data=fuelReportData(records),receipts=receiptEntries(records),filename='CPL-Abastecimentos-'+from+'-a-'+to;
+       msg.textContent='Conferindo comprovantes disponíveis...';
+       await loadFuelReceiptStatus(records);
+       const data=fuelReportData(records),filename='CPL-Abastecimentos-'+from+'-a-'+to;
+       const receipts=(format==='pdf'||format==='zip')?await receiptEntries(records):[];
        if(format==='pdf'){
          if(!window.jspdf?.jsPDF)throw new Error('Biblioteca de PDF indisponível.');
          const pdf=new window.jspdf.jsPDF({orientation:'landscape'});
@@ -785,7 +812,7 @@
        }else{
          XLSX.writeFile(fuelWorkbook(data),filename+'.xlsx');
        }
-       msg.textContent=records.length+' abastecimento(s) • total R$ '+records.reduce((n,r)=>n+Number(r.valor||0),0).toLocaleString('pt-BR',{minimumFractionDigits:2})+' • '+receipts.length+' foto(s) anexada(s).';
+       msg.textContent=records.length+' abastecimento(s) • total R$ '+records.reduce((n,r)=>n+Number(r.valor||0),0).toLocaleString('pt-BR',{minimumFractionDigits:2})+' • '+records.filter(r=>r.has_receipt).length+' foto(s) salva(s).';
      }catch(e){msg.textContent=errorMessage(e);toast(errorMessage(e),'red');}
      finally{button.disabled=false;}
    }
