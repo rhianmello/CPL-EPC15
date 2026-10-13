@@ -374,7 +374,9 @@
       $('#drawer-body').innerHTML='<div class="fleet-detail-section-head"><h3>Abastecimentos <span class="fleet-chip">'+current.length+' registros válidos</span></h3><button class="fleet-button primary" data-new-record="fuelings">'+icon('fuel')+' Abastecimento</button></div>'+
       '<p class="fleet-history-note">Total registrado: <strong>'+cash(current.reduce((s,r)=>s+Number(r.valor||0),0))+'</strong>. Correções preservam a versão anterior, mas não entram em dobro nos relatórios.</p>'+
       '<div class="fleet-form-actions"><button class="fleet-button" data-fuel-report="'+esc(asset.id)+'">'+icon('file-spreadsheet')+' Excel deste veículo</button></div>'+
-      '<div class="fleet-records">'+(records.length?records.map(r=>'<article class="fleet-record'+(r.is_current===false?' superseded':'')+'"><header><div><h4>'+esc(fmt(r.data_abastecimento)+' • '+(r.combustivel||'Combustível'))+'</h4><small>'+esc(r.responsavel||'Responsável não informado')+'</small></div><div class="fleet-record-tools">'+(r.is_current===false?badge('Versão anterior','gray'):'')+'<button class="fleet-icon-button edit-only '+(editing()&&r.is_current!==false?'':'hidden')+'" data-edit-record="'+esc(r.id)+'" data-record-kind="fuelings" title="Corrigir abastecimento">'+icon('pencil')+'</button></div></header><div class="fleet-record-meta"><div><span>Placa</span><b>'+esc(r.placa||'—')+'</b></div><div><span>Quilometragem</span><b>'+esc(r.km_atual==null?'—':number(r.km_atual)+' km')+'</b></div><div><span>Valor</span><b>'+cash(r.valor)+'</b></div><div><span>Litros</span><b>'+esc(r.quantidade==null?'—':String(r.quantidade))+'</b></div><div><span>Preço por litro</span><b>'+esc(r.preco_unitario==null?'—':cash(r.preco_unitario))+'</b></div><div><span>Posto</span><b>'+esc(r.posto||'—')+'</b></div></div>'+(r.extra?.receipt_image?'<div style="padding:10px"><button type="button" class="fleet-button" data-receipt-id="'+esc(r.id)+'">'+icon('image')+' Ver nota fiscal</button></div>':'')+'</article>').join(''):'<div class="fleet-empty">Nenhum abastecimento registrado para este veículo.</div>')+'</div>';
+      '<div class="fleet-records">'+(records.length?records.map(r=>'<article class="fleet-record'+(r.is_current===false?' superseded':'')+'"><header><div><h4>'+esc(fmt(r.data_abastecimento)+' • '+(r.combustivel||'Combustível'))+'</h4><small>'+esc(r.responsavel||'Responsável não informado')+'</small></div><div class="fleet-record-tools">'+(r.is_current===false?badge('Versão anterior','gray'):'')+'<button class="fleet-icon-button edit-only '+(editing()&&r.is_current!==false?'':'hidden')+'" data-edit-record="'+esc(r.id)+'" data-record-kind="fuelings" title="Corrigir abastecimento">'+icon('pencil')+'</button></div></header><div class="fleet-record-meta"><div><span>Placa</span><b>'+esc(r.placa||'—')+'</b></div><div><span>Quilometragem</span><b>'+esc(r.km_atual==null?'—':number(r.km_atual)+' km')+'</b></div><div><span>Valor</span><b>'+cash(r.valor)+'</b></div><div><span>Litros</span><b>'+esc(r.quantidade==null?'—':String(r.quantidade))+'</b></div><div><span>Preço por litro</span><b>'+esc(r.preco_unitario==null?'—':cash(r.preco_unitario))+'</b></div><div><span>Posto</span><b>'+esc(r.posto||'—')+'</b></div></div>'+'<div style="padding:10px;display:flex;gap:8px;flex-wrap:wrap">'+
+      (r.is_current===false?'':'<button type="button" class="fleet-button edit-only '+(editing()?'':'hidden')+'" data-attach-receipt="'+esc(r.id)+'">'+icon('paperclip')+' Anexar / trocar nota</button>')+
+      '<button type="button" class="fleet-button hidden" data-view-receipt="'+esc(r.id)+'">'+icon('image')+' Ver nota fiscal</button></div>'+'</article>').join(''):'<div class="fleet-empty">Nenhum abastecimento registrado para este veículo.</div>')+'</div>';
     } else if(tab==='audit') {
       const events=assetTimeline(detail);
       $('#drawer-body').innerHTML='<div class="fleet-detail-section-head"><h3>Linha do tempo do ativo</h3><span class="fleet-chip">'+number(events.length)+' eventos</span></div><p class="fleet-history-note">PTRANs, inspeções, manutenções, documentos, movimentações e alterações de cadastro em ordem cronológica.</p><div class="fleet-timeline">'+ (events.length?events.map(event=>historyEventHTML(event,false)).join(''):'<div class="fleet-empty">'+empty('Nenhum evento registrado','Os novos registros e alterações serão preservados nesta linha do tempo.','','history')+'</div>')+'</div>';
@@ -383,6 +385,7 @@
       const currentIds=new Set(core.currentRecords(records).map(r=>r.id));
       $('#drawer-body').innerHTML='<div class="fleet-detail-section-head"><h3>'+kindNames[tab]+' <span class="fleet-chip">'+records.length+' registros</span></h3><button class="fleet-button edit-only '+(editing()?'':'hidden')+'" data-new-record="'+tab+'">'+icon('plus')+' '+(tab==='movements'?'Registrar':'Adicionar')+'</button></div><p class="fleet-history-note">Novos registros preservam os anteriores. A correção de um registro cria uma versão vinculada ao original.</p><div class="fleet-records">'+ (records.length?records.map(record=>recordHTML(tab,record,!currentIds.has(record.id))).join(''):'<div class="fleet-empty">'+empty('Nenhum registro de '+kindNames[tab].toLowerCase(),'Use a edição protegida para incluir informações reais do ativo.','','folder-open')+'</div>')+'</div>';
     } icons();
+    if(tab==='fuelings')refreshFuelReceiptButtons(detail.fuelings||[]);
   }
   function recordHTML(kind,record,superseded) {
     const title={ptrans:'PTRAN '+(record.numero_ptran||'sem número'),inspections:record.tipo_inspecao||'Inspeção',maintenance:[record.categoria,record.tipo].filter(Boolean).join(' • ')||'Manutenção',documents:record.tipo_documento||'Documento',movements:record.tipo_movimento||'Movimentação'}[kind];
@@ -446,13 +449,53 @@
     if(kind==='inspections')content=inputField('tipo_inspecao',record.tipo_inspecao,{values:inspectionTypes,required:true})+inputField('status',record.status,{values:['Programada','Pendente','Aprovado','Reprovado','Cancelado'],required:true})+inputField('data_inspecao',record.data_inspecao,{type:'date'})+inputField('validade',record.validade,{type:'date'})+inputField('proxima_inspecao',record.proxima_inspecao,{type:'date'})+inputField('inspetor',record.inspetor)+inputField('resultado',record.resultado,{values:['Aprovado','Aprovado com ressalvas','Reprovado','Pendente']})+inputField('quilometragem',record.quilometragem,{type:'number'})+inputField('horimetro',record.horimetro,{type:'number'})+inputField('anexo_url',record.anexo_url,{type:'url',placeholder:'https://...'});
     if(kind==='maintenance')content=inputField('tipo',record.tipo,{values:['Manutenção','Revisão','Serviço']})+inputField('categoria',record.categoria,{values:maintenanceCategories,required:true})+inputField('status',record.status,{values:['Programada','Aberta','Em andamento','Concluído','Cancelado'],required:true})+inputField('numero_os',record.numero_os)+inputField('data_abertura',record.data_abertura,{type:'date'})+inputField('data_execucao',record.data_execucao,{type:'date'})+inputField('proxima_revisao_data',record.proxima_revisao_data,{type:'date'})+inputField('km_atual',record.km_atual,{type:'number'})+inputField('proxima_revisao_km',record.proxima_revisao_km,{type:'number'})+inputField('horimetro_atual',record.horimetro_atual,{type:'number'})+inputField('proxima_revisao_horas',record.proxima_revisao_horas,{type:'number'})+inputField('oficina_fornecedor',record.oficina_fornecedor)+inputField('valor',record.valor,{type:'number'})+inputField('descricao',record.descricao,{type:'textarea',full:true});
     if(kind==='documents')content=inputField('tipo_documento',record.tipo_documento,{values:documentTypes,required:true})+inputField('numero_documento',record.numero_documento)+inputField('emissao',record.emissao,{type:'date'})+inputField('validade',record.validade,{type:'date'})+inputField('status',record.status,{values:['Válido','Pendente','Em renovação','Vencido','Cancelado'],required:true})+inputField('arquivo_url',record.arquivo_url,{type:'url',placeholder:'https://...'});
-    if(kind==='fuelings')content=inputField('data_abastecimento',record.data_abastecimento||core.todayISO(),{type:'date',required:true})+inputField('responsavel',record.responsavel||state.detail.asset.responsavel_cpl,{required:true})+inputField('placa',record.placa||state.detail.asset.placa_identificador,{readonly:true})+inputField('km_atual',record.km_atual,{type:'number',required:true})+inputField('combustivel',record.combustivel,{values:['Diesel S-10','Diesel S-500','Gasolina comum','Gasolina aditivada','Etanol','Biodiesel','GNV','Outro'],required:true})+inputField('valor',record.valor,{type:'number',required:true})+inputField('quantidade',record.quantidade,{type:'number'})+inputField('preco_unitario',record.preco_unitario,{type:'number'})+inputField('posto',record.posto)+inputField('numero_nota',record.numero_nota)+'<label class="fleet-form-field">Foto da nota fiscal<input type="file" id="fuel-receipt" accept="image/jpeg,image/png,image/webp" style="max-width:100%"><small>Imagem JPG, PNG ou WebP • será otimizada antes de salvar.</small></label>'+(record.extra?.receipt_image?'<p class="fleet-form-note">Nota anexada anteriormente. Deixe o campo vazio para mantê-la.</p>':'');
+    if(kind==='fuelings')content=inputField('data_abastecimento',record.data_abastecimento||core.todayISO(),{type:'date',required:true})+inputField('responsavel',record.responsavel||state.detail.asset.responsavel_cpl,{required:true})+inputField('placa',record.placa||state.detail.asset.placa_identificador,{readonly:true})+inputField('km_atual',record.km_atual,{type:'number',required:true})+inputField('combustivel',record.combustivel,{values:['Diesel S-10','Diesel S-500','Gasolina comum','Gasolina aditivada','Etanol','Biodiesel','GNV','Outro'],required:true})+inputField('valor',record.valor,{type:'number',required:true})+inputField('quantidade',record.quantidade,{type:'number'})+inputField('preco_unitario',record.preco_unitario,{type:'number'})+inputField('posto',record.posto)+inputField('numero_nota',record.numero_nota)+'<label class="fleet-form-field">Foto da nota fiscal<input type="file" id="fuel-receipt" accept="image/jpeg,image/png,image/webp" style="max-width:100%"><small>Imagem JPG, PNG ou WebP. A foto será vinculada ao registro em armazenamento separado.</small></label>';
     if(kind==='movements')content=inputField('tipo_movimento',record.tipo_movimento,{values:movements,required:true})+inputField('data',record.data?record.data.slice(0,10):core.todayISO(),{type:'date',required:true})+inputField('origem',record.origem)+inputField('destino',record.destino)+inputField('responsavel_anterior',record.responsavel_anterior||state.detail.asset.responsavel_cpl)+inputField('responsavel_novo',record.responsavel_novo);
     content+=inputField('observacao',record.observacao,{type:'textarea',full:true});
     const title=(correcting?'Corrigir registro • ':'Novo registro • ')+kindNames[kind];
     const subtitle=kind==='movements'&&['entrada','saída'].includes(record.tipo_movimento)?'A movimentação e a situação do ativo no contrato serão atualizadas juntas.':correcting?'A versão anterior será preservada e vinculada à correção.':assetLabel(state.detail.asset);
     openModal(modalHead(title,subtitle,'FICHA DO ATIVO')+'<div class="fleet-modal-body"><form id="record-form" class="fleet-form"><div class="fleet-form-grid">'+content+'</div>'+ (kind==='documents'||kind==='inspections'?'<p class="fleet-form-note">Anexos: informe a URL de um arquivo publicado ou autorizado. Campos sem dados podem permanecer vazios.</p>':'')+'<div id="record-form-error" class="fleet-form-error hidden" role="alert"></div><div class="fleet-form-actions"><button class="fleet-button" type="button" data-close-modal>Cancelar</button><button class="fleet-button primary" type="submit">'+icon('save')+' '+(correcting?'Salvar correção':'Registrar')+'</button></div></form></div>');
     $('#record-form').onsubmit=event=>saveRecordForm(event,kind,existing);
+  }
+  function refreshFuelReceiptButtons(fuelings){
+    const ids=fuelings.map(r=>r.id).filter(Boolean);
+    if(!ids.length)return;
+    api.fuelReceiptManifest(ids).then(found=>{
+      const foundIds=new Set(Array.isArray(found)?found.map(String):[]);
+      $('[data-view-receipt]').forEach(btn=>{
+        btn.classList.toggle('hidden',!foundIds.has(btn.dataset.viewReceipt));
+      });
+    }).catch(error=>toast('Não foi possível consultar os comprovantes: '+errorMessage(error),'yellow'));
+  }
+  function openFuelReceiptForm(fuelingId){
+    if(!editing()){unlock(()=>openFuelReceiptForm(fuelingId));return;}
+    const record=state.detail?.fuelings?.find(r=>r.id===fuelingId);
+    if(!record){toast('Registro não encontrado. Atualize a ficha.','red');return;}
+    openModal(modalHead('Anexar nota fiscal','Abastecimento de '+fmt(record.data_abastecimento)+' • '+(record.placa||'')+' • '+Number(record.valor||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}),'COMPROVANTE')+
+      '<div class="fleet-modal-body"><form id="receipt-upload-form" class="fleet-form"><label>Selecione a foto da nota fiscal<input type="file" name="receipt" accept="image/jpeg,image/png,image/webp" required></label><p class="fleet-form-note">O comprovante ficará vinculado a este abastecimento já existente. Esta ação não cria outra cobrança.</p>'+
+      '<div id="receipt-upload-error" class="fleet-form-error hidden" role="alert"></div><div class="fleet-form-actions"><button class="fleet-button" type="button" data-close-modal>Cancelar</button><button class="fleet-button primary" type="submit">'+icon('upload')+' Salvar nota fiscal</button></div></form></div>');
+    $('#receipt-upload-form').onsubmit=async ev=>{
+      ev.preventDefault();const form=ev.currentTarget,btn=$('[type="submit"]',form);btn.disabled=true;
+      try{
+        const file=form.elements.receipt.files[0];
+        if(!file)throw new Error('Selecione uma foto.');
+        const data=await optimizeFuelReceipt(file);
+        await api.saveFuelReceipt(fuelingId,data);
+        closeModal();toast('Comprovante salvo e vinculado ao abastecimento.');refreshFuelReceiptButtons(state.detail?.fuelings||[]);
+      }catch(error){
+        const el=$('#receipt-upload-error');if(el){el.textContent=errorMessage(error);el.classList.remove('hidden');}
+        btn.disabled=false;
+      }
+    };
+  }
+  function viewFuelReceipt(fuelingId){
+    if(!editing()){unlock(()=>viewFuelReceipt(fuelingId));return;}
+    api.getFuelReceipt(fuelingId).then(result=>{
+      const data=result?.data;
+      if(!data?.startsWith('data:image/jpeg;base64,'))throw new Error('Foto inválida.');
+      openModal(modalHead('Comprovante de abastecimento','Foto armazenada de forma separada e protegida','NOTA FISCAL')+
+       '<div class="fleet-modal-body"><img alt="Nota fiscal de abastecimento" src="'+data+'" style="max-width:100%;height:auto;border-radius:10px"></div>');
+    }).catch(error=>toast('Não foi possível abrir a nota: '+errorMessage(error),'red'));
   }
   async function optimizeFuelReceipt(file){
     if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw new Error('Use JPG, PNG ou WebP.');
@@ -466,16 +509,18 @@
     // from the backend. Do not reinterpret the form's calendar day in host timezone.
     if(record.data)record.data=record.data.slice(0,10);
     if(kind==='fuelings'&&(record.valor<=0||record.km_atual<0||!record.data_abastecimento)){showFormError('record-form-error','Verifique a data, o KM e o valor do abastecimento.');return;}
-    if(kind==='fuelings'&&$('#fuel-receipt')?.files?.length){try{record.extra={...(existing?.extra||{}),receipt_image:await optimizeFuelReceipt($('#fuel-receipt').files[0])};}catch(error){showFormError('record-form-error',errorMessage(error));return;}}
+    let receiptData=null;
+    if(kind==='fuelings'&&$('#fuel-receipt')?.files?.length){try{receiptData=await optimizeFuelReceipt($('#fuel-receipt').files[0]);}catch(error){showFormError('record-form-error',errorMessage(error));return;}}
     const movement=kind==='movements'&&['entrada','saída'].includes(record.tipo_movimento);
     const confirmation=movement?(record.tipo_movimento==='saída'?'Registrar saída do contrato?':'Registrar entrada no contrato?'):existing?'Salvar correção do registro?':'Publicar este registro?';
     const message=movement?'A situação no contrato será alterada e a movimentação permanecerá no histórico do ativo.':'O registro será salvo no banco. Os registros anteriores e a auditoria serão preservados.';
     if(!await confirmAction(confirmation,message,'Registrar',record.tipo_movimento==='saída'?'danger':'primary'))return;
     button.disabled=true;$('#record-form-error').classList.add('hidden');
-    let saved=false, uncertain=false;
+    let saved=false, uncertain=false, savedRecordId=null;
     const id=state.detail.asset.id;
     try {
-      await api.addRecord(kind,id,record,state.detail.asset.updated_at);
+      const created=await api.addRecord(kind,id,record,state.detail.asset.updated_at);
+      savedRecordId=created?.id||null;
       saved=true;
     } catch(error) {
       if(kind==='fuelings' && (/failed to fetch|networkerror|load failed/i).test(errorMessage(error))){
@@ -491,6 +536,7 @@
             String(r.combustivel||'')===String(record.combustivel||'')
           );
           if(matches.length){
+            savedRecordId=matches[0].id;
             saved=true;
             toast('Abastecimento localizado no banco. Não foi duplicado.');
           }else{
@@ -513,8 +559,16 @@
       if(!saved && !uncertain)button.disabled=false;
     }
     if(saved){
+      let receiptWarning='';
+      if(kind==='fuelings'&&receiptData){
+        try{
+          if(!savedRecordId)throw new Error('O registro foi salvo, mas não foi possível identificar seu ID.');
+          await api.saveFuelReceipt(savedRecordId,receiptData);
+        }catch(error){receiptWarning='O abastecimento FOI SALVO, mas a foto não foi anexada: '+errorMessage(error)+' Abra o histórico do veículo e use "Anexar / trocar nota".';}
+      }
       closeModal();
       state.drawerTab=kind;
+      if(receiptWarning)toast(receiptWarning,'red');
       try{
         await refreshAsset(id);
         toast({ptrans:'PTRAN cadastrado.',inspections:'Inspeção registrada.',maintenance:'Manutenção registrada.',documents:'Documento cadastrado.',movements:'Movimentação registrada.',fuelings:'Abastecimento registrado.'}[kind]);
@@ -777,7 +831,8 @@
   },true);
   document.addEventListener('click',event=>{
     const button=event.target.closest('button,a');
-    if(button?.dataset.receiptId){const receipt=state.detail?.fuelings?.find(r=>r.id===button.dataset.receiptId)?.extra?.receipt_image;if(receipt){openModal(modalHead('Comprovante de abastecimento','Foto anexada ao abastecimento','NOTA FISCAL')+'<div class="fleet-modal-body"><img alt="Nota de abastecimento" src="'+receipt+'" style="max-width:100%;height:auto;border-radius:10px"></div>');}return;}
+    if(button?.dataset.attachReceipt){openFuelReceiptForm(button.dataset.attachReceipt);return;}
+    if(button?.dataset.viewReceipt){viewFuelReceipt(button.dataset.viewReceipt);return;}
     if(button?.dataset.fuelReport!==undefined){openFuelReport(button.dataset.fuelReport);return;}
     if(button?.dataset.focus){focusDashboard(button.dataset.focus);return;}
     if(button?.dataset.kpiAction){
