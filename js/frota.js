@@ -765,6 +765,7 @@
        }
        if(!data?.startsWith('data:image/jpeg;base64,'))throw new Error('Não foi possível recuperar a foto da nota '+(r.numero_nota||r.id)+'.');
        result.push({
+         fuelingId:r.id,
          name:'Notas/'+String(i+1).padStart(3,'0')+'_'+String(r.data_abastecimento||'')+'_'+String(r.placa||'sem-placa').replace(/[^a-z0-9-]/gi,'_')+'.jpg',
          data
        });
@@ -786,22 +787,8 @@
        const data=fuelReportData(records),filename='CPL-Abastecimentos-'+from+'-a-'+to;
        const receipts=(format==='pdf'||format==='zip')?await receiptEntries(records):[];
        if(format==='pdf'){
-         if(!window.jspdf?.jsPDF)throw new Error('Biblioteca de PDF indisponível.');
-         const pdf=new window.jspdf.jsPDF({orientation:'landscape'});
-         function textLine(line,y,bold=false){pdf.setFont('helvetica',bold?'bold':'normal');pdf.text(String(line).slice(0,170),12,y);}
-         textLine('CPL CONSTRUTORA | RELATÓRIO DE ABASTECIMENTOS',15,true);
-         textLine('Período: '+from+' a '+to+' | Posto: '+(posto||'Todos')+' | '+records.length+' abastecimentos',23);
-         let y=34;
-         data.byPost.forEach(r=>{if(y>185){pdf.addPage();y=18;}textLine(r.Posto+' | '+r.Abastecimentos+' abastecimentos | R$ '+r['Total (R$)'].toLocaleString('pt-BR',{minimumFractionDigits:2}),y,r.Posto==='TOTAL GERAL');y+=8;});
-         pdf.addPage();textLine('LANÇAMENTOS',15,true);y=25;
-         records.forEach(r=>{if(y>188){pdf.addPage();y=18;}textLine([r.data_abastecimento,r.placa,r.posto||'Não informado',r.responsavel||'', 'R$ '+Number(r.valor||0).toFixed(2),'Nota '+(r.numero_nota||'—')].join(' | '),y);y+=7;});
-         if(receipts.length){
-           for(const [i,receipt] of receipts.entries()){
-             pdf.addPage();textLine('COMPROVANTE '+(i+1)+' / '+receipts.length+' | '+receipt.name.split('/').pop(),14,true);
-             const img=new Image();img.src=receipt.data;await img.decode();let w=img.width,h=img.height,scale=Math.min(255/w,165/h);pdf.addImage(receipt.data,'JPEG',12,20,w*scale,h*scale);
-           }
-         }
-         pdf.save(filename+'.pdf');
+         if(!window.FleetFuelReportPDF?.create)throw new Error('Gerador de PDF indisponível. Atualize a página.');
+         window.FleetFuelReportPDF.create({records,receipts,from,to,posto,filename});
        }else if(format==='zip'){
          if(!window.JSZip)throw new Error('Biblioteca ZIP indisponível.');
          const zip=new JSZip(),wb=fuelWorkbook(data);
