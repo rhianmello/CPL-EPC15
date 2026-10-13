@@ -1604,12 +1604,7 @@
     const periodLabel=String(allNotes.__highlightPeriodLabel || '').trim();
     if(heading) heading.textContent='EVENTOS DA SEMANA'+(periodLabel ? ' — '+periodLabel : '');
 
-    const hideAutomatic=Boolean(allNotes.__hideAutomaticHighlights);
-    const automaticRows=hideAutomatic ? [] : presentationVisibleRows(presentationRows())
-      .filter(hasDeviation)
-      .sort((a,b)=>(a.sourceIndex??0)-(b.sourceIndex??0))
-      .slice(0,4);
-
+    const automaticRows=[]; // Somente eventos cadastrados manualmente/importados
     const visibleAuto=automaticRows.filter(row=>!noteFor(row).highlightHidden);
     const hiddenAuto=automaticRows.filter(row=>noteFor(row).highlightHidden);
     const manual=manualHighlights()
@@ -2335,20 +2330,7 @@
   function getPresentationData() {
     const sel=selection();
     const scope=scopeSummary();
-    const auto=notes().__hideAutomaticHighlights ? [] : presentationVisibleRows(presentationRows())
-      .filter(hasDeviation)
-      .sort((a,b)=>(a.sourceIndex??0)-(b.sourceIndex??0))
-      .slice(0,4)
-      .filter(row=>!noteFor(row).highlightHidden)
-      .map(row=>{
-        const note=noteFor(row);
-        return {
-          title:note.highlightTitle || rowLabel(row),
-          subtitle:note.highlightSubtitle || '',
-          unit:row.unit || '',
-          phase:row.phase || ''
-        };
-      });
+    const auto=[]; // Eventos automáticos desativados em todas as apresentações
     const manual=manualHighlights()
       .filter(manualHighlightMatchesSelection)
       .filter(item=>manualHighlightText(item))
