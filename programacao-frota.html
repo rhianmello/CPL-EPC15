@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Programação Semanal • Frota CPL</title><link rel="stylesheet" href="css/style.css"><link rel="stylesheet" href="css/frota.css">
+<style>
+body{background:#07111f;color:#e7f0fa;font-family:Inter,Arial,sans-serif;margin:0}*{box-sizing:border-box}
+.program-shell{max-width:1450px;margin:auto;padding:25px 24px 70px}
+.program-header{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:18px}
+.program-header h1{font-size:clamp(22px,2.8vw,34px);margin:5px 0}.muted{color:#9ab0c6;font-size:13px}a{color:#91e8fa}
+.toolbar,.panel{background:linear-gradient(140deg,rgba(22,43,66,.95),rgba(10,24,42,.98));border:1px solid #29405b;border-radius:17px;padding:17px;margin-bottom:15px}
+.toolbar{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.toolbar label{display:grid;gap:6px;font-size:12px;color:#b6cce0}
+input,select,textarea{background:#0a182b;border:1px solid #3b5572;color:#f3f9ff;border-radius:9px;padding:11px;font:inherit;min-width:0}input[type=date]{color-scheme:dark}
+button{background:#16324f;color:#eaf5ff;border:1px solid #496582;border-radius:10px;padding:11px 14px;font-weight:700;cursor:pointer}
+button.primary{background:linear-gradient(120deg,#05a8c9,#1679d7);border-color:#39c7f0;color:#fff}
+button:disabled{opacity:.45;cursor:not-allowed}button:hover:not(:disabled){filter:brightness(1.15)}
+.btns{display:flex;gap:8px;flex-wrap:wrap}.status{font-size:13px;color:#c4d7e8;margin:8px 0 16px}.status.error{color:#ff909b}
+.gridstats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.stat{background:#11243b;padding:15px;border:1px solid #294761;border-radius:13px}.stat b{font-size:23px;display:block;color:#7ee4f4}.stat small{color:#a8bfd5}
+.table-scroll{overflow:auto}table{width:100%;border-collapse:collapse;min-width:920px}th{text-align:left;color:#9ddef0;font-size:11px;letter-spacing:.05em;text-transform:uppercase;background:#132b44}td,th{padding:10px;border-bottom:1px solid #29405b;vertical-align:middle}td{font-size:13px}
+td input,td select{width:100%;font-size:13px;padding:9px}td.vehicle{min-width:150px}td.vehicle strong{display:block}td.vehicle small{color:#93afc7}
+#notes{width:100%;min-height:75px;resize:vertical}h2{margin:0 0 13px;font-size:18px}.sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#output{background:white;color:#162638;border-radius:10px;padding:23px;overflow:hidden}#output h2{font-size:23px;margin:2px 0 7px}#output .sub{font-size:12px;color:#52667c;margin-bottom:15px}
+#output table{min-width:0}#output th{background:#ddecf6;color:#17364f;font-size:11px}#output td{font-size:12px;border-color:#d9e4ec;overflow-wrap:anywhere}
+#output .output-foot{font-size:11px;color:#596c7d;margin-top:14px;white-space:pre-wrap}
+.empty{padding:22px;color:#9bb2c9;text-align:center}
+@media(max-width:720px){.program-shell{padding:13px}.gridstats{grid-template-columns:1fr 1fr 1fr}.stat b{font-size:18px}.toolbar button{flex:1}#output{padding:12px}#output table{font-size:9px}}
+@media print{body{background:white;color:black}.no-print{display:none!important}.program-shell{padding:0;max-width:none}#output{padding:0;overflow:visible}#output table{width:100%;table-layout:fixed;min-width:0}#output th,#output td{font-size:9px;padding:6px 4px} @page{size:A4 landscape;margin:12mm}}
+</style></head><body>
+<main class="program-shell">
+<header class="program-header no-print"><div><a href="frota.html">← Voltar à Frota</a><div class="muted" style="margin-top:13px">CPL CONSTRUTORA • CENTRAL DE FROTA</div><h1>Programação semanal dos veículos</h1><div class="muted">Defina os motoristas, horários e frentes de serviço. Publique uma semana por vez.</div></div><div class="btns"><button id="unlock">🔒 Liberar edição</button><button id="reload">↻ Atualizar banco</button></div></header>
+<section class="toolbar no-print">
+<label>Semana de referência (segunda-feira)<input type="date" id="week"></label>
+<button id="prev">← Semana anterior</button><button id="next">Próxima semana →</button>
+<button id="add">+ Adicionar veículo</button><button id="save" class="primary">Salvar programação</button>
+</section>
+<div id="status" class="status no-print">Carregando...</div>
+<section class="gridstats no-print"><div class="stat"><b id="s-total">0</b><small>Veículos programados</small></div><div class="stat"><b id="s-drivers">0</b><small>Motoristas definidos</small></div><div class="stat"><b id="s-pending">0</b><small>Sem motorista</small></div></section>
+<section class="panel no-print"><div class="sheet-head"><h2>Escala da semana</h2><small class="muted" id="period"></small></div><div class="table-scroll"><table><thead><tr><th>Veículo / Placa</th><th>Motorista responsável</th><th>Turno / horário</th><th>Local / Frente de serviço</th><th>Período / dias</th><th>Observações</th><th></th></tr></thead><tbody id="rows"></tbody></table></div><div class="muted" style="margin-top:9px">Escolha o veículo da base da frota. A programação é semanal e admite substituições e veículos de reserva.</div><label style="display:grid;gap:8px;margin-top:18px">Observações gerais<textarea id="notes" placeholder="Ex.: ponto de encontro, mudanças previstas, orientações aos motoristas..."></textarea></label></section>
+<section class="panel no-print"><div class="sheet-head"><div><h2>Relatório para os motoristas</h2><p class="muted">O quadro abaixo é o que será enviado ao grupo, sem os campos de edição.</p></div><div class="btns"><button id="pdf">PDF</button><button id="excel">Excel</button><button id="png">Imagem (PNG)</button><button id="print">Imprimir / salvar PDF</button></div></div></section>
+<section id="output"><div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#1979a3">CPL CONSTRUTORA • FROTA</div><h2>PROGRAMAÇÃO SEMANAL DE VEÍCULOS</h2><div class="sub" id="out-period"></div><table><thead><tr><th>VEÍCULO</th><th>PLACA</th><th>MOTORISTA</th><th>HORÁRIO</th><th>FRENTE / DESTINO</th><th>DIAS</th><th>OBSERVAÇÕES</th></tr></thead><tbody id="out-rows"></tbody></table><div class="output-foot" id="out-notes"></div><div class="output-foot" id="out-updated"></div></section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.min.js"></script>
+<script src="vendor/xlsx-frota-0.20.3.min.js"></script><script src="vendor/html2canvas.min.js"></script><script src="vendor/jspdf.umd.min.js"></script>
+<script src="js/supabase-config.js"></script><script src="js/frota-api.js"></script>
+<script>
+(()=>{'use strict';
+const $=id=>document.getElementById(id),api=window.FleetAPI;
+let assets=[],rows=[],record=null,dirty=false,loading=false;
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dateLocal=s=>{let [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const iso=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+const addDays=(d,n)=>{let v=new Date(d);v.setDate(v.getDate()+n);return v};
+const monday=d=>addDays(d,-((d.getDay()+6)%7));
+const fmt=d=>new Intl.DateTimeFormat('pt-BR').format(d);
+const weekName=()=>{let d=dateLocal($('week').value);return fmt(d)+' a '+fmt(addDays(d,6))};
+function status(t,bad=false){$('status').textContent=t;$('status').classList.toggle('error',bad)}
+function assetName(a){return [a.modelo||a.categoria||a.tipo||'Veículo',a.placa_identificador||a.asset_code||'Sem placa'].join(' • ')}
+function label(a){return a?assetName(a):'Veículo não encontrado'}
+function options(value){return '<option value="">Selecione o veículo</option>'+assets.map(a=>'<option value="'+esc(a.id)+'" '+(String(a.id)===String(value)?'selected':'')+'>'+esc(assetName(a))+'</option>').join('')}
+function enabled(){return api.isEditing()}
+function setDirty(){dirty=true;status('Alterações ainda não salvas.');renderOutput()}
+function period(){let txt='Semana: '+weekName();$('period').textContent=txt;$('out-period').textContent=txt}
+function render(){
+ period();
+ $('unlock').textContent=enabled()?'🔓 Edição liberada':'🔒 Liberar edição';
+ $('save').disabled=!enabled()||loading;
+ $('add').disabled=!enabled()||loading;
+ $('rows').innerHTML=rows.map((r,i)=>'<tr data-index="'+i+'"><td class="vehicle"><select data-key="asset_id" '+(!enabled()?'disabled':'')+'>'+options(r.asset_id)+'</select></td>'+
+ '<td><input data-key="driver" placeholder="Nome do motorista" value="'+esc(r.driver)+'" '+(!enabled()?'disabled':'')+'></td>'+
+ '<td><input data-key="shift" placeholder="07h às 17h" value="'+esc(r.shift)+'" '+(!enabled()?'disabled':'')+'></td>'+
+ '<td><input data-key="destination" placeholder="Unidade / frente" value="'+esc(r.destination)+'" '+(!enabled()?'disabled':'')+'></td>'+
+ '<td><input data-key="days" placeholder="Seg a sex" value="'+esc(r.days)+'" '+(!enabled()?'disabled':'')+'></td>'+
+ '<td><input data-key="note" placeholder="Reserva / apoio..." value="'+esc(r.note)+'" '+(!enabled()?'disabled':'')+'></td>'+
+ '<td><button data-remove="'+i+'" '+(!enabled()?'disabled':'')+' aria-label="Excluir linha">✕</button></td></tr>').join('');
+ $('notes').disabled=!enabled();
+ $('s-total').textContent=rows.filter(r=>r.asset_id).length;
+ $('s-drivers').textContent=rows.filter(r=>r.asset_id&&r.driver.trim()).length;
+ $('s-pending').textContent=rows.filter(r=>r.asset_id&&!r.driver.trim()).length;
+ renderOutput();
+}
+function reportRows(){return rows.filter(r=>r.asset_id).map(r=>({...r,asset:assets.find(a=>String(a.id)===String(r.asset_id))}))}
+function renderOutput(){
+ period();const list=reportRows();
+ $('out-rows').innerHTML=list.length?list.map(r=>'<tr><td>'+esc(r.asset?.modelo||r.asset?.categoria||'Veículo')+'</td><td>'+esc(r.asset?.placa_identificador||r.asset?.asset_code||'—')+'</td><td>'+esc(r.driver||'A definir')+'</td><td>'+esc(r.shift||'—')+'</td><td>'+esc(r.destination||'—')+'</td><td>'+esc(r.days||'—')+'</td><td>'+esc(r.note||'—')+'</td></tr>').join(''):'<tr><td colspan="7" class="empty">Nenhum veículo programado nesta semana.</td></tr>';
+ $('out-notes').textContent=$('notes').value?'ORIENTAÇÕES GERAIS: '+$('notes').value:'';
+ $('out-updated').textContent=dirty?'RASCUNHO — ainda não salvo no banco':record?.updated_at?'Atualizado em '+new Date(record.updated_at).toLocaleString('pt-BR')+(record.updated_by?' • '+record.updated_by:''):'Semana sem programação publicada';
+}
+async function loadAssets(){let offset=0,total=0;let all=[];do{let data=await api.listAssets({offset,limit:250});let group=data.assets||[];all.push(...group);total=Number(data.total||all.length);offset+=group.length;if(!group.length)break}while(offset<total);assets=all.filter(a=>/ve[ií]culo|carro|caminh|van|utilit|passeio|ônibus|onibus|munck/i.test([a.tipo,a.categoria,a.modelo].join(' ')));if(!assets.length)assets=all}
+async function loadWeek(force=false){
+ if(dirty&&!force&&!confirm('Existem alterações não salvas. Deseja descartá-las?'))return false;
+ loading=true;status('Consultando programação e veículos...');render();
+ try{await loadAssets();let cfg=window.EPC15_SUPABASE_CONFIG;let client=window.supabase.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:false}});
+ let result=await client.rpc('fleet_weekly_schedule_public',{p_week_start:$('week').value});if(result.error)throw result.error;
+ record=result.data;rows=Array.isArray(record.assignments)?record.assignments.map(x=>({asset_id:x.asset_id||'',driver:String(x.driver||''),shift:String(x.shift||''),destination:String(x.destination||''),days:String(x.days||''),note:String(x.note||'')})):[];
+ $('notes').value=record.notes||'';dirty=false;status('Programação sincronizada com o banco • '+(rows.length?rows.length+' linha(s)':'sem registros nesta semana'));return true;
+ }catch(e){status('Falha ao buscar a programação: '+e.message,true);return false}
+ finally{loading=false;render()}
+}
+async function unlock(){
+ if(enabled()){await api.lock();render();return}
+ let password=prompt('Senha master para editar a programação:');if(!password)return;
+ let actor=prompt('Seu nome (responsável pela alteração):')||'Planejamento';
+ try{await api.unlock(password,actor);status('Edição liberada.');render()}catch(e){status(e.message,true)}
+}
+async function save(){
+ if(!enabled())return status('Libere a edição antes de salvar.',true);
+ const ids=rows.filter(r=>r.asset_id).map(r=>String(r.asset_id));
+ if(new Set(ids).size!==ids.length)return status('Há veículo duplicado na semana. Utilize a observação para indicar turnos ou substituições.',true);
+ if(rows.some(r=>!r.asset_id))return status('Selecione o veículo em todas as linhas ou exclua as linhas vazias.',true);
+ loading=true;render();status('Salvando programação no banco...');
+ try{let cfg=window.EPC15_SUPABASE_CONFIG;let client=window.supabase.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:false}});
+ // FleetAPI supplies a server-validated session; only the editing capability may write.
+ let session=window.__fleetScheduleSession;
+ if(!session)throw new Error('Sessão de programação indisponível. Libere a edição novamente.');
+ let result=await client.rpc('fleet_save_weekly_schedule',{p_token:session,p_week_start:$('week').value,p_assignments:rows,p_notes:$('notes').value,p_expected_updated_at:record?.updated_at||null});
+ if(result.error)throw result.error;record=result.data;dirty=false;status('Programação salva no Supabase com sucesso.');
+ }catch(e){status('Não foi possível salvar: '+e.message,true)}finally{loading=false;render()}
+}
+function move(n){let old=$('week').value;$('week').value=iso(addDays(dateLocal(old),n));loadWeek().then(ok=>{if(!ok)$('week').value=old})}
+async function exportPNG(){if(!window.html2canvas)throw Error('Biblioteca de imagem indisponível.');let c=await html2canvas($('output'),{backgroundColor:'#ffffff',scale:2});let a=document.createElement('a');a.download='Programacao_Frota_'+$('week').value+'.png';a.href=c.toDataURL('image/png');a.click()}
+async function exportPDF(){if(!window.html2canvas||!window.jspdf?.jsPDF)throw Error('Biblioteca PDF indisponível.');let canvas=await html2canvas($('output'),{backgroundColor:'#ffffff',scale:2});let pdf=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4'});const w=277,h=canvas.height*w/canvas.width;let pageH=190;let y=0;while(y<h){if(y)pdf.addPage();pdf.addImage(canvas.toDataURL('image/png'),'PNG',10,8-y,w,h);y+=pageH}pdf.save('Programacao_Frota_'+$('week').value+'.pdf')}
+function exportExcel(){if(!window.XLSX)throw Error('Biblioteca Excel indisponível.');let data=[['CPL CONSTRUTORA • PROGRAMAÇÃO SEMANAL'],['Período',weekName()],[],['VEÍCULO','PLACA','MOTORISTA','HORÁRIO','FRENTE / DESTINO','DIAS','OBSERVAÇÕES'],...reportRows().map(r=>[r.asset?.modelo||'',r.asset?.placa_identificador||r.asset?.asset_code||'',r.driver,r.shift,r.destination,r.days,r.note]),[],['ORIENTAÇÕES GERAIS',$('notes').value]];let ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:26},{wch:18},{wch:28},{wch:20},{wch:30},{wch:18},{wch:42}];let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Programação');XLSX.writeFile(wb,'Programacao_Frota_'+$('week').value+'.xlsx')}
+$('rows').addEventListener('input',event=>{let tr=event.target.closest('tr[data-index]');if(!tr||!event.target.dataset.key)return;rows[Number(tr.dataset.index)][event.target.dataset.key]=event.target.value;setDirty();$('s-drivers').textContent=rows.filter(r=>r.asset_id&&r.driver.trim()).length;$('s-pending').textContent=rows.filter(r=>r.asset_id&&!r.driver.trim()).length});
+$('rows').addEventListener('change',event=>{if(event.target.dataset.key==='asset_id'){rows[Number(event.target.closest('tr').dataset.index)].asset_id=event.target.value;setDirty();render()}});
+$('rows').addEventListener('click',event=>{let b=event.target.closest('[data-remove]');if(!b||!enabled())return;rows.splice(Number(b.dataset.remove),1);setDirty();render()});
+$('notes').addEventListener('input',setDirty);
+$('week').addEventListener('change',event=>{let old=record?.week_start||iso(monday(new Date()));event.target.value=iso(monday(dateLocal(event.target.value)));loadWeek().then(ok=>{if(!ok){$('week').value=old;render()}})});
+$('prev').onclick=()=>move(-7);$('next').onclick=()=>move(7);$('reload').onclick=()=>loadWeek();$('unlock').onclick=unlock;$('save').onclick=save;
+$('add').onclick=()=>{if(!enabled())return;rows.push({asset_id:'',driver:'',shift:'07h às 17h',destination:'',days:'Seg a sex',note:''});setDirty();render()};
+$('excel').onclick=()=>{try{exportExcel()}catch(e){status(e.message,true)}};
+$('png').onclick=async()=>{try{await exportPNG()}catch(e){status(e.message,true)}};
+$('pdf').onclick=async()=>{try{await exportPDF()}catch(e){status(e.message,true)}};
+$('print').onclick=()=>window.print();
+window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
+$('week').value=iso(monday(new Date()));loadWeek();
+})();
+</script></body></html>
