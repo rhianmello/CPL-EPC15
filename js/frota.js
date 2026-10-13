@@ -18,7 +18,7 @@
   const fields = {
     asset_code:'Código do ativo',placa_identificador:'Placa / identificador',tipo:'Tipo',categoria:'Categoria',modelo:'Modelo',marca:'Marca',ano:'Ano',cor:'Cor',empresa:'Empresa',gerencia:'Gerência',responsavel_cpl:'Responsável CPL',status_operacional:'Status operacional',ativo_no_contrato:'Ativo no contrato',data_entrada:'Entrada no contrato',data_saida:'Saída do contrato',observacao_atual:'Observação',quilometragem:'Quilometragem',horimetro:'Horímetro',numero_ptran:'Número PTRAN',numero_isc:'Número ISC',data_recebimento:'Recebimento',data_solicitacao:'Solicitação',data_emissao:'Emissão',data_validade:'Validade',status:'Status',tipo_ptran:'Tipo PTRAN',provisoria:'Provisória',observacao:'Observação',responsavel:'Responsável',tipo_inspecao:'Tipo de inspeção',data_inspecao:'Data da inspeção',validade:'Validade',proxima_inspecao:'Próxima inspeção',inspetor:'Inspetor',resultado:'Resultado',anexo_url:'Anexo',data_abertura:'Abertura',data_execucao:'Execução',proxima_revisao_data:'Próxima revisão',km_atual:'KM atual',proxima_revisao_km:'Próxima revisão • KM',horimetro_atual:'Horímetro atual',proxima_revisao_horas:'Próxima revisão • horas',oficina_fornecedor:'Oficina / fornecedor',numero_os:'Ordem de serviço',descricao:'Descrição',valor:'Valor (R$)',tipo_documento:'Tipo de documento',numero_documento:'Número do documento',emissao:'Emissão',arquivo_url:'Arquivo',tipo_movimento:'Movimentação',data:'Data e hora',origem:'Origem',destino:'Destino',responsavel_anterior:'Responsável anterior',responsavel_novo:'Novo responsável'
   };
-  const kindNames = {ptrans:'PTRAN',inspections:'Inspeções',maintenance:'Manutenção',documents:'Documentos',movements:'Movimentações',assets:'Ativo'};
+  const kindNames = {ptrans:'PTRAN',inspections:'Inspeções',maintenance:'Manutenção',documents:'Documentos',movements:'Movimentações',fuelings:'Abastecimentos',assets:'Ativo'};
   const icon = name => '<i data-lucide="' + name + '"></i>';
   function icons() { window.lucide?.createIcons(); }
   function badge(label,tone='gray') { return '<span class="fleet-badge" data-tone="' + esc(tone) + '">' + esc(label || 'Não informado') + '</span>'; }
@@ -356,7 +356,7 @@
     const detail=state.detail;if(!detail)return;
     const asset=fullAsset(detail),situation=core.situation(asset);
     const statusCards=[{title:'Situação geral',value:situation.label,icon:'activity',tone:situation.tone},...['ptrans','inspections','maintenance','documents'].map(kind=>{const summary=recordSummary(asset,kind);return {title:kindNames[kind],value:summary.label,icon:{ptrans:'file-check-2',inspections:'clipboard-check',maintenance:'wrench',documents:'files'}[kind],tone:summary.tone};})];
-    const tabs=[['resumo','Resumo'],['ptrans','PTRAN'],['inspections','Inspeções'],['maintenance','Manutenção'],['documents','Documentos'],['movements','Movimentações'],['audit','Histórico']];
+    const tabs=[['resumo','Resumo'],['ptrans','PTRAN'],['inspections','Inspeções'],['maintenance','Manutenção'],['documents','Documentos'],['movements','Movimentações'],['fuelings','Abastecimento'],['audit','Histórico']];
     $('#drawer-content').innerHTML=detailHeader(asset)+'<div class="fleet-drawer-status">'+statusCards.map(card=>'<div class="fleet-status-card" data-tone="'+card.tone+'">'+icon(card.icon)+'<small>'+esc(card.title)+'</small><strong>'+esc(card.value)+'</strong></div>').join('')+'</div><div class="fleet-drawer-actions"><button class="fleet-button" data-action="edit-current">'+icon('pencil')+' Editar ativo</button><button class="fleet-button success edit-only '+(editing()?'':'hidden')+'" data-movement="entrada">'+icon('log-in')+' Registrar entrada</button><button class="fleet-button danger edit-only '+(editing()?'':'hidden')+'" data-movement="saída">'+icon('log-out')+' Registrar saída</button></div><div class="fleet-drawer-tabs" role="tablist" aria-label="Ficha do ativo">'+tabs.map(([key,label])=>'<button data-drawer-tab="'+key+'" role="tab" aria-selected="'+(state.drawerTab===key)+'" class="'+(state.drawerTab===key?'active':'')+'">'+label+'</button>').join('')+'</div><div class="fleet-drawer-body" id="drawer-body"></div>';
     renderDetailTab();icons();
   }
@@ -367,6 +367,14 @@
       const situation=core.situation(asset);
       const list=['asset_code','placa_identificador','tipo','categoria','modelo','marca','ano','cor','empresa','gerencia','responsavel_cpl','status_operacional','ativo_no_contrato'];
       $('#drawer-body').innerHTML='<div class="fleet-detail-callout" data-tone="'+situation.tone+'"><strong>'+esc(situation.label)+'</strong>'+ (situation.reasons.length?'<ul>'+situation.reasons.map(r=>'<li>'+esc(r)+'</li>').join('')+'</ul>':'<ul><li>Nenhuma restrição identificada nos registros atuais informados.</li></ul>')+'</div><dl class="fleet-detail-grid">'+list.map(field=>detailItem(field,field==='ativo_no_contrato'&&asset[field]==null?'Não confirmado':asset[field])).join('')+detailItem('data_entrada',fmt(asset.data_entrada))+detailItem('data_saida',fmt(asset.data_saida))+ (asset.quilometragem!=null?detailItem('quilometragem',number(asset.quilometragem)+' km'):'')+(asset.horimetro!=null?detailItem('horimetro',number(asset.horimetro)+' h'):'')+detailItem('observacao_atual',asset.observacao_atual,true)+detailItem('Última atualização',fmt(asset.updated_at,true))+detailItem('UUID interno',asset.id)+'</dl>';
+
+    } else if(tab==='fuelings') {
+      const records=[...(detail.fuelings||[])].sort((a,b)=>String(b.data_abastecimento||'').localeCompare(String(a.data_abastecimento||'')));
+      const current=core.currentRecords(records),cash=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+      $('#drawer-body').innerHTML='<div class="fleet-detail-section-head"><h3>Abastecimentos <span class="fleet-chip">'+current.length+' registros válidos</span></h3><button class="fleet-button primary" data-new-record="fuelings">'+icon('fuel')+' Abastecimento</button></div>'+
+      '<p class="fleet-history-note">Total registrado: <strong>'+cash(current.reduce((s,r)=>s+Number(r.valor||0),0))+'</strong>. Correções preservam a versão anterior, mas não entram em dobro nos relatórios.</p>'+
+      '<div class="fleet-form-actions"><button class="fleet-button" data-fuel-report="'+esc(asset.id)+'">'+icon('file-spreadsheet')+' Excel deste veículo</button></div>'+
+      '<div class="fleet-records">'+(records.length?records.map(r=>'<article class="fleet-record'+(r.is_current===false?' superseded':'')+'"><header><div><h4>'+esc(fmt(r.data_abastecimento)+' • '+(r.combustivel||'Combustível'))+'</h4><small>'+esc(r.responsavel||'Responsável não informado')+'</small></div><div class="fleet-record-tools">'+(r.is_current===false?badge('Versão anterior','gray'):'')+'<button class="fleet-icon-button edit-only '+(editing()&&r.is_current!==false?'':'hidden')+'" data-edit-record="'+esc(r.id)+'" data-record-kind="fuelings" title="Corrigir abastecimento">'+icon('pencil')+'</button></div></header><div class="fleet-record-meta"><div><span>Placa</span><b>'+esc(r.placa||'—')+'</b></div><div><span>Quilometragem</span><b>'+esc(r.km_atual==null?'—':number(r.km_atual)+' km')+'</b></div><div><span>Valor</span><b>'+cash(r.valor)+'</b></div><div><span>Litros</span><b>'+esc(r.quantidade==null?'—':String(r.quantidade))+'</b></div><div><span>Preço por litro</span><b>'+esc(r.preco_unitario==null?'—':cash(r.preco_unitario))+'</b></div><div><span>Posto</span><b>'+esc(r.posto||'—')+'</b></div></div></article>').join(''):'<div class="fleet-empty">Nenhum abastecimento registrado para este veículo.</div>')+'</div>';
     } else if(tab==='audit') {
       const events=assetTimeline(detail);
       $('#drawer-body').innerHTML='<div class="fleet-detail-section-head"><h3>Linha do tempo do ativo</h3><span class="fleet-chip">'+number(events.length)+' eventos</span></div><p class="fleet-history-note">PTRANs, inspeções, manutenções, documentos, movimentações e alterações de cadastro em ordem cronológica.</p><div class="fleet-timeline">'+ (events.length?events.map(event=>historyEventHTML(event,false)).join(''):'<div class="fleet-empty">'+empty('Nenhum evento registrado','Os novos registros e alterações serão preservados nesta linha do tempo.','','history')+'</div>')+'</div>';
@@ -438,6 +446,7 @@
     if(kind==='inspections')content=inputField('tipo_inspecao',record.tipo_inspecao,{values:inspectionTypes,required:true})+inputField('status',record.status,{values:['Programada','Pendente','Aprovado','Reprovado','Cancelado'],required:true})+inputField('data_inspecao',record.data_inspecao,{type:'date'})+inputField('validade',record.validade,{type:'date'})+inputField('proxima_inspecao',record.proxima_inspecao,{type:'date'})+inputField('inspetor',record.inspetor)+inputField('resultado',record.resultado,{values:['Aprovado','Aprovado com ressalvas','Reprovado','Pendente']})+inputField('quilometragem',record.quilometragem,{type:'number'})+inputField('horimetro',record.horimetro,{type:'number'})+inputField('anexo_url',record.anexo_url,{type:'url',placeholder:'https://...'});
     if(kind==='maintenance')content=inputField('tipo',record.tipo,{values:['Manutenção','Revisão','Serviço']})+inputField('categoria',record.categoria,{values:maintenanceCategories,required:true})+inputField('status',record.status,{values:['Programada','Aberta','Em andamento','Concluído','Cancelado'],required:true})+inputField('numero_os',record.numero_os)+inputField('data_abertura',record.data_abertura,{type:'date'})+inputField('data_execucao',record.data_execucao,{type:'date'})+inputField('proxima_revisao_data',record.proxima_revisao_data,{type:'date'})+inputField('km_atual',record.km_atual,{type:'number'})+inputField('proxima_revisao_km',record.proxima_revisao_km,{type:'number'})+inputField('horimetro_atual',record.horimetro_atual,{type:'number'})+inputField('proxima_revisao_horas',record.proxima_revisao_horas,{type:'number'})+inputField('oficina_fornecedor',record.oficina_fornecedor)+inputField('valor',record.valor,{type:'number'})+inputField('descricao',record.descricao,{type:'textarea',full:true});
     if(kind==='documents')content=inputField('tipo_documento',record.tipo_documento,{values:documentTypes,required:true})+inputField('numero_documento',record.numero_documento)+inputField('emissao',record.emissao,{type:'date'})+inputField('validade',record.validade,{type:'date'})+inputField('status',record.status,{values:['Válido','Pendente','Em renovação','Vencido','Cancelado'],required:true})+inputField('arquivo_url',record.arquivo_url,{type:'url',placeholder:'https://...'});
+    if(kind==='fuelings')content=inputField('data_abastecimento',record.data_abastecimento||core.todayISO(),{type:'date',required:true})+inputField('responsavel',record.responsavel||state.detail.asset.responsavel_cpl,{required:true})+inputField('placa',record.placa||state.detail.asset.placa_identificador,{readonly:true})+inputField('km_atual',record.km_atual,{type:'number',required:true})+inputField('combustivel',record.combustivel,{values:['Diesel S10','Diesel S500','Gasolina comum','Gasolina aditivada','Etanol','GNV','Outro'],required:true})+inputField('valor',record.valor,{type:'number',required:true})+inputField('quantidade',record.quantidade,{type:'number'})+inputField('preco_unitario',record.preco_unitario,{type:'number'})+inputField('posto',record.posto)+inputField('numero_nota',record.numero_nota);
     if(kind==='movements')content=inputField('tipo_movimento',record.tipo_movimento,{values:movements,required:true})+inputField('data',record.data?record.data.slice(0,10):core.todayISO(),{type:'date',required:true})+inputField('origem',record.origem)+inputField('destino',record.destino)+inputField('responsavel_anterior',record.responsavel_anterior||state.detail.asset.responsavel_cpl)+inputField('responsavel_novo',record.responsavel_novo);
     content+=inputField('observacao',record.observacao,{type:'textarea',full:true});
     const title=(correcting?'Corrigir registro • ':'Novo registro • ')+kindNames[kind];
@@ -450,12 +459,13 @@
     // A movement's effective date is a date in São Paulo; its audit timestamp comes
     // from the backend. Do not reinterpret the form's calendar day in host timezone.
     if(record.data)record.data=record.data.slice(0,10);
+    if(kind==='fuelings'&&(record.valor<=0||record.km_atual<0||!record.data_abastecimento)){showFormError('record-form-error','Verifique a data, o KM e o valor do abastecimento.');return;}
     const movement=kind==='movements'&&['entrada','saída'].includes(record.tipo_movimento);
     const confirmation=movement?(record.tipo_movimento==='saída'?'Registrar saída do contrato?':'Registrar entrada no contrato?'):existing?'Salvar correção do registro?':'Publicar este registro?';
     const message=movement?'A situação no contrato será alterada e a movimentação permanecerá no histórico do ativo.':'O registro será salvo no banco. Os registros anteriores e a auditoria serão preservados.';
     if(!await confirmAction(confirmation,message,'Registrar',record.tipo_movimento==='saída'?'danger':'primary'))return;
     button.disabled=true;$('#record-form-error').classList.add('hidden');
-    try {const id=state.detail.asset.id;await api.addRecord(kind,id,record,state.detail.asset.updated_at);closeModal();state.drawerTab=kind;await refreshAsset(id);toast({ptrans:'PTRAN cadastrado.',inspections:'Inspeção registrada.',maintenance:'Manutenção registrada.',documents:'Documento cadastrado.',movements:'Movimentação registrada.'}[kind]);}
+    try {const id=state.detail.asset.id;await api.addRecord(kind,id,record,state.detail.asset.updated_at);closeModal();state.drawerTab=kind;await refreshAsset(id);toast({ptrans:'PTRAN cadastrado.',inspections:'Inspeção registrada.',maintenance:'Manutenção registrada.',documents:'Documento cadastrado.',movements:'Movimentação registrada.',fuelings:'Abastecimento registrado.'}[kind]);}
     catch(error){showFormError('record-form-error',errorMessage(error));}
     finally {button.disabled=false;}
   }
@@ -587,6 +597,70 @@
     } catch(error) {showFormError('import-error',errorMessage(error));}
     finally {if(button.isConnected)button.disabled=!canPublish();}
   }
+
+  async function exportFuelReport(event) {
+    event.preventDefault();
+    const form=event.currentTarget,from=form.elements.from.value,to=form.elements.to.value,assetId=form.elements.asset_id.value||null;
+    const msg=$('#fuel-report-message');msg.textContent='Consultando lançamentos...';
+    if(!from||!to||from>to){msg.textContent='Informe um período válido.';return;}
+    const button=form.querySelector('[type=submit]');button.disabled=true;
+    try{
+      const records=[];let offset=0,total=0;
+      do {
+        const page=await api.fuelReport(from,to,assetId,offset,500);
+        const items=page.records||[];total=Number(page.total||0);
+        records.push(...items);offset+=items.length;
+        if(!items.length&&offset<total)throw new Error('Consulta interrompida. Tente novamente.');
+      }while(offset<total);
+      if(!records.length){msg.textContent='Nenhum abastecimento encontrado neste período.';return;}
+      if(!window.XLSX)throw new Error('Biblioteca XLSX indisponível. Atualize a página.');
+      const money=n=>Number(n||0);
+      const rows=records.map(r=>({
+        'Data':r.data_abastecimento,'Placa':r.placa||'','Modelo':r.modelo||'',
+        'Abastecido por':r.responsavel||'','KM do veículo':r.km_atual==null?'':Number(r.km_atual),
+        'Combustível':r.combustivel||'','Litros':r.quantidade==null?'':Number(r.quantidade),
+        'Preço/L':r.preco_unitario==null?'':Number(r.preco_unitario),
+        'Valor (R$)':money(r.valor),'Posto':r.posto||'',
+        'Nota':r.numero_nota||'','Observação':r.observacao||''
+      }));
+      const byPlate=new Map();
+      records.forEach(r=>{const k=r.placa||'Sem placa',prev=byPlate.get(k)||{placa:k,modelo:r.modelo||'',qtd:0,litros:0,valor:0};prev.qtd++;prev.litros+=money(r.quantidade);prev.valor+=money(r.valor);byPlate.set(k,prev);});
+      const summary=[...byPlate.values()].map(r=>({'Placa':r.placa,'Modelo':r.modelo,'Abastecimentos':r.qtd,'Litros':r.litros,'Total (R$)':r.valor}));
+      summary.push({'Placa':'TOTAL GERAL','Abastecimentos':records.length,'Litros':records.reduce((n,r)=>n+money(r.quantidade),0),'Total (R$)':records.reduce((n,r)=>n+money(r.valor),0)});
+      const wb=XLSX.utils.book_new();
+      const sheet=XLSX.utils.json_to_sheet(rows),sum=XLSX.utils.json_to_sheet(summary);
+      sheet['!cols']=[{wch:13},{wch:17},{wch:24},{wch:27},{wch:18},{wch:17},{wch:13},{wch:13},{wch:17},{wch:25},{wch:16},{wch:40}];
+      sum['!cols']=[{wch:20},{wch:28},{wch:20},{wch:18},{wch:22}];
+      XLSX.utils.book_append_sheet(wb,sheet,'Abastecimentos');
+      XLSX.utils.book_append_sheet(wb,sum,'Resumo por placa');
+      XLSX.writeFile(wb,'CPL-Abastecimentos-'+from+'-a-'+to+'.xlsx');
+      msg.textContent=records.length+' abastecimento(s) exportado(s), sem duplicar versões corrigidas.';
+    }catch(e){msg.textContent=errorMessage(e);toast(errorMessage(e),'red');}
+    finally{button.disabled=false;}
+  }
+  function openFuelReport(assetId='') {
+    const today=core.todayISO(),month=today.slice(0,7)+'-01';
+    openModal(modalHead('Relatório de abastecimento','Exporte uma placa ou toda a frota em Excel.','CONTROLE DE COMBUSTÍVEL')+
+      '<div class="fleet-modal-body"><form id="fuel-report-form" class="fleet-form">'+
+      '<div class="fleet-form-grid"><label>Período<select id="fuel-period"><option value="month">Mensal</option><option value="week">Semanal</option><option value="quarter">Trimestral</option><option value="custom">Personalizado</option></select></label>'+
+      '<label>Veículo<select name="asset_id"><option value="">Toda a frota</option>'+state.assets.map(a=>'<option value="'+esc(a.id)+'"'+(a.id===assetId?' selected':'')+'>'+esc(assetLabel(a))+'</option>').join('')+'</select></label>'+
+      '<label>Data inicial<input name="from" type="date" required value="'+month+'"></label>'+
+      '<label>Data final<input name="to" type="date" required value="'+today+'"></label></div>'+
+      '<p id="fuel-report-message" class="fleet-form-note">O relatório considera a data real do abastecimento e exclui versões substituídas.</p>'+
+      '<div class="fleet-form-actions"><button type="button" class="fleet-button" data-close-modal>Fechar</button><button type="submit" class="fleet-button primary">'+icon('file-spreadsheet')+' Baixar Excel</button></div></form></div>');
+    const form=$('#fuel-report-form'),period=$('#fuel-period');
+    period.onchange=()=>{
+      const d=new Date(today+'T12:00:00'),p=period.value;
+      if(p==='custom')return;
+      if(p==='week')d.setDate(d.getDate()-((d.getDay()+6)%7));
+      if(p==='quarter')d.setMonth(Math.floor(d.getMonth()/3)*3,1);
+      if(p==='month')d.setDate(1);
+      form.elements.from.value=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+      form.elements.to.value=today;
+    };
+    form.onsubmit=exportFuelReport;
+  }
+
   function exportView() {
     if(!state.filtered.length)return;
     const rows=state.filtered.map(asset=>{const p=latest(asset,'ptrans'),s=core.situation(asset);return {'UUID':asset.id,'Código':asset.asset_code||'','Identificação':asset.placa_identificador||'','Modelo':asset.modelo||'','Tipo':asset.tipo||'','Categoria':asset.categoria||'','Empresa':asset.empresa||'','Gerência':asset.gerencia||'','Responsável CPL':asset.responsavel_cpl||'','No contrato':asset.ativo_no_contrato===true?'Sim':asset.ativo_no_contrato===false?'Não':'Não confirmado','Status operacional':asset.status_operacional||'','Número PTRAN':p?.numero_ptran||'','ISC':p?.numero_isc||'','Status PTRAN':p?.status||'','Validade PTRAN':p?.data_validade||'','Situação':s.label,'Motivos':s.reasons.join('; '),'Atualização':asset.updated_at||''};});
@@ -601,6 +675,7 @@
   },true);
   document.addEventListener('click',event=>{
     const button=event.target.closest('button,a');
+    if(button?.dataset.fuelReport!==undefined){openFuelReport(button.dataset.fuelReport);return;}
     if(button?.dataset.focus){focusDashboard(button.dataset.focus);return;}
     if(button?.dataset.kpiAction){
       const action=button.dataset.kpiAction;
