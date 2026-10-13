@@ -42,6 +42,9 @@
     saveAsset:(asset,expectedUpdatedAt=null)=>rpc('fleet_save_asset',{p_token:editToken(),p_asset:asset,p_expected_updated_at:expectedUpdatedAt}),
     addRecord:(kind,assetId,record,expectedUpdatedAt=null)=>rpc('fleet_add_record',{p_token:editToken(),p_kind:kind,p_asset_id:assetId,p_record:record,p_expected_updated_at:expectedUpdatedAt}),
     saveSchedule:(weekStart,assignments,notes,expectedUpdatedAt=null)=>rpc('fleet_save_weekly_schedule',{p_token:editToken(),p_week_start:weekStart,p_assignments:assignments,p_notes:notes,p_expected_updated_at:expectedUpdatedAt}),
+    saveFuelReceipt:(fuelingId,imageData)=>rpc('fleet_fuel_receipt_save',{p_token:editToken(),p_fueling_id:fuelingId,p_image_data:imageData}),
+    getFuelReceipt:fuelingId=>rpc('fleet_fuel_receipt_get',{p_token:editToken(),p_fueling_id:fuelingId}),
+    fuelReceiptManifest:ids=>ids.length?rpc('fleet_fuel_receipt_manifest',{p_ids:ids}):Promise.resolve([]),
     fuelReport:(from,to,assetId=null,offset=0,limit=500)=>rpc('fleet_fuel_report_public',{p_from:from,p_to:to,p_asset_id:assetId,p_offset:offset,p_limit:limit}),
     publishImport:(batchId,fileName,rows)=>rpc('fleet_publish_import',{p_token:editToken(),p_batch_id:batchId,p_file_name:fileName,p_rows:rows})
   };
