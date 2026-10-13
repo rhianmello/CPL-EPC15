@@ -687,14 +687,16 @@
   }
   function openFuelReport(assetId='') {
     const today=core.todayISO(),month=today.slice(0,7)+'-01';
-    openModal(modalHead('Relatório de abastecimento','Exporte uma placa ou toda a frota em Excel.','CONTROLE DE COMBUSTÍVEL')+
+    openModal(modalHead('Relatório de abastecimento','Filtre por posto, placa e período, com totalização para pagamento.','CONTROLE DE COMBUSTÍVEL')+
       '<div class="fleet-modal-body"><form id="fuel-report-form" class="fleet-form">'+
       '<div class="fleet-form-grid"><label>Período<select id="fuel-period"><option value="month">Mensal</option><option value="week">Semanal</option><option value="quarter">Trimestral</option><option value="custom">Personalizado</option></select></label>'+
       '<label>Veículo<select name="asset_id"><option value="">Toda a frota</option>'+state.assets.map(a=>'<option value="'+esc(a.id)+'"'+(a.id===assetId?' selected':'')+'>'+esc(assetLabel(a))+'</option>').join('')+'</select></label>'+
-      '<label>Data inicial<input name="from" type="date" required value="'+month+'"></label>'+
+      '<label>Posto<select name="posto" id="fuel-report-post"><option value="">Todos os postos</option></select></label>'+ 
+       '<label>Formato<select name="format"><option value="xlsx">Excel</option><option value="zip">Excel + fotos (ZIP)</option><option value="pdf">PDF com comprovantes</option></select></label>'+ 
+       '<label>Data inicial<input name="from" type="date" required value="'+month+'"></label>'+
       '<label>Data final<input name="to" type="date" required value="'+today+'"></label></div>'+
       '<p id="fuel-report-message" class="fleet-form-note">O relatório considera a data real do abastecimento e exclui versões substituídas.</p>'+
-      '<div class="fleet-form-actions"><button type="button" class="fleet-button" data-close-modal>Fechar</button><button type="submit" class="fleet-button primary">'+icon('file-spreadsheet')+' Baixar Excel</button></div></form></div>');
+      '<div class="fleet-form-actions"><button type="button" class="fleet-button" data-close-modal>Fechar</button><button type="submit" class="fleet-button primary">'+icon('download')+' Baixar relatório</button></div></form></div>');
     const form=$('#fuel-report-form'),period=$('#fuel-period');
     period.onchange=()=>{
       const d=new Date(today+'T12:00:00'),p=period.value;
@@ -791,4 +793,87 @@
   // FleetAPI owns pagehide revocation with fetch keepalive. Clearing its token in
   // beforeunload would prevent that best-effort backend revocation from running.
   icons();renderDashboard();renderAlerts();renderQuality();loadAssets();
-}());
+}());   async function getFuelRecords(from,to,assetId){
+     const records=[];let offset=0,total=0;
+     do{const page=await api.fuelReport(from,to,assetId,offset,500);
+       const items=page.records||[];total=Number(page.total||0);records.push(...items);offset+=items.length;
+       if(!items.length&&offset<total)throw new Error('Consulta interrompida. Tente novamente.');
+     }while(offset<total);
+     return records;
+   }
+   function fuelReportData(records){
+     const money=n=>Number(n||0);
+     const rows=records.map(r=>({
+       'Data':r.data_abastecimento,'Placa':r.placa||'','Modelo':r.modelo||'',
+       'Abastecido por':r.responsavel||'','KM do veículo':r.km_atual==null?'':Number(r.km_atual),
+       'Combustível':r.combustivel||'','Litros':r.quantidade==null?'':money(r.quantidade),
+       'Preço/L':r.preco_unitario==null?'':Number(r.preco_unitario),
+       'Valor (R$)':money(r.valor),'Posto':r.posto||'Não informado',
+       'Nota':r.numero_nota||'','Comprovante':r.extra?.receipt_image?'Anexado':'Sem foto','Observação':r.observacao||''
+     }));
+     function summarize(key,title){
+       const grouped=new Map();
+       records.forEach(r=>{const k=String(key(r)||'Não informado').trim(),prev=grouped.get(k)||{nome:k,qtd:0,litros:0,valor:0};prev.qtd++;prev.litros+=money(r.quantidade);prev.valor+=money(r.valor);grouped.set(k,prev);});
+       const result=[...grouped.values()].sort((x,y)=>x.nome.localeCompare(y.nome,'pt-BR')).map(r=>({[title]:r.nome,'Abastecimentos':r.qtd,'Litros':r.litros,'Total (R$)':r.valor}));
+       result.push({[title]:'TOTAL GERAL','Abastecimentos':records.length,'Litros':records.reduce((n,r)=>n+money(r.quantidade),0),'Total (R$)':records.reduce((n,r)=>n+money(r.valor),0)});
+       return result;
+     }
+     return {rows,byPost:summarize(r=>r.posto,'Posto'),byPlate:summarize(r=>r.placa,'Placa')};
+   }
+   function fuelWorkbook(data){
+     if(!window.XLSX)throw new Error('Biblioteca XLSX indisponível. Atualize a página.');
+     const wb=XLSX.utils.book_new();
+     [['Abastecimentos',data.rows],[ 'Resumo por posto',data.byPost],['Resumo por placa',data.byPlate]].forEach(([name,entries])=>{
+       const sheet=XLSX.utils.json_to_sheet(entries);sheet['!cols']=Object.keys(entries[0]||{}).map(k=>({wch:Math.max(17,Math.min(42,k.length+12))}));
+       XLSX.utils.book_append_sheet(wb,sheet,name);
+     });return wb;
+   }
+   function receiptEntries(records){
+     return records.filter(r=>r.extra?.receipt_image?.startsWith('data:image/jpeg;base64,')).map((r,i)=>({
+       name:'Notas/'+String(i+1).padStart(3,'0')+'_'+String(r.data_abastecimento||'')+'_'+String(r.placa||'sem-placa').replace(/[^a-z0-9-]/gi,'_')+'.jpg',
+       data:r.extra.receipt_image
+     }));
+   }
+   async function exportFuelReport(event){
+     event.preventDefault();
+     const form=event.currentTarget,from=form.elements.from.value,to=form.elements.to.value,assetId=form.elements.asset_id.value||null,posto=form.elements.posto.value.trim(),format=form.elements.format.value;
+     const msg=$('#fuel-report-message');
+     if(!from||!to||from>to){msg.textContent='Informe um período válido.';return;}
+     const button=form.querySelector('[type=submit]');button.disabled=true;msg.textContent='Consultando lançamentos...';
+     try{
+       const all=await getFuelRecords(from,to,assetId);
+       const records=all.filter(r=>!posto||String(r.posto||'').trim().toLocaleLowerCase('pt-BR')===posto.toLocaleLowerCase('pt-BR'));
+       if(!records.length){msg.textContent='Nenhum abastecimento encontrado nos filtros selecionados.';return;}
+       const data=fuelReportData(records),receipts=receiptEntries(records),filename='CPL-Abastecimentos-'+from+'-a-'+to;
+       if(format==='pdf'){
+         if(!window.jspdf?.jsPDF)throw new Error('Biblioteca de PDF indisponível.');
+         const pdf=new window.jspdf.jsPDF({orientation:'landscape'});
+         function textLine(line,y,bold=false){pdf.setFont('helvetica',bold?'bold':'normal');pdf.text(String(line).slice(0,170),12,y);}
+         textLine('CPL CONSTRUTORA | RELATÓRIO DE ABASTECIMENTOS',15,true);
+         textLine('Período: '+from+' a '+to+' | Posto: '+(posto||'Todos')+' | '+records.length+' abastecimentos',23);
+         let y=34;
+         data.byPost.forEach(r=>{if(y>185){pdf.addPage();y=18;}textLine(r.Posto+' | '+r.Abastecimentos+' abastecimentos | R$ '+r['Total (R$)'].toLocaleString('pt-BR',{minimumFractionDigits:2}),y,r.Posto==='TOTAL GERAL');y+=8;});
+         pdf.addPage();textLine('LANÇAMENTOS',15,true);y=25;
+         records.forEach(r=>{if(y>188){pdf.addPage();y=18;}textLine([r.data_abastecimento,r.placa,r.posto||'Não informado',r.responsavel||'', 'R$ '+Number(r.valor||0).toFixed(2),'Nota '+(r.numero_nota||'—')].join(' | '),y);y+=7;});
+         if(receipts.length){
+           for(const [i,receipt] of receipts.entries()){
+             pdf.addPage();textLine('COMPROVANTE '+(i+1)+' / '+receipts.length+' | '+receipt.name.split('/').pop(),14,true);
+             const img=new Image();img.src=receipt.data;await img.decode();let w=img.width,h=img.height,scale=Math.min(255/w,165/h);pdf.addImage(receipt.data,'JPEG',12,20,w*scale,h*scale);
+           }
+         }
+         pdf.save(filename+'.pdf');
+       }else if(format==='zip'){
+         if(!window.JSZip)throw new Error('Biblioteca ZIP indisponível.');
+         const zip=new JSZip(),wb=fuelWorkbook(data);
+         zip.file(filename+'.xlsx',XLSX.write(wb,{bookType:'xlsx',type:'array'}));
+         receipts.forEach(r=>zip.file(r.name,r.data.split(',')[1],{base64:true}));
+         const blob=await zip.generateAsync({type:'blob'});const url=URL.createObjectURL(blob);
+         const a=document.createElement('a');a.href=url;a.download=filename+'-com-notas.zip';a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);
+       }else{
+         XLSX.writeFile(fuelWorkbook(data),filename+'.xlsx');
+       }
+       msg.textContent=records.length+' abastecimento(s) • total R$ '+records.reduce((n,r)=>n+Number(r.valor||0),0).toLocaleString('pt-BR',{minimumFractionDigits:2})+' • '+receipts.length+' foto(s) anexada(s).';
+     }catch(e){msg.textContent=errorMessage(e);toast(errorMessage(e),'red');}
+     finally{button.disabled=false;}
+   }
+
