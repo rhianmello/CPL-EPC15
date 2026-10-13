@@ -454,12 +454,19 @@
     openModal(modalHead(title,subtitle,'FICHA DO ATIVO')+'<div class="fleet-modal-body"><form id="record-form" class="fleet-form"><div class="fleet-form-grid">'+content+'</div>'+ (kind==='documents'||kind==='inspections'?'<p class="fleet-form-note">Anexos: informe a URL de um arquivo publicado ou autorizado. Campos sem dados podem permanecer vazios.</p>':'')+'<div id="record-form-error" class="fleet-form-error hidden" role="alert"></div><div class="fleet-form-actions"><button class="fleet-button" type="button" data-close-modal>Cancelar</button><button class="fleet-button primary" type="submit">'+icon('save')+' '+(correcting?'Salvar correção':'Registrar')+'</button></div></form></div>');
     $('#record-form').onsubmit=event=>saveRecordForm(event,kind,existing);
   }
+  async function optimizeFuelReceipt(file){
+    if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw new Error('Use JPG, PNG ou WebP.');
+    if(file.size>12*1024*1024)throw new Error('A imagem deve ter no máximo 12 MB.');
+    const url=URL.createObjectURL(file);
+    try{const img=new Image();img.src=url;await img.decode();const k=Math.min(1,1400/Math.max(img.width,img.height));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.width*k));canvas.height=Math.max(1,Math.round(img.height*k));const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);let data=canvas.toDataURL('image/jpeg',.75);if(data.length>650000)data=canvas.toDataURL('image/jpeg',.48);if(data.length>650000)throw new Error('Imagem muito grande após compactação.');return data;}finally{URL.revokeObjectURL(url);}
+  }
   async function saveRecordForm(event,kind,existing) {
     event.preventDefault();const form=event.currentTarget,button=$('[type="submit"]',form),record=formData(form);if(existing?.id)record.supersedes_id=existing.id;
     // A movement's effective date is a date in São Paulo; its audit timestamp comes
     // from the backend. Do not reinterpret the form's calendar day in host timezone.
     if(record.data)record.data=record.data.slice(0,10);
     if(kind==='fuelings'&&(record.valor<=0||record.km_atual<0||!record.data_abastecimento)){showFormError('record-form-error','Verifique a data, o KM e o valor do abastecimento.');return;}
+    if(kind==='fuelings'&&$('#fuel-receipt')?.files?.length){try{record.extra={...(existing?.extra||{}),receipt_image:await optimizeFuelReceipt($('#fuel-receipt').files[0])};}catch(error){showFormError('record-form-error',errorMessage(error));return;}}
     const movement=kind==='movements'&&['entrada','saída'].includes(record.tipo_movimento);
     const confirmation=movement?(record.tipo_movimento==='saída'?'Registrar saída do contrato?':'Registrar entrada no contrato?'):existing?'Salvar correção do registro?':'Publicar este registro?';
     const message=movement?'A situação no contrato será alterada e a movimentação permanecerá no histórico do ativo.':'O registro será salvo no banco. Os registros anteriores e a auditoria serão preservados.';
@@ -645,46 +652,91 @@
     finally {if(button.isConnected)button.disabled=!canPublish();}
   }
 
-  async function exportFuelReport(event) {
-    event.preventDefault();
-    const form=event.currentTarget,from=form.elements.from.value,to=form.elements.to.value,assetId=form.elements.asset_id.value||null;
-    const msg=$('#fuel-report-message');msg.textContent='Consultando lançamentos...';
-    if(!from||!to||from>to){msg.textContent='Informe um período válido.';return;}
-    const button=form.querySelector('[type=submit]');button.disabled=true;
-    try{
-      const records=[];let offset=0,total=0;
-      do {
-        const page=await api.fuelReport(from,to,assetId,offset,500);
-        const items=page.records||[];total=Number(page.total||0);
-        records.push(...items);offset+=items.length;
-        if(!items.length&&offset<total)throw new Error('Consulta interrompida. Tente novamente.');
-      }while(offset<total);
-      if(!records.length){msg.textContent='Nenhum abastecimento encontrado neste período.';return;}
-      if(!window.XLSX)throw new Error('Biblioteca XLSX indisponível. Atualize a página.');
-      const money=n=>Number(n||0);
-      const rows=records.map(r=>({
-        'Data':r.data_abastecimento,'Placa':r.placa||'','Modelo':r.modelo||'',
-        'Abastecido por':r.responsavel||'','KM do veículo':r.km_atual==null?'':Number(r.km_atual),
-        'Combustível':r.combustivel||'','Litros':r.quantidade==null?'':Number(r.quantidade),
-        'Preço/L':r.preco_unitario==null?'':Number(r.preco_unitario),
-        'Valor (R$)':money(r.valor),'Posto':r.posto||'',
-        'Nota':r.numero_nota||'','Observação':r.observacao||''
-      }));
-      const byPlate=new Map();
-      records.forEach(r=>{const k=r.placa||'Sem placa',prev=byPlate.get(k)||{placa:k,modelo:r.modelo||'',qtd:0,litros:0,valor:0};prev.qtd++;prev.litros+=money(r.quantidade);prev.valor+=money(r.valor);byPlate.set(k,prev);});
-      const summary=[...byPlate.values()].map(r=>({'Placa':r.placa,'Modelo':r.modelo,'Abastecimentos':r.qtd,'Litros':r.litros,'Total (R$)':r.valor}));
-      summary.push({'Placa':'TOTAL GERAL','Abastecimentos':records.length,'Litros':records.reduce((n,r)=>n+money(r.quantidade),0),'Total (R$)':records.reduce((n,r)=>n+money(r.valor),0)});
-      const wb=XLSX.utils.book_new();
-      const sheet=XLSX.utils.json_to_sheet(rows),sum=XLSX.utils.json_to_sheet(summary);
-      sheet['!cols']=[{wch:13},{wch:17},{wch:24},{wch:27},{wch:18},{wch:17},{wch:13},{wch:13},{wch:17},{wch:25},{wch:16},{wch:40}];
-      sum['!cols']=[{wch:20},{wch:28},{wch:20},{wch:18},{wch:22}];
-      XLSX.utils.book_append_sheet(wb,sheet,'Abastecimentos');
-      XLSX.utils.book_append_sheet(wb,sum,'Resumo por placa');
-      XLSX.writeFile(wb,'CPL-Abastecimentos-'+from+'-a-'+to+'.xlsx');
-      msg.textContent=records.length+' abastecimento(s) exportado(s), sem duplicar versões corrigidas.';
-    }catch(e){msg.textContent=errorMessage(e);toast(errorMessage(e),'red');}
-    finally{button.disabled=false;}
-  }
+   async function getFuelRecords(from,to,assetId){
+     const records=[];let offset=0,total=0;
+     do{const page=await api.fuelReport(from,to,assetId,offset,500);
+       const items=page.records||[];total=Number(page.total||0);records.push(...items);offset+=items.length;
+       if(!items.length&&offset<total)throw new Error('Consulta interrompida. Tente novamente.');
+     }while(offset<total);
+     return records;
+   }
+   function fuelReportData(records){
+     const money=n=>Number(n||0);
+     const rows=records.map(r=>({
+       'Data':r.data_abastecimento,'Placa':r.placa||'','Modelo':r.modelo||'',
+       'Abastecido por':r.responsavel||'','KM do veículo':r.km_atual==null?'':Number(r.km_atual),
+       'Combustível':r.combustivel||'','Litros':r.quantidade==null?'':money(r.quantidade),
+       'Preço/L':r.preco_unitario==null?'':Number(r.preco_unitario),
+       'Valor (R$)':money(r.valor),'Posto':r.posto||'Não informado',
+       'Nota':r.numero_nota||'','Comprovante':r.extra?.receipt_image?'Anexado':'Sem foto','Observação':r.observacao||''
+     }));
+     function summarize(key,title){
+       const grouped=new Map();
+       records.forEach(r=>{const k=String(key(r)||'Não informado').trim(),prev=grouped.get(k)||{nome:k,qtd:0,litros:0,valor:0};prev.qtd++;prev.litros+=money(r.quantidade);prev.valor+=money(r.valor);grouped.set(k,prev);});
+       const result=[...grouped.values()].sort((x,y)=>x.nome.localeCompare(y.nome,'pt-BR')).map(r=>({[title]:r.nome,'Abastecimentos':r.qtd,'Litros':r.litros,'Total (R$)':r.valor}));
+       result.push({[title]:'TOTAL GERAL','Abastecimentos':records.length,'Litros':records.reduce((n,r)=>n+money(r.quantidade),0),'Total (R$)':records.reduce((n,r)=>n+money(r.valor),0)});
+       return result;
+     }
+     return {rows,byPost:summarize(r=>r.posto,'Posto'),byPlate:summarize(r=>r.placa,'Placa')};
+   }
+   function fuelWorkbook(data){
+     if(!window.XLSX)throw new Error('Biblioteca XLSX indisponível. Atualize a página.');
+     const wb=XLSX.utils.book_new();
+     [['Abastecimentos',data.rows],[ 'Resumo por posto',data.byPost],['Resumo por placa',data.byPlate]].forEach(([name,entries])=>{
+       const sheet=XLSX.utils.json_to_sheet(entries);sheet['!cols']=Object.keys(entries[0]||{}).map(k=>({wch:Math.max(17,Math.min(42,k.length+12))}));
+       XLSX.utils.book_append_sheet(wb,sheet,name);
+     });return wb;
+   }
+   function receiptEntries(records){
+     return records.filter(r=>r.extra?.receipt_image?.startsWith('data:image/jpeg;base64,')).map((r,i)=>({
+       name:'Notas/'+String(i+1).padStart(3,'0')+'_'+String(r.data_abastecimento||'')+'_'+String(r.placa||'sem-placa').replace(/[^a-z0-9-]/gi,'_')+'.jpg',
+       data:r.extra.receipt_image
+     }));
+   }
+   async function exportFuelReport(event){
+     event.preventDefault();
+     const form=event.currentTarget,from=form.elements.from.value,to=form.elements.to.value,assetId=form.elements.asset_id.value||null,posto=form.elements.posto.value.trim(),format=form.elements.format.value;
+     const msg=$('#fuel-report-message');
+     if(!from||!to||from>to){msg.textContent='Informe um período válido.';return;}
+     const button=form.querySelector('[type=submit]');button.disabled=true;msg.textContent='Consultando lançamentos...';
+     try{
+       const all=await getFuelRecords(from,to,assetId);
+       const records=all.filter(r=>!posto||String(r.posto||'').trim().toLocaleLowerCase('pt-BR')===posto.toLocaleLowerCase('pt-BR'));
+       if(!records.length){msg.textContent='Nenhum abastecimento encontrado nos filtros selecionados.';return;}
+       const data=fuelReportData(records),receipts=receiptEntries(records),filename='CPL-Abastecimentos-'+from+'-a-'+to;
+       if(format==='pdf'){
+         if(!window.jspdf?.jsPDF)throw new Error('Biblioteca de PDF indisponível.');
+         const pdf=new window.jspdf.jsPDF({orientation:'landscape'});
+         function textLine(line,y,bold=false){pdf.setFont('helvetica',bold?'bold':'normal');pdf.text(String(line).slice(0,170),12,y);}
+         textLine('CPL CONSTRUTORA | RELATÓRIO DE ABASTECIMENTOS',15,true);
+         textLine('Período: '+from+' a '+to+' | Posto: '+(posto||'Todos')+' | '+records.length+' abastecimentos',23);
+         let y=34;
+         data.byPost.forEach(r=>{if(y>185){pdf.addPage();y=18;}textLine(r.Posto+' | '+r.Abastecimentos+' abastecimentos | R$ '+r['Total (R$)'].toLocaleString('pt-BR',{minimumFractionDigits:2}),y,r.Posto==='TOTAL GERAL');y+=8;});
+         pdf.addPage();textLine('LANÇAMENTOS',15,true);y=25;
+         records.forEach(r=>{if(y>188){pdf.addPage();y=18;}textLine([r.data_abastecimento,r.placa,r.posto||'Não informado',r.responsavel||'', 'R$ '+Number(r.valor||0).toFixed(2),'Nota '+(r.numero_nota||'—')].join(' | '),y);y+=7;});
+         if(receipts.length){
+           for(const [i,receipt] of receipts.entries()){
+             pdf.addPage();textLine('COMPROVANTE '+(i+1)+' / '+receipts.length+' | '+receipt.name.split('/').pop(),14,true);
+             const img=new Image();img.src=receipt.data;await img.decode();let w=img.width,h=img.height,scale=Math.min(255/w,165/h);pdf.addImage(receipt.data,'JPEG',12,20,w*scale,h*scale);
+           }
+         }
+         pdf.save(filename+'.pdf');
+       }else if(format==='zip'){
+         if(!window.JSZip)throw new Error('Biblioteca ZIP indisponível.');
+         const zip=new JSZip(),wb=fuelWorkbook(data);
+         zip.file(filename+'.xlsx',XLSX.write(wb,{bookType:'xlsx',type:'array'}));
+         receipts.forEach(r=>zip.file(r.name,r.data.split(',')[1],{base64:true}));
+         const blob=await zip.generateAsync({type:'blob'});const url=URL.createObjectURL(blob);
+         const a=document.createElement('a');a.href=url;a.download=filename+'-com-notas.zip';a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);
+       }else{
+         XLSX.writeFile(fuelWorkbook(data),filename+'.xlsx');
+       }
+       msg.textContent=records.length+' abastecimento(s) • total R$ '+records.reduce((n,r)=>n+Number(r.valor||0),0).toLocaleString('pt-BR',{minimumFractionDigits:2})+' • '+receipts.length+' foto(s) anexada(s).';
+     }catch(e){msg.textContent=errorMessage(e);toast(errorMessage(e),'red');}
+     finally{button.disabled=false;}
+   }
+
+
   function openFuelReport(assetId='') {
     const today=core.todayISO(),month=today.slice(0,7)+'-01';
     openModal(modalHead('Relatório de abastecimento','Filtre por posto, placa e período, com totalização para pagamento.','CONTROLE DE COMBUSTÍVEL')+
@@ -698,6 +750,7 @@
       '<p id="fuel-report-message" class="fleet-form-note">O relatório considera a data real do abastecimento e exclui versões substituídas.</p>'+
       '<div class="fleet-form-actions"><button type="button" class="fleet-button" data-close-modal>Fechar</button><button type="submit" class="fleet-button primary">'+icon('download')+' Baixar relatório</button></div></form></div>');
     const form=$('#fuel-report-form'),period=$('#fuel-period');
+    getFuelRecords('2020-01-01',core.todayISO(),null).then(all=>{const select=$('#fuel-report-post');if(!select)return;const postos=[...new Set(all.map(r=>String(r.posto||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));select.innerHTML='<option value="">Todos os postos</option>'+postos.map(p=>'<option value="'+esc(p)+'">'+esc(p)+'</option>').join('');}).catch(error=>{const msg=$('#fuel-report-message');if(msg)msg.textContent='Não foi possível carregar a lista de postos: '+errorMessage(error);});
     period.onchange=()=>{
       const d=new Date(today+'T12:00:00'),p=period.value;
       if(p==='custom')return;
@@ -793,87 +846,4 @@
   // FleetAPI owns pagehide revocation with fetch keepalive. Clearing its token in
   // beforeunload would prevent that best-effort backend revocation from running.
   icons();renderDashboard();renderAlerts();renderQuality();loadAssets();
-}());   async function getFuelRecords(from,to,assetId){
-     const records=[];let offset=0,total=0;
-     do{const page=await api.fuelReport(from,to,assetId,offset,500);
-       const items=page.records||[];total=Number(page.total||0);records.push(...items);offset+=items.length;
-       if(!items.length&&offset<total)throw new Error('Consulta interrompida. Tente novamente.');
-     }while(offset<total);
-     return records;
-   }
-   function fuelReportData(records){
-     const money=n=>Number(n||0);
-     const rows=records.map(r=>({
-       'Data':r.data_abastecimento,'Placa':r.placa||'','Modelo':r.modelo||'',
-       'Abastecido por':r.responsavel||'','KM do veículo':r.km_atual==null?'':Number(r.km_atual),
-       'Combustível':r.combustivel||'','Litros':r.quantidade==null?'':money(r.quantidade),
-       'Preço/L':r.preco_unitario==null?'':Number(r.preco_unitario),
-       'Valor (R$)':money(r.valor),'Posto':r.posto||'Não informado',
-       'Nota':r.numero_nota||'','Comprovante':r.extra?.receipt_image?'Anexado':'Sem foto','Observação':r.observacao||''
-     }));
-     function summarize(key,title){
-       const grouped=new Map();
-       records.forEach(r=>{const k=String(key(r)||'Não informado').trim(),prev=grouped.get(k)||{nome:k,qtd:0,litros:0,valor:0};prev.qtd++;prev.litros+=money(r.quantidade);prev.valor+=money(r.valor);grouped.set(k,prev);});
-       const result=[...grouped.values()].sort((x,y)=>x.nome.localeCompare(y.nome,'pt-BR')).map(r=>({[title]:r.nome,'Abastecimentos':r.qtd,'Litros':r.litros,'Total (R$)':r.valor}));
-       result.push({[title]:'TOTAL GERAL','Abastecimentos':records.length,'Litros':records.reduce((n,r)=>n+money(r.quantidade),0),'Total (R$)':records.reduce((n,r)=>n+money(r.valor),0)});
-       return result;
-     }
-     return {rows,byPost:summarize(r=>r.posto,'Posto'),byPlate:summarize(r=>r.placa,'Placa')};
-   }
-   function fuelWorkbook(data){
-     if(!window.XLSX)throw new Error('Biblioteca XLSX indisponível. Atualize a página.');
-     const wb=XLSX.utils.book_new();
-     [['Abastecimentos',data.rows],[ 'Resumo por posto',data.byPost],['Resumo por placa',data.byPlate]].forEach(([name,entries])=>{
-       const sheet=XLSX.utils.json_to_sheet(entries);sheet['!cols']=Object.keys(entries[0]||{}).map(k=>({wch:Math.max(17,Math.min(42,k.length+12))}));
-       XLSX.utils.book_append_sheet(wb,sheet,name);
-     });return wb;
-   }
-   function receiptEntries(records){
-     return records.filter(r=>r.extra?.receipt_image?.startsWith('data:image/jpeg;base64,')).map((r,i)=>({
-       name:'Notas/'+String(i+1).padStart(3,'0')+'_'+String(r.data_abastecimento||'')+'_'+String(r.placa||'sem-placa').replace(/[^a-z0-9-]/gi,'_')+'.jpg',
-       data:r.extra.receipt_image
-     }));
-   }
-   async function exportFuelReport(event){
-     event.preventDefault();
-     const form=event.currentTarget,from=form.elements.from.value,to=form.elements.to.value,assetId=form.elements.asset_id.value||null,posto=form.elements.posto.value.trim(),format=form.elements.format.value;
-     const msg=$('#fuel-report-message');
-     if(!from||!to||from>to){msg.textContent='Informe um período válido.';return;}
-     const button=form.querySelector('[type=submit]');button.disabled=true;msg.textContent='Consultando lançamentos...';
-     try{
-       const all=await getFuelRecords(from,to,assetId);
-       const records=all.filter(r=>!posto||String(r.posto||'').trim().toLocaleLowerCase('pt-BR')===posto.toLocaleLowerCase('pt-BR'));
-       if(!records.length){msg.textContent='Nenhum abastecimento encontrado nos filtros selecionados.';return;}
-       const data=fuelReportData(records),receipts=receiptEntries(records),filename='CPL-Abastecimentos-'+from+'-a-'+to;
-       if(format==='pdf'){
-         if(!window.jspdf?.jsPDF)throw new Error('Biblioteca de PDF indisponível.');
-         const pdf=new window.jspdf.jsPDF({orientation:'landscape'});
-         function textLine(line,y,bold=false){pdf.setFont('helvetica',bold?'bold':'normal');pdf.text(String(line).slice(0,170),12,y);}
-         textLine('CPL CONSTRUTORA | RELATÓRIO DE ABASTECIMENTOS',15,true);
-         textLine('Período: '+from+' a '+to+' | Posto: '+(posto||'Todos')+' | '+records.length+' abastecimentos',23);
-         let y=34;
-         data.byPost.forEach(r=>{if(y>185){pdf.addPage();y=18;}textLine(r.Posto+' | '+r.Abastecimentos+' abastecimentos | R$ '+r['Total (R$)'].toLocaleString('pt-BR',{minimumFractionDigits:2}),y,r.Posto==='TOTAL GERAL');y+=8;});
-         pdf.addPage();textLine('LANÇAMENTOS',15,true);y=25;
-         records.forEach(r=>{if(y>188){pdf.addPage();y=18;}textLine([r.data_abastecimento,r.placa,r.posto||'Não informado',r.responsavel||'', 'R$ '+Number(r.valor||0).toFixed(2),'Nota '+(r.numero_nota||'—')].join(' | '),y);y+=7;});
-         if(receipts.length){
-           for(const [i,receipt] of receipts.entries()){
-             pdf.addPage();textLine('COMPROVANTE '+(i+1)+' / '+receipts.length+' | '+receipt.name.split('/').pop(),14,true);
-             const img=new Image();img.src=receipt.data;await img.decode();let w=img.width,h=img.height,scale=Math.min(255/w,165/h);pdf.addImage(receipt.data,'JPEG',12,20,w*scale,h*scale);
-           }
-         }
-         pdf.save(filename+'.pdf');
-       }else if(format==='zip'){
-         if(!window.JSZip)throw new Error('Biblioteca ZIP indisponível.');
-         const zip=new JSZip(),wb=fuelWorkbook(data);
-         zip.file(filename+'.xlsx',XLSX.write(wb,{bookType:'xlsx',type:'array'}));
-         receipts.forEach(r=>zip.file(r.name,r.data.split(',')[1],{base64:true}));
-         const blob=await zip.generateAsync({type:'blob'});const url=URL.createObjectURL(blob);
-         const a=document.createElement('a');a.href=url;a.download=filename+'-com-notas.zip';a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);
-       }else{
-         XLSX.writeFile(fuelWorkbook(data),filename+'.xlsx');
-       }
-       msg.textContent=records.length+' abastecimento(s) • total R$ '+records.reduce((n,r)=>n+Number(r.valor||0),0).toLocaleString('pt-BR',{minimumFractionDigits:2})+' • '+receipts.length+' foto(s) anexada(s).';
-     }catch(e){msg.textContent=errorMessage(e);toast(errorMessage(e),'red');}
-     finally{button.disabled=false;}
-   }
-
+}());
