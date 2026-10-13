@@ -107,12 +107,7 @@ async function save(){
  if(new Set(ids).size!==ids.length)return status('Há veículo duplicado na semana. Utilize a observação para indicar turnos ou substituições.',true);
  if(rows.some(r=>!r.asset_id))return status('Selecione o veículo em todas as linhas ou exclua as linhas vazias.',true);
  loading=true;render();status('Salvando programação no banco...');
- try{let cfg=window.EPC15_SUPABASE_CONFIG;let client=window.supabase.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:false}});
- // FleetAPI supplies a server-validated session; only the editing capability may write.
- let session=window.__fleetScheduleSession;
- if(!session)throw new Error('Sessão de programação indisponível. Libere a edição novamente.');
- let result=await client.rpc('fleet_save_weekly_schedule',{p_token:session,p_week_start:$('week').value,p_assignments:rows,p_notes:$('notes').value,p_expected_updated_at:record?.updated_at||null});
- if(result.error)throw result.error;record=result.data;dirty=false;status('Programação salva no Supabase com sucesso.');
+ try{record=await api.saveSchedule($('week').value,rows,$('notes').value,record?.updated_at||null);dirty=false;status('Programação salva no Supabase com sucesso.');
  }catch(e){status('Não foi possível salvar: '+e.message,true)}finally{loading=false;render()}
 }
 function move(n){let old=$('week').value;$('week').value=iso(addDays(dateLocal(old),n));loadWeek().then(ok=>{if(!ok)$('week').value=old})}
