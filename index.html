@@ -317,6 +317,10 @@
       </section>
 
       <section id="page-pb" class="page pb-page">
+        <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px 0">
+          <a id="pb-drone-import" href="drone.html?import=1" class="tf-import-history-link" title="Importar vídeo da entrega e semana selecionadas na Reunião de Coordenação">▶ Importar vídeo por Drone ↗</a>
+          <a id="pb-drone-library" href="drone.html" class="tf-import-history-link">Ver vídeos e Stories ↗</a>
+        </div>
         <div class="pb-filterbar pb-filterbar-hierarchy">
           <div class="pb-filter-main">
             <div class="pb-filter-headrow">
@@ -694,5 +698,22 @@
   <script>if (window.lucide) lucide.createIcons();</script>
   <script src="js/coordination-week.js?v=20261002-stable-sync1"></script>
   <script src="js/tempo-fotografico.js?v=20261008-compare-weeks1"></script>
+  <script>
+    (function(){
+      const link=document.getElementById('pb-drone-import');
+      function syncDroneLink(){
+        if(!link)return;
+        const params=new URLSearchParams({import:'1'});
+        const unit=document.getElementById('pb-unit-filter')?.value;
+        const week=document.getElementById('pb-week-filter')?.value;
+        if(unit)params.set('unit',unit);
+        if(week)params.set('week',week);
+        link.href='drone.html?'+params.toString();
+      }
+      document.addEventListener('change',e=>{if(e.target?.id==='pb-unit-filter'||e.target?.id==='pb-week-filter')syncDroneLink()});
+      link?.addEventListener('click',syncDroneLink);
+    })();
+  </script>
+
 </body>
 </html>
