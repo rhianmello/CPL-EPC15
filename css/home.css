@@ -526,36 +526,3 @@
   .home-history{margin-top:8px;padding:8px 14px}
   .home-footnote{padding:5px 0 7px}
 }
-
-
-/* 2026-10-14: fundo cinematográfico da página inicial, sem alterar controles reais */
-#upload-view.home{
-  position:relative;
-  isolation:isolate;
-  background:#071426;
-}
-#upload-view.home::before{
-  content:"";
-  position:fixed;
-  inset:0;
-  z-index:-1;
-  pointer-events:none;
-  background-image:
-    linear-gradient(90deg,rgba(5,17,34,.82) 0%,rgba(5,17,34,.54) 40%,rgba(5,17,34,.42) 100%),
-    linear-gradient(180deg,rgba(5,17,34,.30) 0%,rgba(5,17,34,.14) 55%,rgba(5,17,34,.64) 100%),
-    url("https://www.skkunathamgroup.com/images/blog/crane_200_ton_1773497258770.png");
-  background-position:center,center,center center;
-  background-size:cover;
-  background-repeat:no-repeat;
-}
-#upload-view.home .site-topbar{background:rgba(5,17,34,.85)!important;backdrop-filter:blur(12px)}
-#upload-view.home .home-hero{background:transparent!important}
-#upload-view.home .home-card,#upload-view.home .home-history{
-  background:linear-gradient(160deg,rgba(10,31,55,.91),rgba(6,21,41,.89))!important;
-  border-color:rgba(138,183,223,.30)!important;
-  box-shadow:0 12px 34px rgba(0,0,0,.22);
-  backdrop-filter:blur(8px);
-}
-@media(max-width:760px){
-  #upload-view.home::before{background-position:center,center,62% center}
-}
