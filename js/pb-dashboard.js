@@ -1730,13 +1730,22 @@
   function renderOffenders() {
     const keySet=metricSelectedGroupKeys();
     const contextBySource=keySet ? metricContextBySource() : null;
-    const rows=presentationVisibleRows(presentationRows())
+    // Carryover histórico aprovado: mantém os ofensores da S-27 na S-28,
+    // sem alterar os valores do cronograma, indicadores ou demais semanas.
+    const carryover=Number(selection().week)===28 && importedWeekPayload?.offenderCarryover?.sourceWeek===27
+      ? importedWeekPayload.offenderCarryover : null;
+    const snapshotRows=Array.isArray(carryover?.rows) ? carryover.rows : null;
+    const offenderNote=row=>carryover?.notes?.[String(row.sourceIndex)] || noteFor(row);
+    const offenderHidden=row=>Boolean(offenderNote(row).hidden);
+    const rows=(snapshotRows
+      ? snapshotRows.filter(row=>matches(row,selection())).filter(row=>curationMode || !offenderHidden(row))
+      : presentationVisibleRows(presentationRows()))
       .filter(row=>metricRowMatchesSelection(row,keySet,contextBySource))
       .filter(r=>hasDeviation(r)&&r.variance<0)
       .sort((a,b)=>a.variance-b.variance);
     const info=paged(rows,'offenders');
     const host=document.getElementById('pb-offenders-list');
-    const visibleCount=rows.filter(row=>!isHidden(row)).length;
+    const visibleCount=rows.filter(row=>!offenderHidden(row)).length;
     const hiddenCount=rows.length-visibleCount;
     document.getElementById('pb-offender-count').textContent=curationMode && hiddenCount
       ? visibleCount+' visíveis • '+hiddenCount+' ocultos'
@@ -1746,11 +1755,11 @@
     if(!rows.length){host.innerHTML='<div class="pb-empty-light">Nenhuma Etapa de Nível 5 com desvio negativo nesta seleção.</div>';return;}
 
     host.innerHTML=info.items.map((row,index)=>{
-      const note=noteFor(row);
+      const note=offenderNote(row);
       const cause=note.cause?'<div><span>CAUSA</span><p>'+esc(note.cause)+'</p></div>':'';
       const mitigation=note.mitigation?'<div><span>MITIGAÇÃO</span><p>'+esc(note.mitigation)+'</p></div>':'';
       const isFocused=Number(focusedSourceIndex)===Number(row.sourceIndex);
-      const hidden=isHidden(row);
+      const hidden=offenderHidden(row);
       const curationButton=curationMode
         ? '<button type="button" class="pb-hide-row-button' + (hidden?' restore':'') + '" data-hide-row="'+esc(row.sourceIndex)+'" data-hidden="'+(hidden?'1':'0')+'">' + (hidden?'Reexibir':'Ocultar') + '</button>'
         : '';
