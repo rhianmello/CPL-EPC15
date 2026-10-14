@@ -493,11 +493,22 @@
   });
 
   document.addEventListener('click', event => {
+    const droneLink=event.target.closest('[data-drone-nav]');
+    if(droneLink){
+      event.preventDefault();
+      const params=new URLSearchParams(droneLink.dataset.droneParams||'');
+      if(droneLink.dataset.import==='1')params.set('import','1');
+      params.set('embedded','1');
+      const frame=document.getElementById('drone-frame');
+      if(frame)frame.src='drone.html?'+params.toString();
+      if(!hasData){openDashboard('drone')}else Dashboard.showPage('drone');
+      return;
+    }
     const page = event.target.closest('[data-page]')?.dataset.page;
     const unitButton = event.target.closest('[data-unit-index]');
     const unitIndex = unitButton?.dataset.unitIndex;
     if (page) {
-      if (!hasData && !['executive','photo-time'].includes(page)) return;
+      if (!hasData && !['executive','photo-time','drone'].includes(page)) return;
       Dashboard.showPage(page);
     }
     if (unitIndex != null && hasData) {
