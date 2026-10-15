@@ -755,7 +755,7 @@
         const a=assets.get(id),group=groups.get(id)||{id,label:a?assetLabel(a):[r.modelo||'Ativo',r.placa||'Sem placa'].join(' • '),sum:0,count:0};
         group.sum+=value;group.count++;groups.set(id,group);
       }
-      const top=[...groups.values()].sort((a,b)=>b.sum-a.sum).slice(0,10);
+      const top=[...groups.values()].sort((a,b)=>b.sum-a.sum);
       const summary='<div class="fleet-fuel-summary"><div><small>Total gasto no mês</small><strong>'+fuelCash(total)+'</strong></div><div><small>Veículos abastecidos</small><strong>'+number(groups.size)+'</strong></div><div><small>Média por veículo</small><strong>'+fuelCash(groups.size?total/groups.size:0)+'</strong></div></div>';
       const max=top[0]?.sum||1;
       target.innerHTML=summary+(top.length?'<div class="fleet-fuel-bars">'+top.map((item,i)=>
