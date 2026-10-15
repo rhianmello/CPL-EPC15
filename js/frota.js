@@ -14,7 +14,7 @@
   const documentTypes = ['CRLV','Licenciamento','Seguro','PTRAN','Certificado','Inspeção','Documentação de máquina','Documento Petrobras','Outros'];
   const movements = ['entrada','saída','troca de responsável','troca de gerência','indisponibilidade','retorno à operação','mudança de frente','mudança de contrato','veículo reserva','outros'];
   const colors = {green:'#2dd4bf',yellow:'#f5b72e',red:'#fb7185',gray:'#708aa6',cyan:'#38bdf8',blue:'#60a5fa',purple:'#a78bfa'};
-  const state = {assets:[],filtered:[],loaded:false,connected:false,loading:false,filters:{},page:0,pageSize:25,view:'dashboard',charts:{},detail:null,drawerTab:'resumo',quality:[],alerts:[],history:[],historyTotal:0,historyFilters:{},historyLoading:false,historyLoaded:false,import:null,importFile:null,importBatch:null,lastFocus:null,confirmResolve:null,modalClose:null};
+  const state = {assets:[],filtered:[],loaded:false,connected:false,loading:false,filters:{},page:0,pageSize:25,view:'dashboard',charts:{},detail:null,drawerTab:'resumo',quality:[],alerts:[],history:[],historyTotal:0,historyFilters:{},historyLoading:false,historyLoaded:false,import:null,importFile:null,importBatch:null,lastFocus:null,confirmResolve:null,modalClose:null,fuelMonth:core.todayISO().slice(0,7),fuelRankingRequest:0,ptranFocusId:null};
   const fields = {
     asset_code:'Código do ativo',placa_identificador:'Placa / identificador',tipo:'Tipo',categoria:'Categoria',modelo:'Modelo',marca:'Marca',ano:'Ano',cor:'Cor',empresa:'Empresa',gerencia:'Gerência',responsavel_cpl:'Responsável CPL',status_operacional:'Status operacional',ativo_no_contrato:'Ativo no contrato',data_entrada:'Entrada no contrato',data_saida:'Saída do contrato',observacao_atual:'Observação',quilometragem:'Quilometragem',horimetro:'Horímetro',numero_ptran:'Número PTRAN',numero_isc:'Número ISC',data_recebimento:'Recebimento',data_solicitacao:'Solicitação',data_emissao:'Emissão',data_validade:'Validade',status:'Status',tipo_ptran:'Tipo PTRAN',provisoria:'Provisória',observacao:'Observação',responsavel:'Responsável',tipo_inspecao:'Tipo de inspeção',data_inspecao:'Data da inspeção',validade:'Validade',proxima_inspecao:'Próxima inspeção',inspetor:'Inspetor',resultado:'Resultado',anexo_url:'Anexo',data_abertura:'Abertura',data_execucao:'Execução',proxima_revisao_data:'Próxima revisão',km_atual:'KM atual',proxima_revisao_km:'Próxima revisão • KM',horimetro_atual:'Horímetro atual',proxima_revisao_horas:'Próxima revisão • horas',oficina_fornecedor:'Oficina / fornecedor',numero_os:'Ordem de serviço',descricao:'Descrição',valor:'Valor (R$)',tipo_documento:'Tipo de documento',numero_documento:'Número do documento',emissao:'Emissão',arquivo_url:'Arquivo',tipo_movimento:'Movimentação',data:'Data e hora',origem:'Origem',destino:'Destino',responsavel_anterior:'Responsável anterior',responsavel_novo:'Novo responsável'
   };
@@ -76,7 +76,7 @@
       $('#pending-import-button').innerHTML=icon('clipboard-list')+' Revisar carga inicial'+(pendingImport?' • '+number(pendingImport.row_count)+' registros':'');
       state.historyLoaded=false; state.page=0;
       $('#last-update').textContent='Última atualização: '+fmt(updated,true);
-      notice(''); setConnection('online'); populateFilters(); recalculate();
+      notice(''); setConnection('online'); populateFilters(); recalculate();renderFuelRanking();
       if(state.view==='history')loadHistory();
     } catch(error) {
       state.connected=false; setConnection('offline');
@@ -141,13 +141,30 @@
     ['nav-quality-count','tab-quality-count'].forEach(id=>$('#'+id).textContent=state.loaded?number(state.quality.length):'—');
     renderDashboard(); renderAlerts(); renderQuality(); updateEditing();
   }
+  function ptranPending(assets) {
+    return assets.flatMap(asset => {
+      const p=latest(asset,'ptrans');
+      if(!p||norm(p.status)==='cancelado')return [];
+      const days=core.daysUntil(p.data_validade);
+      if(norm(p.status)!=='vencido'&&(days===null||days>30))return [];
+      return [{asset,ptran:p,days,expired:norm(p.status)==='vencido'||(days!==null&&days<0)}];
+    }).sort((a,b)=>Number(b.expired)-Number(a.expired)||(a.days??999)-(b.days??999));
+  }
+  function showPtranPending() {
+    const entries=ptranPending(state.filtered);
+    if(!entries.length){toast('Nenhum PTRAN em atenção na visão atual.','yellow');return;}
+    if(entries.length===1){state.ptranFocusId=String(entries[0].ptran.id||'');openAsset(entries[0].asset.id,'ptrans');return;}
+    openModal(modalHead('PTRAN em atenção',entries.length+' veículo(s) com vencimento ou prazo próximo','PENDÊNCIAS')+
+      '<div class="fleet-modal-body"><div class="fleet-ptran-list">'+entries.map(({asset,ptran,days,expired})=>
+      '<button type="button" class="fleet-ptran-entry" data-ptran-asset="'+esc(asset.id)+'" data-ptran-record="'+esc(ptran.id||'')+'"><strong>'+esc(assetLabel(asset))+'</strong><span>Nº '+esc(ptran.numero_ptran||'Não informado')+' • Validade: '+esc(fmt(ptran.data_validade))+'</span><span>'+badge(expired?'Vencido':'Próximo do vencimento',expired?'red':'yellow')+' '+esc(days===null?'Prazo não informado':days<0?Math.abs(days)+' dia(s) em atraso':days+' dia(s) restantes')+'</span></button>').join('')+'</div></div>');
+  }
   function renderDashboard() {
     const assets=state.filtered, metrics=core.metrics(assets);
     $('#filter-result').textContent=state.loaded?number(assets.length)+' de '+number(state.assets.length)+' ativos na visão':'Aguardando dados do banco';
     const alertAssets=assets.filter(a=>['yellow','red'].includes(core.situation(a).tone)).length;
-    const ptranAttention=assets.filter(a=>{const p=latest(a,'ptrans');if(!p||norm(p.status)==='cancelado')return false;const d=core.daysUntil(p.data_validade);return norm(p.status)==='vencido'||(d!==null&&d<=30);}).length;
+    const ptranAttention=ptranPending(assets).length;
     const maintenanceAttention=assets.filter(a=>core.situation(a).alerts.some(x=>x.type==='Revisão')).length;
-    const specs=[['total','Frota Total','truck','cyan','Ativos cadastrados','all'],['available','Operacionais','circle-check-big','green','Disponível, em operação ou reserva','operational'],['alerts','Em Alerta','triangle-alert','yellow','Ativos com pendências','alerts'],['ptran','PTRAN em atenção','file-warning','red','Vencidos ou em até 30 dias','documents'],['maintenance','Revisões pendentes','wrench','purple','Revisões vencidas ou próximas','maintenance']];
+    const specs=[['total','Frota Total','truck','cyan','Ativos cadastrados','all'],['available','Operacionais','circle-check-big','green','Disponível, em operação ou reserva','operational'],['alerts','Em Alerta','triangle-alert','yellow','Ativos com pendências','alerts'],['ptran','PTRAN em atenção','file-warning','red','Vencidos ou em até 30 dias','ptran-pending'],['maintenance','Revisões pendentes','wrench','purple','Revisões vencidas ou próximas','maintenance']];
     const values={total:assets.length,available:metrics.available,alerts:alertAssets,ptran:ptranAttention,maintenance:maintenanceAttention};
     $('#fleet-kpis').innerHTML=specs.map(([key,label,ico,tone,sub,action])=>'<button type="button" class="fleet-kpi" data-tone="'+tone+'" data-kpi-action="'+action+'"><div class="fleet-kpi-label">'+esc(label)+icon(ico)+'</div><strong class="fleet-kpi-value fleet-number">'+(state.loaded?number(values[key]):'—')+'</strong><div class="fleet-kpi-sub">'+esc(sub)+'</div></button>').join('');
     renderCharts(assets,metrics); renderTable(); renderAlertPreview(); icons();
@@ -332,6 +349,7 @@
   }
   async function openAsset(id,tab='resumo',edit=false) {
     if(!id)return;
+    if(tab!=='fuelings')state.fuelHistoryMonth=null;
     state.lastFocus=document.activeElement;state.drawerTab=tab;state.detail=null;const request=(state.drawerRequest||0)+1;state.drawerRequest=request;
     $('#drawer-content').innerHTML='<header class="fleet-drawer-head"><div><p class="eyebrow">FICHA DO ATIVO</p><h2 id="drawer-title">Consultando ativo</h2></div><button class="fleet-icon-button" data-close-drawer aria-label="Fechar ficha">'+icon('x')+'</button></header><div class="fleet-loading-inline"><div class="spinner"></div>Carregando cadastro e histórico</div>';
     $('#fleet-drawer-overlay').classList.remove('hidden');document.body.style.overflow='hidden';icons();$('#fleet-drawer').focus();
@@ -340,7 +358,7 @@
       if(!detail?.asset)throw new Error('O ativo não foi encontrado. Atualize a visão da frota.');
       if(request!==state.drawerRequest||$('#fleet-drawer-overlay').classList.contains('hidden'))return;
       state.detail=detail;
-      if(edit)renderAssetForm(detail.asset);else renderDetail();
+      renderDetail();if(edit)renderAssetForm(detail.asset);
     } catch(error) {if(request!==state.drawerRequest)return;$('#drawer-content').innerHTML='<header class="fleet-drawer-head"><div><h2 id="drawer-title">Ficha indisponível</h2></div><button class="fleet-icon-button" data-close-drawer aria-label="Fechar ficha">'+icon('x')+'</button></header><div class="fleet-empty">'+empty('Não foi possível consultar o ativo',errorMessage(error),'<button class="fleet-button" data-open-asset="'+esc(id)+'">'+icon('refresh-cw')+' Tentar novamente</button>','cloud-off')+'</div>';icons();}
   }
   function closeDrawer() {$('#fleet-drawer-overlay').classList.add('hidden');state.detail=null;state.drawerRequest=(state.drawerRequest||0)+1;restoreScroll();state.lastFocus?.focus?.();}
@@ -370,7 +388,7 @@
 
     } else if(tab==='fuelings') {
       const records=[...(detail.fuelings||[])].sort((a,b)=>String(b.data_abastecimento||'').localeCompare(String(a.data_abastecimento||'')));
-      const current=core.currentRecords(records),cash=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+      const current=core.currentRecords(records).filter(r=>!state.fuelHistoryMonth||String(r.data_abastecimento||'').slice(0,7)===state.fuelHistoryMonth),cash=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
       $('#drawer-body').innerHTML='<div class="fleet-detail-section-head"><h3>Abastecimentos <span class="fleet-chip">'+current.length+' registros válidos</span></h3><button class="fleet-button primary" data-new-record="fuelings">'+icon('fuel')+' Abastecimento</button></div>'+
       '<p class="fleet-history-note">Total registrado: <strong>'+cash(current.reduce((s,r)=>s+Number(r.valor||0),0))+'</strong>. Correções preservam a versão anterior, mas não entram em dobro nos relatórios.</p>'+
       '<div class="fleet-form-actions"><button class="fleet-button" data-fuel-report="'+esc(asset.id)+'">'+icon('file-spreadsheet')+' Excel deste veículo</button></div>'+
@@ -386,6 +404,7 @@
       $('#drawer-body').innerHTML='<div class="fleet-detail-section-head"><h3>'+kindNames[tab]+' <span class="fleet-chip">'+records.length+' registros</span></h3><button class="fleet-button edit-only '+(editing()?'':'hidden')+'" data-new-record="'+tab+'">'+icon('plus')+' '+(tab==='movements'?'Registrar':'Adicionar')+'</button></div><p class="fleet-history-note">Novos registros preservam os anteriores. A correção de um registro cria uma versão vinculada ao original.</p><div class="fleet-records">'+ (records.length?records.map(record=>recordHTML(tab,record,!currentIds.has(record.id))).join(''):'<div class="fleet-empty">'+empty('Nenhum registro de '+kindNames[tab].toLowerCase(),'Use a edição protegida para incluir informações reais do ativo.','','folder-open')+'</div>')+'</div>';
     } icons();
     if(tab==='fuelings')refreshFuelReceiptButtons(detail.fuelings||[]);
+    if(tab==='ptrans'&&state.ptranFocusId){const focus=$('[data-edit-record]', $('#drawer-body')).find(el=>String(el.dataset.editRecord)===state.ptranFocusId);if(focus){focus.closest('.fleet-record')?.classList.add('fleet-ptran-highlight');focus.closest('.fleet-record')?.scrollIntoView({block:'nearest'});}state.ptranFocusId=null;}
   }
   function recordHTML(kind,record,superseded) {
     const title={ptrans:'PTRAN '+(record.numero_ptran||'sem número'),inspections:record.tipo_inspecao||'Inspeção',maintenance:[record.categoria,record.tipo].filter(Boolean).join(' • ')||'Manutenção',documents:record.tipo_documento||'Documento',movements:record.tipo_movimento||'Movimentação'}[kind];
@@ -413,10 +432,18 @@
     return '<p class="fleet-form-note full">Situação no contrato: <strong>'+ (asset.ativo_no_contrato===true?'No contrato':asset.ativo_no_contrato===false?'Fora do contrato':'Não confirmado')+'</strong>. Use Registrar entrada / Registrar saída na ficha para registrar formalmente a movimentação.</p>';
   }
   function renderAssetForm(asset={}) {
-    if(!editing()){unlock(()=>asset.id?openAsset(asset.id,'resumo',true):renderAssetForm({}));return;}
+    if(!editing()){unlock(()=>asset.id?renderAssetForm(asset):renderAssetForm({}));return;}
     const isNew=!asset.id;
     if(isNew){state.lastFocus=document.activeElement;$('#fleet-drawer-overlay').classList.remove('hidden');document.body.style.overflow='hidden';}
     $('#drawer-content').innerHTML=detailHeader(asset,isNew?'CADASTRAR ATIVO':'EDITAR ATIVO')+'<div class="fleet-drawer-body fleet-drawer-edit"><form id="asset-form" class="fleet-form"><p class="fleet-form-note">Máquinas podem usar serial, patrimônio ou número interno. O UUID identifica o ativo e permanece imutável.</p>'+group('Identificação e classificação',inputField('asset_code',asset.asset_code)+inputField('placa_identificador',asset.placa_identificador,{placeholder:'Placa, patrimônio ou serial'})+inputField('modelo',asset.modelo,{required:true})+inputField('tipo',asset.tipo,{values:types})+inputField('categoria',asset.categoria,{values:core.CATEGORIES})+inputField('marca',asset.marca)+inputField('ano',asset.ano,{type:'number'})+inputField('cor',asset.cor))+group('Responsabilidade e operação',inputField('empresa',asset.empresa)+inputField('gerencia',asset.gerencia)+inputField('responsavel_cpl',asset.responsavel_cpl)+inputField('status_operacional',asset.status_operacional,{values:operational})+inputField('quilometragem',asset.quilometragem,{type:'number'})+inputField('horimetro',asset.horimetro,{type:'number'})+contractField(asset,isNew))+group('Observações',inputField('observacao_atual',asset.observacao_atual,{type:'textarea',full:true}))+'<div id="asset-form-error" class="fleet-form-error hidden" role="alert"></div><div class="fleet-form-actions"><button type="button" class="fleet-button" data-action="cancel-asset-edit">Cancelar</button><button type="submit" class="fleet-button primary">'+icon('save')+' '+(isNew?'Cadastrar ativo':'Salvar alterações')+'</button></div></form></div>';
+    if(!isNew){
+      const editor=$('#drawer-content .fleet-drawer-edit');
+      const formHTML=editor?.innerHTML||'';
+      renderDetail();
+      $('#drawer-body').innerHTML='<div class="fleet-detail-section-head"><h3>Editar cadastro</h3><span class="fleet-chip">Edição autorizada</span></div><div class="fleet-drawer-edit">'+formHTML+'</div>';
+      state.drawerTab='resumo';
+      $('#drawer-content [data-drawer-tab]').forEach(b=>{b.classList.toggle('active',b.dataset.drawerTab==='resumo');b.setAttribute('aria-selected',String(b.dataset.drawerTab==='resumo'));});
+    }
     $('#drawer-title').textContent=isNew?'Novo ativo de frota':assetLabel(asset);
     $('#asset-form').onsubmit=event=>saveAssetForm(event,asset);icons();
     if(isNew)$('[name="modelo"]',$('#asset-form')).focus();
@@ -439,7 +466,7 @@
     const detail=await api.detail(id);const asset=fullAsset(detail);const index=state.assets.findIndex(a=>a.id===id);
     if(index<0)state.assets.push(asset);else state.assets[index]=asset;
     state.detail=detail;state.loaded=true;state.connected=true;state.lastUpdate=asset.updated_at||state.lastUpdate;
-    $('#last-update').textContent='Última atualização: '+fmt(state.lastUpdate,true);setConnection('online');state.historyLoaded=false;populateFilters();recalculate();renderDetail();
+    $('#last-update').textContent='Última atualização: '+fmt(state.lastUpdate,true);setConnection('online');state.historyLoaded=false;populateFilters();recalculate();renderDetail();renderFuelRanking();
   }
   function recordForm(kind,existing=null,preset={}) {
     if(!state.detail)return;
@@ -706,6 +733,38 @@
     finally {if(button.isConnected)button.disabled=!canPublish();}
   }
 
+  const fuelCash=value=>Number(value||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  async function renderFuelRanking() {
+    const target=$('#fleet-fuel-ranking');
+    if(!target)return;
+    const month=state.fuelMonth,request=++state.fuelRankingRequest;
+    const start=month+'-01',end=new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0).toLocaleDateString('en-CA');
+    target.innerHTML='<p class="fleet-history-note">Consultando abastecimentos reais…</p>';
+    try {
+      const records=await getFuelRecords(start,end,null);
+      if(request!==state.fuelRankingRequest)return;
+      const seen=new Set(),groups=new Map(),assets=new Map(state.assets.map(a=>[String(a.id),a]));
+      let total=0;
+      for(const r of records) {
+        if(r.is_current===false||r.status==='cancelado')continue;
+        const id=String(r.asset_id||r.fleet_asset_id||'');
+        const value=Number(r.valor);
+        if(!id||!Number.isFinite(value)||value<=0||String(r.data_abastecimento||'').slice(0,7)!==month)continue;
+        if(r.id){if(seen.has(String(r.id)))continue;seen.add(String(r.id));}
+        total+=value;
+        const a=assets.get(id),group=groups.get(id)||{id,label:a?assetLabel(a):[r.modelo||'Ativo',r.placa||'Sem placa'].join(' • '),sum:0,count:0};
+        group.sum+=value;group.count++;groups.set(id,group);
+      }
+      const top=[...groups.values()].sort((a,b)=>b.sum-a.sum).slice(0,10);
+      const summary='<div class="fleet-fuel-summary"><div><small>Total gasto no mês</small><strong>'+fuelCash(total)+'</strong></div><div><small>Veículos abastecidos</small><strong>'+number(groups.size)+'</strong></div><div><small>Média por veículo</small><strong>'+fuelCash(groups.size?total/groups.size:0)+'</strong></div></div>';
+      const max=top[0]?.sum||1;
+      target.innerHTML=summary+(top.length?'<div class="fleet-fuel-bars">'+top.map((item,i)=>
+        '<button type="button" class="fleet-fuel-bar" data-ranking-asset="'+esc(item.id)+'" title="'+esc(item.count+' abastecimento(s) • '+fuelCash(item.sum))+'"><span class="fleet-fuel-name"><b>'+(i+1)+'º</b> '+esc(item.label)+'</span><span class="fleet-fuel-track"><span style="width:'+(item.sum/max*100).toFixed(2)+'%"></span></span><strong>'+fuelCash(item.sum)+'</strong></button>').join('')+'</div>':'<div class="fleet-empty">Nenhum abastecimento válido registrado neste mês.</div>');
+    }catch(error){
+      if(request!==state.fuelRankingRequest)return;
+      target.innerHTML='<div class="fleet-empty">Não foi possível consultar os abastecimentos: '+esc(errorMessage(error))+'</div>';
+    }
+  }
    async function getFuelRecords(from,to,assetId){
      const records=[];let offset=0,total=0;
      do{const page=await api.fuelReport(from,to,assetId,offset,500);
@@ -845,6 +904,7 @@
   },true);
   document.addEventListener('click',event=>{
     const button=event.target.closest('button,a');
+    if(button?.dataset.rankingAsset){state.fuelHistoryMonth=state.fuelMonth;openAsset(button.dataset.rankingAsset,'fuelings');return;}
     if(button?.dataset.attachReceipt){openFuelReceiptForm(button.dataset.attachReceipt);return;}
     if(button?.dataset.viewReceipt){viewFuelReceipt(button.dataset.viewReceipt);return;}
     if(button?.dataset.fuelReport!==undefined){openFuelReport(button.dataset.fuelReport);return;}
@@ -854,6 +914,7 @@
       if(action==='all'){clearFilters();focusDashboard('assets');}
       if(action==='operational'){setFilter('situation','green');focusDashboard('assets');}
       if(action==='alerts'){setFilter('only_pending',true);focusDashboard('assets');}
+      if(action==='ptran-pending')showPtranPending();
       if(action==='documents')focusDashboard('documents');
       if(action==='maintenance')focusDashboard('maintenance');
       return;
@@ -863,9 +924,10 @@
     if(button?.hasAttribute('data-close-modal')){closeModal();return;}
     if(button?.hasAttribute('data-close-drawer')){closeDrawer();return;}
     if(button?.dataset.confirm){answerConfirm(button.dataset.confirm==='ok');return;}
+    if(button?.dataset.ptranAsset){const id=button.dataset.ptranAsset;state.ptranFocusId=button.dataset.ptranRecord||null;closeModal();openAsset(id,'ptrans');return;}
     if(button?.dataset.openAsset){openAsset(button.dataset.openAsset);return;}
     if(button?.dataset.editAsset){const id=button.dataset.editAsset;unlock(()=>openAsset(id,'resumo',true));return;}
-    if(button?.dataset.drawerTab){state.drawerTab=button.dataset.drawerTab;renderDetail();return;}
+    if(button?.dataset.drawerTab){state.drawerTab=button.dataset.drawerTab;if(state.drawerTab!=='fuelings')state.fuelHistoryMonth=null;renderDetail();return;}
     if(button?.dataset.newRecord){recordForm(button.dataset.newRecord);return;}
     if(button?.dataset.editRecord){const kind=button.dataset.recordKind,record=state.detail?.[kind]?.find(r=>r.id===button.dataset.editRecord);recordForm(kind,record);return;}
     if(button?.dataset.movement){recordForm('movements',null,{tipo_movimento:button.dataset.movement});return;}
@@ -896,7 +958,9 @@
   $('#filter-toggle').onclick=()=>{const expanded=$('#filter-toggle').getAttribute('aria-expanded')==='true';$('#filter-toggle').setAttribute('aria-expanded',String(!expanded));$('#fleet-advanced-filters').classList.toggle('hidden',expanded);};
   $('#analytics-toggle').onclick=()=>{const wrap=$('#fleet-secondary-analytics'),expanded=!wrap.classList.contains('hidden');wrap.classList.toggle('hidden',expanded);$('#analytics-toggle').setAttribute('aria-expanded',String(!expanded));$('#analytics-toggle').innerHTML=icon('chart-no-axes-combined')+(expanded?' Ver análises detalhadas ':' Ocultar análises detalhadas ')+icon(expanded?'chevron-down':'chevron-up');if(!expanded)requestAnimationFrame(()=>Object.values(state.charts).forEach(c=>c.resize()));icons();};
   $('#clear-filters').onclick=clearFilters;
-  $('#refresh-button').onclick=loadAssets;
+  $('#refresh-button').onclick=()=>{loadAssets();renderFuelRanking();};
+  $('#fuel-ranking-month').onchange=event=>{state.fuelMonth=event.target.value;renderFuelRanking();};
+  $('#fuel-ranking-month').value=state.fuelMonth;
   $('#unlock-button').onclick=async()=>{if(editing()){if(await confirmAction('Encerrar edição?','O painel voltará ao modo somente leitura.','Encerrar sessão')){try{await api.lock();toast('Sessão de edição encerrada.');}catch(error){toast('A edição foi encerrada nesta página. '+errorMessage(error),'yellow');}}}else unlock();};
   $('#new-asset-button').onclick=()=>renderAssetForm({});$('#import-button').onclick=()=>$('#fleet-import-file').click();
   $('#pending-import-button').onclick=reviewPendingImport;
