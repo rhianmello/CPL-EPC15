@@ -14,7 +14,7 @@
   const documentTypes = ['CRLV','Licenciamento','Seguro','PTRAN','Certificado','Inspeção','Documentação de máquina','Documento Petrobras','Outros'];
   const movements = ['entrada','saída','troca de responsável','troca de gerência','indisponibilidade','retorno à operação','mudança de frente','mudança de contrato','veículo reserva','outros'];
   const colors = {green:'#2dd4bf',yellow:'#f5b72e',red:'#fb7185',gray:'#708aa6',cyan:'#38bdf8',blue:'#60a5fa',purple:'#a78bfa'};
-  const state = {assets:[],filtered:[],loaded:false,connected:false,loading:false,filters:{},page:0,pageSize:25,view:'dashboard',charts:{},detail:null,drawerTab:'resumo',quality:[],alerts:[],history:[],historyTotal:0,historyFilters:{},historyLoading:false,historyLoaded:false,import:null,importFile:null,importBatch:null,lastFocus:null,confirmResolve:null,modalClose:null,fuelMonth:core.todayISO().slice(0,7),fuelRankingRequest:0,ptranFocusId:null};
+  const state = {assets:[],filtered:[],loaded:false,connected:false,loading:false,filters:{},page:0,pageSize:25,view:'dashboard',charts:{},detail:null,drawerTab:'resumo',quality:[],alerts:[],history:[],historyTotal:0,historyFilters:{},historyLoading:false,historyLoaded:false,import:null,importFile:null,importBatch:null,lastFocus:null,confirmResolve:null,modalClose:null,fuelMonth:core.todayISO().slice(0,7),fuelCategory:'',fuelRankingRequest:0,ptranFocusId:null};
   const fields = {
     asset_code:'Código do ativo',placa_identificador:'Placa / identificador',tipo:'Tipo',categoria:'Categoria',modelo:'Modelo',marca:'Marca',ano:'Ano',cor:'Cor',empresa:'Empresa',gerencia:'Gerência',responsavel_cpl:'Responsável CPL',status_operacional:'Status operacional',ativo_no_contrato:'Ativo no contrato',data_entrada:'Entrada no contrato',data_saida:'Saída do contrato',observacao_atual:'Observação',quilometragem:'Quilometragem',horimetro:'Horímetro',numero_ptran:'Número PTRAN',numero_isc:'Número ISC',data_recebimento:'Recebimento',data_solicitacao:'Solicitação',data_emissao:'Emissão',data_validade:'Validade',status:'Status',tipo_ptran:'Tipo PTRAN',provisoria:'Provisória',observacao:'Observação',responsavel:'Responsável',tipo_inspecao:'Tipo de inspeção',data_inspecao:'Data da inspeção',validade:'Validade',proxima_inspecao:'Próxima inspeção',inspetor:'Inspetor',resultado:'Resultado',anexo_url:'Anexo',data_abertura:'Abertura',data_execucao:'Execução',proxima_revisao_data:'Próxima revisão',km_atual:'KM atual',proxima_revisao_km:'Próxima revisão • KM',horimetro_atual:'Horímetro atual',proxima_revisao_horas:'Próxima revisão • horas',oficina_fornecedor:'Oficina / fornecedor',numero_os:'Ordem de serviço',descricao:'Descrição',valor:'Valor (R$)',tipo_documento:'Tipo de documento',numero_documento:'Número do documento',emissao:'Emissão',arquivo_url:'Arquivo',tipo_movimento:'Movimentação',data:'Data e hora',origem:'Origem',destino:'Destino',responsavel_anterior:'Responsável anterior',responsavel_novo:'Novo responsável'
   };
@@ -76,7 +76,7 @@
       $('#pending-import-button').innerHTML=icon('clipboard-list')+' Revisar carga inicial'+(pendingImport?' • '+number(pendingImport.row_count)+' registros':'');
       state.historyLoaded=false; state.page=0;
       $('#last-update').textContent='Última atualização: '+fmt(updated,true);
-      notice(''); setConnection('online'); populateFilters(); recalculate();renderFuelRanking();
+      notice(''); setConnection('online'); populateFilters(); populateFuelCategories(); recalculate();renderFuelRanking();
       if(state.view==='history')loadHistory();
     } catch(error) {
       state.connected=false; setConnection('offline');
@@ -466,7 +466,7 @@
     const detail=await api.detail(id);const asset=fullAsset(detail);const index=state.assets.findIndex(a=>a.id===id);
     if(index<0)state.assets.push(asset);else state.assets[index]=asset;
     state.detail=detail;state.loaded=true;state.connected=true;state.lastUpdate=asset.updated_at||state.lastUpdate;
-    $('#last-update').textContent='Última atualização: '+fmt(state.lastUpdate,true);setConnection('online');state.historyLoaded=false;populateFilters();recalculate();renderDetail();renderFuelRanking();
+    $('#last-update').textContent='Última atualização: '+fmt(state.lastUpdate,true);setConnection('online');state.historyLoaded=false;populateFilters();populateFuelCategories();recalculate();renderDetail();renderFuelRanking();
   }
   function recordForm(kind,existing=null,preset={}) {
     if(!state.detail)return;
@@ -734,10 +734,18 @@
   }
 
   const fuelCash=value=>Number(value||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  function populateFuelCategories() {
+    const select=$('#fuel-ranking-category');if(!select)return;
+    const categories=[...new Set(state.assets.map(a=>String(a.categoria||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    const hasUncategorized=state.assets.some(a=>!String(a.categoria||'').trim());
+    select.innerHTML='<option value="">Todas as categorias</option>'+categories.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('')+(hasUncategorized?'<option value="__uncategorized__">Sem categoria</option>':'');
+    if(state.fuelCategory&&!categories.includes(state.fuelCategory)&&!(state.fuelCategory==='__uncategorized__'&&hasUncategorized))state.fuelCategory='';
+    select.value=state.fuelCategory;
+  }
   async function renderFuelRanking() {
     const target=$('#fleet-fuel-ranking');
     if(!target)return;
-    const month=state.fuelMonth,request=++state.fuelRankingRequest;
+    const month=state.fuelMonth,category=state.fuelCategory,request=++state.fuelRankingRequest;
     const start=month+'-01',end=month.slice(0,4)+'-'+month.slice(5,7)+'-'+String(new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0).getDate()).padStart(2,'0');
     target.innerHTML='<p class="fleet-history-note">Consultando abastecimentos reais…</p>';
     try {
@@ -750,6 +758,8 @@
         const id=String(r.asset_id||r.fleet_asset_id||'');
         const value=Number(r.valor);
         if(!id||!Number.isFinite(value)||value<=0||String(r.data_abastecimento||'').slice(0,7)!==month)continue;
+        const categoryName=String(assets.get(id)?.categoria||'').trim();
+        if(category&&(category==='__uncategorized__'?Boolean(categoryName):categoryName!==category))continue;
         if(r.id){if(seen.has(String(r.id)))continue;seen.add(String(r.id));}
         total+=value;
         const a=assets.get(id),group=groups.get(id)||{id,label:a?assetLabel(a):[r.modelo||'Ativo',r.placa||'Sem placa'].join(' • '),sum:0,count:0};
@@ -961,6 +971,7 @@
   $('#refresh-button').onclick=()=>{loadAssets();renderFuelRanking();};
   $('#fuel-ranking-month').onchange=event=>{state.fuelMonth=event.target.value;renderFuelRanking();};
   $('#fuel-ranking-month').value=state.fuelMonth;
+  $('#fuel-ranking-category').onchange=event=>{state.fuelCategory=event.target.value;renderFuelRanking();};
   $('#unlock-button').onclick=async()=>{if(editing()){if(await confirmAction('Encerrar edição?','O painel voltará ao modo somente leitura.','Encerrar sessão')){try{await api.lock();toast('Sessão de edição encerrada.');}catch(error){toast('A edição foi encerrada nesta página. '+errorMessage(error),'yellow');}}}else unlock();};
   $('#new-asset-button').onclick=()=>renderAssetForm({});$('#import-button').onclick=()=>$('#fleet-import-file').click();
   $('#pending-import-button').onclick=reviewPendingImport;
