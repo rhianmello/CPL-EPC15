@@ -738,7 +738,7 @@
     const target=$('#fleet-fuel-ranking');
     if(!target)return;
     const month=state.fuelMonth,request=++state.fuelRankingRequest;
-    const start=month+'-01',end=new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0).toLocaleDateString('en-CA');
+    const start=month+'-01',end=month.slice(0,4)+'-'+month.slice(5,7)+'-'+String(new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0).getDate()).padStart(2,'0');
     target.innerHTML='<p class="fleet-history-note">Consultando abastecimentos reais…</p>';
     try {
       const records=await getFuelRecords(start,end,null);
