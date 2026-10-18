@@ -20,22 +20,36 @@ const units={'8223':'U-8223 – Centro de Resposta a Emergência','8224':'U-8224
 const normalize=v=>String(v||'').trim().toLocaleLowerCase('pt-BR');
 function parse(name) {
  const decoded=name.replace(/#U([0-9a-fA-F]{4,6})/g,(_,hex)=>String.fromCodePoint(parseInt(hex,16)));
- const base=decoded.split('/').pop().replace(/\.(?:jpe?g|png|webp)$/i,'').trim();
- const id=base.match(/U\s*-\s*(8223|8224|8226|8900)/i)?.[1];
- const week=Number(base.match(/Semana\s*0*(\d+)\s*\.*\s*$/i)?.[1]);
- if(!id||!week)return null;
- const withoutWeek=base.replace(/\s*[-–—]?\s*Semana\s*0*\d+\s*\.*\s*$/i,'').trim();
- const afterUnitCode=withoutWeek.replace(/^.*?U\s*-\s*\d+\s*[-–—]?\s*/i,'').trim();
- const unitNames={
- '8223':[/^(?:Centro|Central) de Resposta a Emergência\s*[-–—]?\s*/i],
- '8224':[/^Oficina(?:s)?(?: de Manutenção)?\s*[-–—]?\s*/i],
- '8226':[/^Almoxarifado\s*[-–—]?\s*/i],
- '8900':[/^Central de Resíduos\s*[-–—]?\s*/i]
+ const base=decoded.split(/[\\/]/).pop().replace(/\.(?:jpe?g|png|webp)$/i,'').trim();
+ const unitMatch=base.match(/U\s*[-–—]?\s*(8215|8222|8223|8224|8226|8900|8910)\b/i);
+ const id=unitMatch?.[1];
+ if(!id)return null;
+ // Aceita S29, S-29 e Semana 29 em qualquer posição depois da unidade.
+ const tail=base.slice(unitMatch.index+unitMatch[0].length);
+ const weekMatch=tail.match(/(?:^|[\s\-–—_])(?:S\s*[-–—]?\s*|Semana\s*)0*(\d{1,3})(?=$|[\s\-–—_.])/i);
+ if(!weekMatch)return null;
+ const week=Number(weekMatch[1]);
+ if(!Number.isInteger(week)||week<1||week>134)return null;
+ const unitsById={
+  ...units,
+  '8215':'U-8215 - CENTRO MÉDICO',
+  '8222':'U-8222 - LABORATÓRIO',
+  '8910':'U-8910 - SMS'
  };
- let caption=afterUnitCode;
- for(const regex of unitNames[id]) caption=caption.replace(regex,'').trim();
- caption=caption.replace(/^[-–—\s]+/,'').trim();
- return {id,week,unit:units[id],caption:caption||'Registro fotográfico',fileName:name};
+ const unitNames={
+  '8215':[/^Centro M[eé]dico\s*[-–—]?\s*/i],
+  '8222':[/^Laborat[oó]rio\s*[-–—]?\s*/i],
+  '8223':[/^(?:Centro|Central) de Resposta a Emerg[eê]ncia\s*[-–—]?\s*/i],
+  '8224':[/^Oficina(?:s)?(?: de Manuten[cç][aã]o)?\s*[-–—]?\s*/i],
+  '8226':[/^Almoxarifado\s*[-–—]?\s*/i],
+  '8900':[/^Central de Res[ií]duos\s*[-–—]?\s*/i],
+  '8910':[/^SMS\s*[-–—]?\s*/i]
+ };
+ let caption=tail.replace(weekMatch[0],' ').trim();
+ caption=caption.replace(/^[-–—_\s]+/,'').replace(/[-–—_\s]+$/,'').trim();
+ for(const regex of unitNames[id]||[])caption=caption.replace(regex,'').trim();
+ caption=caption.replace(/^[-–—_\s]+/,'').trim();
+ return {id,week,unit:unitsById[id],caption:caption||'Registro fotográfico',fileName:name};
 }
 function line(t,error=false){const d=document.createElement('div');d.textContent=t;if(error)d.className='err';$('log').prepend(d);}
 $('zip').addEventListener('change',()=>{$('status').textContent=$('zip').files[0]?'Fotos selecionadas: '+$('zip').files[0].name+' — clique em Conferir fotos.':'Nenhum arquivo selecionado.'});
