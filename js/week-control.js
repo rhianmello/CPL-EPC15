@@ -27,12 +27,13 @@ async function refresh(){
  try{
   if(!window.CloudSync?.ready?.())throw Error('Conexão Supabase indisponível');
   const previous=week>1?CloudSync.loadCoordinationWeek(week-1).catch(()=>null):Promise.resolve(null);
-  const [cur,prev,photos,history,allPhotos]=await Promise.all([
+  const [cur,prev,photos,history,allPhotos,review]=await Promise.all([
     CloudSync.loadCoordinationWeek(week),
     previous,
     CloudSync.listCoordinationPhotos(week,'','').catch(()=>null),
     CloudSync.listCoordinationWeeks().catch(()=>[]),
-    CloudSync.listCoordinationPhotoHistory('','','').catch(()=>null)
+    CloudSync.listCoordinationPhotoHistory('','','').catch(()=>null),
+    CloudSync.getPresentationReview(week).catch(()=>null)
   ]);
   if(token!==seq)return;
   const snap=asSnapshot(cur),before=asSnapshot(prev),rows=noteRows(snap),earlier=noteRows(before),offenders=carry(snap);
@@ -71,8 +72,24 @@ async function refresh(){
   const grouping=new Map();for(const p of imgList){const k=p.unit_name||p.unitName||'Sem unidade';grouping.set(k,(grouping.get(k)||0)+1)}
   fill('audit-images',[label('Total de fotos',count==null?'Consulta indisponível':count),...Array.from(grouping,([k,v])=>label(k,v)),elt('p','audit-dim',sameCaptions.length?sameCaptions.length+' grupos com legendas repetidas. Conferir visualmente antes de classificar como duplicidade.':'Legendas repetidas não identificadas na resposta disponível.')]);
   fill('audit-pending',[...issues.filter(x=>x.dataset.severity!=='ok').map(x=>{const e=elt('div','audit-line');e.append(elt('span','',x.querySelector('strong')?.textContent),elt('span','audit-tag',x.dataset.severity==='attention'?'REVISAR':'INFORMATIVO'));return e}),elt('p','audit-dim','Diagnósticos somente para consulta. Nenhuma ação automática de edição, exclusão ou correção.')]);
-  const checks=[['Excel físico correspondente cadastrado',physical==='Excel salvo'],['Registros manuais encontrados',rows.length>0],['Consulta fotográfica concluída',count!==null],['Frentes ofensoras da semana anterior preservadas — '+offenders.length+' registros',offenders.length>0],['Revalidação operacional das frentes (não aferida automaticamente)',false],['Conferência humana da apresentação',false]];
-  fill('audit-checklist',checks.map(([name,ok])=>{const e=elt('div','audit-check');e.append(elt('span','',ok?'✓':'○'),elt('span','',name));if(!ok)e.append(elt('em','','Pendente / não confirmado'));return e}));
+  const reviewed=review&&Number(review.version_no)===Number(snap.version_no);
+  const reviewPanel=elt('div','audit-issue');
+  reviewPanel.dataset.severity=reviewed?'ok':'attention';
+  reviewPanel.append(elt('strong','',reviewed?'Apresentação conferida':'Conferência humana da apresentação pendente'),elt('p','',reviewed?'Responsável: '+review.reviewer+' · '+date(review.reviewed_at)+' · Versão '+review.version_no:'Confira o PDF e confirme manualmente. Uma nova versão exige nova revisão.'));
+  if(!reviewed){
+    const confirmButton=elt('button','','Marcar apresentação como conferida');
+    confirmButton.type='button';confirmButton.style.cssText='padding:10px;background:#146180;color:white;border:1px solid #58bfe2;border-radius:8px;cursor:pointer';
+    confirmButton.onclick=async()=>{
+      const reviewer=prompt('Nome do responsável que conferiu o PDF:');if(!reviewer||reviewer.trim().length<2)return;
+      const master=prompt('Senha master para confirmar a conferência:');if(!master)return;
+      if(!confirm('Confirmar a revisão da apresentação da S-'+week+', versão '+snap.version_no+'?'))return;
+      try{await CloudSync.confirmPresentationReview({weekNo:week,versionNo:snap.version_no,reviewer:reviewer.trim(),masterPassword:master});alert('Conferência registrada.');refresh()}
+      catch(err){alert('Não foi possível confirmar: '+err.message)}
+    };
+    reviewPanel.append(confirmButton);
+  }
+  const checks=[['Excel físico correspondente cadastrado',physical==='Excel salvo'],['Registros manuais encontrados',rows.length>0],['Consulta fotográfica concluída',count!==null],['Frentes ofensoras da semana anterior preservadas — '+offenders.length+' registros',offenders.length>0],['Revalidação operacional das frentes (não aferida automaticamente)',false],['Conferência humana da apresentação',Boolean(reviewed)]];
+  fill('audit-checklist',[...checks.map(([name,ok])=>{const e=elt('div','audit-check');e.append(elt('span','',ok?'✓':'○'),elt('span','',name));if(!ok)e.append(elt('em','','Pendente / não confirmado'));return e}),reviewPanel]);
   write('audit-updated','Auditoria consultada em '+new Date().toLocaleString('pt-BR'));
   lastReport=['CONTROLE SEMANAL — EPC-15','Semana S-'+week,'Arquivo: '+file,'Registros: '+rows.length,'Fotos: '+count,'Frentes preservadas: '+offenders.length,'','DIAGNÓSTICOS',...issues.map(x=>'- '+x.querySelector('strong').textContent+': '+x.querySelector('p').textContent),'','Somente relatório. Não foram alterados dados.'].join('\n');
  }catch(err){
