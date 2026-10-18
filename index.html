@@ -89,7 +89,26 @@
     .wh-detail{font-size:12px;color:#b3cce0;margin:12px 0 0;line-height:1.6}
     @media(max-width:700px){.wh-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.week-health{padding:14px}}
   </style>
-</head>
+<style>
+#page-week-health{color:#e6f4ff}#page-week-health h2{font-size:26px}
+.audit-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:17px 0}
+.audit-toolbar button{border:1px solid #347b9a;border-radius:9px;padding:10px 15px;color:#bdeeff;background:#092e47;font-weight:750;cursor:pointer}
+.audit-toolbar button:hover{background:#145471}.audit-toolbar span{color:#8eacc1;font-size:12px;margin-left:auto}
+.audit-layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:25px}
+.audit-panel{padding:19px;border:1px solid rgba(49,133,173,.36);border-radius:15px;background:linear-gradient(145deg,rgba(8,33,55,.97),rgba(5,19,35,.96));box-shadow:inset 0 1px rgba(121,210,244,.08),0 6px 22px rgba(0,0,0,.14);min-width:0}
+.audit-panel header{margin-bottom:13px;border-bottom:1px solid rgba(81,158,190,.2);padding-bottom:12px}
+.audit-panel header span{font-size:10px;letter-spacing:1.8px;color:#5cd1ef;font-weight:700}.audit-panel header h3{margin:5px 0 0;font-size:17px}
+.audit-span{grid-column:1/-1}.audit-issue-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.audit-issue{padding:12px;border:1px solid #294760;border-radius:10px;background:rgba(1,14,27,.55)}
+.audit-issue[data-severity="attention"]{border-left:3px solid #f0b34e}.audit-issue[data-severity="info"]{border-left:3px solid #58bfe2}.audit-issue[data-severity="ok"]{border-left:3px solid #36bc9a}
+.audit-issue strong{display:block;font-size:13px}.audit-issue p{font-size:12px;line-height:1.5;color:#bad1e4;margin:6px 0}.audit-issue small{font-size:11px;color:#8bc7df}
+.audit-line{padding:9px 0;border-bottom:1px solid rgba(109,160,190,.14);display:flex;align-items:flex-start;justify-content:space-between;gap:10px;font-size:12px}
+.audit-line b{color:#d9f5ff;text-align:right}.audit-dim{color:#9cbace;font-size:12px;line-height:1.5}
+.audit-tag{border:1px solid #496e84;border-radius:20px;padding:4px 8px;font-size:10px;color:#9bd0e6;white-space:nowrap}
+.audit-img-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.audit-img-grid img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px}
+.audit-check{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #24445b;font-size:12px}.audit-check em{font-style:normal;color:#f2c27e}
+@media(max-width:800px){.audit-layout{grid-template-columns:1fr}.audit-span{grid-column:auto}.audit-issue-list{grid-template-columns:1fr}.audit-img-grid{grid-template-columns:repeat(2,1fr)}}
+</style></head>
 <body>
   <section id="upload-view" class="upload-view home" aria-label="Página inicial">
     <header class="site-topbar">
@@ -298,7 +317,15 @@
           </div>
           <p id="wh-detail" class="wh-detail">Selecione uma semana no filtro acima para conferir os dados publicados.</p>
         </section>
-</section>
+<div class="audit-toolbar"><button id="audit-refresh" type="button">↻ Executar auditoria</button><button id="audit-export" type="button">↓ Exportar relatório</button><span id="audit-updated">Aguardando consulta</span></div>
+<div class="audit-layout">
+ <article class="audit-panel audit-span"><header><span>01 / DIAGNÓSTICO</span><h3>Verificações automáticas</h3></header><div id="audit-issues" class="audit-issue-list"><p>Selecione uma semana para iniciar.</p></div></article>
+ <article class="audit-panel"><header><span>02 / EVOLUÇÃO</span><h3>Comparação com semana anterior</h3></header><div id="audit-diff"></div></article>
+ <article class="audit-panel"><header><span>03 / HISTÓRICO</span><h3>Versões e publicações</h3></header><div id="audit-history"></div></article>
+ <article class="audit-panel"><header><span>04 / EVIDÊNCIAS</span><h3>Auditoria fotográfica</h3></header><div id="audit-images"></div></article>
+ <article class="audit-panel"><header><span>05 / GESTÃO</span><h3>Pendências detectadas</h3></header><div id="audit-pending"></div></article>
+ <article class="audit-panel audit-span"><header><span>06 / PRÉ-REUNIÃO</span><h3>Checklist de validação</h3></header><div id="audit-checklist"></div></article>
+</div></section>
       <section id="page-executive" class="page active">
         <div id="dashboard-empty" class="dashboard-empty">
           <div>
@@ -743,61 +770,6 @@
     })();
   </script>
 
-  <script>
-  (() => {
-    const el=id=>document.getElementById(id);
-    const select=el('wh-week-select');
-    const original=el('executive-week-filter');
-    function syncOptions(){
-      if(!original)return;
-      const current=select.value;
-      select.replaceChildren(...Array.from(original.options).map(o=>o.cloneNode(true)));
-      select.value=current && Array.from(select.options).some(o=>o.value===current)?current:(original.value||'');
-    }
-    syncOptions();
-    if(original)new MutationObserver(syncOptions).observe(original,{childList:true,subtree:true});
-    document.querySelector('[data-page="week-health"]')?.addEventListener('click',()=>{syncOptions();refresh()});
-    if(!select)return;
-    let requestId=0;
-    const put=(id,value)=>{el(id).textContent=String(value)};
-    const status=(label,tone)=>{put('wh-status',label);el('wh-status').dataset.tone=tone||''};
-    async function refresh(){
-      const n=++requestId;
-      const week=Number(select.value);
-      put('wh-week-label',week?'S-'+week:'');
-      for(const id of ['wh-events','wh-photos','wh-offenders','wh-physical'])put(id,'—');
-      if(!week){status('Selecione uma semana');put('wh-detail','Escolha uma semana no filtro acima. A opção Atual não representa necessariamente uma semana salva.');return}
-      status('Consultando banco');
-      put('wh-detail','Conferindo a versão salva e as fotos no Supabase...');
-      try{
-        if(!window.CloudSync?.ready?.())throw Error('Supabase indisponível');
-        const [weekData,photos]=await Promise.all([
-          CloudSync.loadCoordinationWeek(week),
-          CloudSync.listCoordinationPhotos(week,'','')
-        ]);
-        if(n!==requestId)return;
-        const snap=weekData?.snapshot||weekData?.week||weekData;
-        const manual=snap?.pb_manual||snap?.pbManual||weekData?.pb_manual||{};
-        const entries=manual?.coordinationNotes?.__manualHighlights;
-        const offender=manual?.offenderCarryover?.rows;
-        put('wh-events',Array.isArray(entries)?entries.length:'Não informado');
-        put('wh-photos',Array.isArray(photos)?photos.length:'Não informado');
-        put('wh-offenders',Array.isArray(offender)?offender.length:'Não informado');
-        const filename=snap?.excel_file_name||snap?.excelFileName||'';
-        const physicalState=(filename && !/^Destaques da semana/i.test(filename))?'Excel salvo':'Pendente de confirmação';
-        put('wh-physical',physicalState);
-        status(physicalState==='Excel salvo'?'Base cadastrada':'Dados a conferir',physicalState==='Excel salvo'?'ok':'warning');
-        put('wh-detail','Semana '+week+' · Arquivo de origem: '+(filename||'não identificado')+'. Os registros de frentes indicam a base preservada, não uma nova apuração. A existência do Excel não valida seus indicadores físicos.');
-      }catch(err){
-        if(n!==requestId)return;
-        status('Consulta indisponível','warning');
-        put('wh-detail','Não foi possível confirmar os registros desta semana: '+(err?.message||'erro desconhecido')+'. Nenhuma informação foi alterada.');
-      }
-    }
-    select.addEventListener('change',refresh);
-    document.addEventListener('click',event=>{if(event.target?.id==='open-epc-dashboard')setTimeout(refresh,400)});
-    setTimeout(refresh,750);
-  })();
-  </script>
+  <script src="js/week-control.js?v=20261018-audit1"></script>
 </body>
 </html>
