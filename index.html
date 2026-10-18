@@ -76,6 +76,19 @@
       .portal-head{padding-top:48px}
     }
   </style>
+  <style>
+    .week-health{margin:14px 0 18px;padding:18px 20px;border:1px solid rgba(56,189,248,.24);border-radius:14px;background:linear-gradient(120deg,rgba(10,31,53,.96),rgba(13,43,67,.92));color:#e8f4ff}
+    .week-health-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+    .week-health-head h3{margin:3px 0;font-size:18px}
+    .week-health-head .eyebrow{margin:0;color:#8ac9e8;font-size:10px;letter-spacing:1.4px}
+    .wh-pill{border:1px solid #5c7286;background:rgba(120,140,160,.13);border-radius:25px;padding:6px 10px;font-size:11px;color:#deedff}
+    .wh-pill[data-tone="ok"]{border-color:#288f75;color:#8df0cc}.wh-pill[data-tone="warning"]{border-color:#bb8c35;color:#ffe3a0}
+    .wh-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+    .wh-metrics>div{padding:13px;border-radius:10px;background:rgba(3,15,29,.54);min-width:0}
+    .wh-metrics small{display:block;color:#a6c2d9;margin-bottom:7px;font-size:11px}.wh-metrics strong{font-size:19px;overflow-wrap:anywhere}
+    .wh-detail{font-size:12px;color:#b3cce0;margin:12px 0 0;line-height:1.6}
+    @media(max-width:700px){.wh-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.week-health{padding:14px}}
+  </style>
 </head>
 <body>
   <section id="upload-view" class="upload-view home" aria-label="Página inicial">
@@ -303,6 +316,16 @@
             Emitir PDF da semana
           </button>
         </div>
+        <section id="week-health" class="week-health" aria-label="Saúde dos dados da semana">
+          <div class="week-health-head"><div><p class="eyebrow">CONTROLE SEMANAL</p><h3>Saúde dos dados da semana <span id="wh-week-label">—</span></h3></div><span id="wh-status" class="wh-pill">Aguardando consulta</span></div>
+          <div class="wh-metrics">
+            <div><small>Registros gerenciais</small><strong id="wh-events">—</strong></div>
+            <div><small>Fotos cadastradas</small><strong id="wh-photos">—</strong></div>
+            <div><small>Frentes herdadas</small><strong id="wh-offenders">—</strong></div>
+            <div><small>Base física</small><strong id="wh-physical">—</strong></div>
+          </div>
+          <p id="wh-detail" class="wh-detail">Selecione uma semana no filtro acima para conferir os dados publicados.</p>
+        </section>
         <div id="executive-kpis" class="kpi-grid"></div>
         <div class="grid-2 executive-row">
           <article class="panel chart-panel"><div class="panel-heading"><div><p class="eyebrow">AVANÇO FÍSICO</p><h3>Avanço por unidade</h3></div></div><div class="chart-wrap"><canvas id="units-progress-chart"></canvas></div></article>
@@ -718,5 +741,51 @@
     })();
   </script>
 
+  <script>
+  (() => {
+    const el=id=>document.getElementById(id);
+    const select=el('executive-week-filter');
+    if(!select)return;
+    let requestId=0;
+    const put=(id,value)=>{el(id).textContent=String(value)};
+    const status=(label,tone)=>{put('wh-status',label);el('wh-status').dataset.tone=tone||''};
+    async function refresh(){
+      const n=++requestId;
+      const week=Number(select.value);
+      put('wh-week-label',week?'S-'+week:'');
+      for(const id of ['wh-events','wh-photos','wh-offenders','wh-physical'])put(id,'—');
+      if(!week){status('Selecione uma semana');put('wh-detail','Escolha uma semana no filtro acima. A opção Atual não representa necessariamente uma semana salva.');return}
+      status('Consultando banco');
+      put('wh-detail','Conferindo a versão salva e as fotos no Supabase...');
+      try{
+        if(!window.CloudSync?.ready?.())throw Error('Supabase indisponível');
+        const [weekData,photos]=await Promise.all([
+          CloudSync.loadCoordinationWeek(week),
+          CloudSync.listCoordinationPhotos(week,'','')
+        ]);
+        if(n!==requestId)return;
+        const snap=weekData?.snapshot||weekData?.week||weekData;
+        const manual=snap?.pb_manual||snap?.pbManual||weekData?.pb_manual||{};
+        const entries=manual?.coordinationNotes?.__manualHighlights;
+        const offender=manual?.offenderCarryover?.rows;
+        put('wh-events',Array.isArray(entries)?entries.length:'Não informado');
+        put('wh-photos',Array.isArray(photos)?photos.length:'Não informado');
+        put('wh-offenders',Array.isArray(offender)?offender.length:'Não informado');
+        const filename=snap?.excel_file_name||snap?.excelFileName||'';
+        const physicalState=(filename && !/^Destaques da semana/i.test(filename))?'Excel salvo':'Pendente de confirmação';
+        put('wh-physical',physicalState);
+        status(physicalState==='Excel salvo'?'Base cadastrada':'Dados a conferir',physicalState==='Excel salvo'?'ok':'warning');
+        put('wh-detail','Semana '+week+' · Arquivo de origem: '+(filename||'não identificado')+'. Os registros de frentes indicam a base preservada, não uma nova apuração. A existência do Excel não valida seus indicadores físicos.');
+      }catch(err){
+        if(n!==requestId)return;
+        status('Consulta indisponível','warning');
+        put('wh-detail','Não foi possível confirmar os registros desta semana: '+(err?.message||'erro desconhecido')+'. Nenhuma informação foi alterada.');
+      }
+    }
+    select.addEventListener('change',refresh);
+    document.addEventListener('click',event=>{if(event.target?.id==='open-epc-dashboard')setTimeout(refresh,400)});
+    setTimeout(refresh,750);
+  })();
+  </script>
 </body>
 </html>
