@@ -253,6 +253,7 @@
         <button class="nav-item" data-page="pb"><span>06</span> Reunião de Coordenação</button>
         <button class="nav-item" data-page="photo-time"><span>07</span> Tempo Fotográfico</button>
         <button class="nav-item" data-page="drone"><span>08</span> Acompanhamento por Drone</button>
+        <button class="nav-item" data-page="week-health"><span>09</span> Controle Semanal</button>
       </nav>
       <div class="sidebar-footer">
         <button id="back-home" class="sidebar-back-button" type="button" title="Voltar à página principal"><span aria-hidden="true">←</span> Voltar</button>
@@ -287,6 +288,17 @@
         </div>
       </header>
 
+      <section id="page-week-health" class="page"><p class="eyebrow">AUDITORIA INTERNA</p><h2>Controle Semanal</h2><p style="color:#b3cce0">Conferência interna; não integra a apresentação gerencial.</p>        <section id="week-health" class="week-health" aria-label="Saúde dos dados da semana">
+          <div class="week-health-head"><div><p class="eyebrow">CONTROLE SEMANAL</p><h3>Saúde dos dados da semana <span id="wh-week-label">—</span></h3></div><label style="font-size:12px;color:#b3cce0">Semana <select id="wh-week-select" style="margin-left:7px;padding:8px;background:#081b2e;border:1px solid #476b88;border-radius:7px;color:#fff"></select></label><span id="wh-status" class="wh-pill">Aguardando consulta</span></div>
+          <div class="wh-metrics">
+            <div><small>Registros gerenciais</small><strong id="wh-events">—</strong></div>
+            <div><small>Fotos cadastradas</small><strong id="wh-photos">—</strong></div>
+            <div><small>Frentes herdadas</small><strong id="wh-offenders">—</strong></div>
+            <div><small>Base física</small><strong id="wh-physical">—</strong></div>
+          </div>
+          <p id="wh-detail" class="wh-detail">Selecione uma semana no filtro acima para conferir os dados publicados.</p>
+        </section>
+</section>
       <section id="page-executive" class="page active">
         <div id="dashboard-empty" class="dashboard-empty">
           <div>
@@ -316,16 +328,6 @@
             Emitir PDF da semana
           </button>
         </div>
-        <section id="week-health" class="week-health" aria-label="Saúde dos dados da semana">
-          <div class="week-health-head"><div><p class="eyebrow">CONTROLE SEMANAL</p><h3>Saúde dos dados da semana <span id="wh-week-label">—</span></h3></div><span id="wh-status" class="wh-pill">Aguardando consulta</span></div>
-          <div class="wh-metrics">
-            <div><small>Registros gerenciais</small><strong id="wh-events">—</strong></div>
-            <div><small>Fotos cadastradas</small><strong id="wh-photos">—</strong></div>
-            <div><small>Frentes herdadas</small><strong id="wh-offenders">—</strong></div>
-            <div><small>Base física</small><strong id="wh-physical">—</strong></div>
-          </div>
-          <p id="wh-detail" class="wh-detail">Selecione uma semana no filtro acima para conferir os dados publicados.</p>
-        </section>
         <div id="executive-kpis" class="kpi-grid"></div>
         <div class="grid-2 executive-row">
           <article class="panel chart-panel"><div class="panel-heading"><div><p class="eyebrow">AVANÇO FÍSICO</p><h3>Avanço por unidade</h3></div></div><div class="chart-wrap"><canvas id="units-progress-chart"></canvas></div></article>
@@ -744,7 +746,17 @@
   <script>
   (() => {
     const el=id=>document.getElementById(id);
-    const select=el('executive-week-filter');
+    const select=el('wh-week-select');
+    const original=el('executive-week-filter');
+    function syncOptions(){
+      if(!original)return;
+      const current=select.value;
+      select.replaceChildren(...Array.from(original.options).map(o=>o.cloneNode(true)));
+      select.value=current && Array.from(select.options).some(o=>o.value===current)?current:(original.value||'');
+    }
+    syncOptions();
+    if(original)new MutationObserver(syncOptions).observe(original,{childList:true,subtree:true});
+    document.querySelector('[data-page="week-health"]')?.addEventListener('click',()=>{syncOptions();refresh()});
     if(!select)return;
     let requestId=0;
     const put=(id,value)=>{el(id).textContent=String(value)};
