@@ -508,7 +508,7 @@
     const unitButton = event.target.closest('[data-unit-index]');
     const unitIndex = unitButton?.dataset.unitIndex;
     if (page) {
-      if (!hasData && !['executive','photo-time','drone'].includes(page)) return;
+      if (!hasData && !['executive','photo-time','drone','week-health'].includes(page)) return;
       Dashboard.showPage(page);
     }
     if (unitIndex != null && hasData) {
