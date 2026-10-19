@@ -172,7 +172,29 @@ async function refresh(){
   const checks=[['Base física da S-'+week+' — '+(physical==='Excel identificado'?'Excel identificado; valores ainda não auditados':'Aguardando publicação do Excel atualizado'),physical==='Excel identificado'?null:false],['Registros manuais encontrados',rows.length>0],['Consulta fotográfica concluída',photos.ok],['Frentes ofensoras da semana anterior preservadas — '+offenders.length+' registros',offenders.length>0],['Revalidação operacional das frentes',offenderReview.ok?offendersReviewed:null],['Conferência humana da apresentação',review.ok?Boolean(reviewed):null]];
   fill('audit-checklist',[...checks.map(([name,ok])=>{const e=elt('div','audit-check');e.append(elt('span','',ok===null?'?':ok?'✓':'○'),elt('span','',name));if(ok!==true)e.append(elt('em','',ok===null?'Não verificado — consulta indisponível':'Pendente / não confirmado'));return e}),offenderPanel,reviewPanel]);
   write('audit-updated','Auditoria consultada em '+new Date().toLocaleString('pt-BR'));
-  fill('control-offenders-details',[label('Semana','S-'+week),label('Frentes cadastradas',offenders.length),label('Revalidação operacional',offendersReviewed?'Confirmada para esta versão':'Não confirmada'),elt('p','audit-dim','Gestão operacional e planos de ação serão adicionados sem modificar a base de frentes atual.')]);
+  const actionArea=elt('div','audit-offender-actions');
+  actionArea.append(label('Frentes ofensoras nesta semana',offenders.length),label('Revalidação operacional',offendersReviewed?'Confirmada':'Não confirmada'));
+  const filter=elt('input');filter.placeholder='Pesquisar unidade ou atividade';filter.style.cssText='padding:10px;background:#071b30;border:1px solid #3b7592;color:white;border-radius:8px;width:100%';
+  const items=elt('div','audit-offender-list');actionArea.append(filter,items);
+  let actions=[];let actionError='';
+  try{actions=await CloudSync.listOffenderActions(week)}catch(e){actionError=e.message}
+  if(token!==seq)return;
+  if(actionError)actionArea.append(elt('p','audit-dim','Planos de ação indisponíveis: '+actionError));
+  const draw=()=>{const query=filter.value.toLocaleLowerCase('pt-BR');const filtered=offenders.filter(r=>(String(r.unit||'')+' '+String(r.component||'')+' '+String(r.phase||'')).toLocaleLowerCase('pt-BR').includes(query));items.replaceChildren();
+    for(const r of filtered.slice(0,100)){
+      const idx=Number(r.sourceIndex),existing=actions.find(a=>Number(a.source_index)===idx);
+      const line=elt('details','audit-issue');line.append(elt('summary','',(r.unit||'Unidade')+' · '+(r.component||r.phase||'Frente')+' · '+(existing?.status||'Sem plano')));
+      const form=elt('div','audit-action-form');
+      const field=(title,value='')=>{const box=elt('label','',title+' '),input=elt('input');input.value=value;input.style.cssText='display:block;margin:6px 0 10px;padding:9px;width:100%;background:#081e31;color:#fff;border:1px solid #426b81;border-radius:7px';box.append(input);form.append(box);return input};
+      const responsible=field('Responsável',existing?.responsible||''),due=field('Prazo',existing?.due_date||'');due.type='date';
+      const priority=elt('select'),status=elt('select');for(const value of ['Baixa','Média','Alta','Crítica'])priority.append(new Option(value,value));for(const value of ['Aberta','Em andamento','Resolvida'])status.append(new Option(value,value));priority.value=existing?.priority||'Média';status.value=existing?.status||'Aberta';form.append(elt('span','','Criticidade '),priority,elt('span','',' Situação '),status);
+      const note=field('Plano de ação / observação',existing?.action_note||'');
+      const btn=elt('button','','Salvar plano com senha master');btn.type='button';btn.onclick=async()=>{if(!Number.isFinite(idx)){alert('Identificador inválido');return}const master=prompt('Informe a senha master:');if(!master)return;if(!confirm('Salvar este plano de ação da S-'+week+'?'))return;try{await CloudSync.saveOffenderAction({weekNo:week,sourceIndex:idx,responsible:responsible.value,dueDate:due.value,priority:priority.value,status:status.value,note:note.value,master});alert('Plano salvo.');refresh()}catch(e){alert('Falha: '+e.message)}};
+      form.append(btn);line.append(form);items.append(line);
+    }
+    if(filtered.length>100)items.append(elt('p','audit-dim','Exibindo 100 frentes. Use a pesquisa para localizar as demais.'));
+  };
+  filter.oninput=draw;draw();fill('control-offenders-details',[actionArea]);
   fill('control-publications-details',[label('Semana','S-'+week),label('Versão vigente',snap.version_no||'Não informada'),label('Arquivo de origem',file||'Não informado'),label('Salvo em',date(snap.saved_at)),label('Versões disponíveis',Array.isArray(versions)?versions.length:'Consulta indisponível'),elt('p','audit-dim','Use a seção Histórico da Visão Geral para comparar versões. Homologação pré-publicação ainda não implementada.')]);
   fill('control-physical-details',[label('Base física',physical),elt('p','audit-dim','Gráficos Real × Previsto × Projetado aguardam a publicação da base física correspondente. Nenhum número será extrapolado.')]);
   fill('control-risks-details',[label('Alertas de auditoria',issues.filter(x=>x.dataset.severity==='attention').length),elt('p','audit-dim','Estes são alertas de qualidade de dados, não previsões de atraso. Análise de risco físico depende de histórico verificado.')]);
