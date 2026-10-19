@@ -48,7 +48,7 @@ async function refresh(){
   write('wh-photos',count==null?'Indisponível':count);
   write('wh-offenders',offenders.length||'0');
   write('wh-physical',physical);
-  const status=$('wh-status');status.dataset.tone=physical==='Excel identificado'?'ok':'warning';
+  const status=$('wh-status');status.dataset.tone=physical==='Excel identificado'?'warning':'warning';
   write('wh-status',physical==='Excel salvo'?'Arquivo identificado':'Dados a conferir');
   write('wh-detail','Fonte: '+(file||'não informada')+'. Publicação física só é confirmada quando o Excel correspondente for salvo. Contagens de fotos e frentes são registros existentes, não confirmação de integridade dos arquivos.');
   const issues=[];
@@ -67,13 +67,14 @@ async function refresh(){
   if(!issues.some(i=>i.dataset.severity==='attention')&&photos.ok&&review.ok&&offenderReview.ok)issues.unshift(issue('Sem alertas nas verificações disponíveis','Conferências básicas executadas. Esta situação não equivale à aprovação completa.','ok'));
   fill('audit-issues',issues);
   const units=new Set(rows.map(x=>x.unit).filter(Boolean)),pastUnits=new Set(earlier.map(x=>x.unit).filter(Boolean));
+  const hasPrevious=Boolean(prev?.snapshot?.dataset||prev?.snapshot?.pb_manual||prev?.pb_manual);
   const kinds=['Destaque','Pontos de Atenção','Próximas Ações'];
   const ofKind=(items,kind)=>items.filter(x=>String(x.event||'').toLowerCase()===kind.toLowerCase()).length;
   const delta=(now,old)=>(now-old>0?'+':'')+(now-old);
   const output=[label('Comparação','S-'+(week-1)+' → S-'+week)];
-  for(const kind of kinds)output.push(label(kind,ofKind(earlier,kind)+' → '+ofKind(rows,kind)+' ('+delta(ofKind(rows,kind),ofKind(earlier,kind))+')'));
-  output.push(label('Eventos Gerenciais',earlier.length+' → '+rows.length+' ('+delta(rows.length,earlier.length)+')'));
-  output.push(label('Unidades com eventos',pastUnits.size+' → '+units.size));
+  for(const kind of kinds)output.push(label(kind,hasPrevious?ofKind(earlier,kind)+' → '+ofKind(rows,kind)+' ('+delta(ofKind(rows,kind),ofKind(earlier,kind))+')':'Semana anterior indisponível'));
+  output.push(label('Eventos Gerenciais',hasPrevious?earlier.length+' → '+rows.length+' ('+delta(rows.length,earlier.length)+')'):'Sem base de comparação'));
+  output.push(label('Unidades com eventos',hasPrevious?pastUnits.size+' → '+units.size:units.size+' na semana atual'));
   const key=x=>[x.unit,x.event,x.phase,x.description].map(v=>String(v||'').trim().toLowerCase()).join('|');
   const build=items=>{const m=new Map();for(const x of items){const k=key(x);m.set(k,[...(m.get(k)||[]),x])}return m};
   const oldEvents=build(earlier),newEvents=build(rows),added=[],removed=[],kept=[];
@@ -86,7 +87,7 @@ async function refresh(){
     for(const x of items)group.append(label((x.unit||'Unidade não informada')+' · '+(x.event||''),x.description||'Sem descrição'));
     details.append(group);
   }
-  output.push(elt('p','audit-dim','Comparação textual: eventos com descrição alterada podem aparecer como novo e ausente. Ausência não significa conclusão da atividade.'),details);
+  output.push(elt('p','audit-dim',hasPrevious?'Comparação textual: eventos com descrição alterada podem aparecer como novo e ausente. Ausência não significa conclusão da atividade.':'Semana anterior não disponível: eventos não podem ser classificados como novos ou ausentes.'),...(hasPrevious?[details]:[]));
   fill('audit-diff',output);
   const wk=Array.isArray(history)?history.filter(x=>Number(x.week_no??x.weekNo??x.week)===week):[];
   fill('audit-history',[label('Arquivo atual',file||'Não identificado'),label('Versão',snap.version_no||snap.versionNo||'Não informada'),label('Salvo em',date(snap.saved_at||snap.savedAt)),label('Responsável',snap.saved_by||snap.savedBy||'Não informado'),label('Versões listadas',wk.length||'Não disponível'),elt('p','audit-dim','Cada publicação pode gerar uma nova versão. O relatório não restaura dados nem modifica publicações.')]);
@@ -97,7 +98,7 @@ async function refresh(){
   const reviewPanel=elt('div','audit-issue');
   reviewPanel.dataset.severity=reviewed?'ok':'attention';
   reviewPanel.append(elt('strong','',reviewed?'Apresentação conferida':'Conferência humana da apresentação pendente'),elt('p','',reviewed?'Responsável: '+review.data.reviewer+' · '+date(review.data.reviewed_at)+' · Versão '+review.data.version_no:'Confira o PDF e confirme manualmente. Uma nova versão exige nova revisão.'));
-  if(!reviewed){
+  if(!reviewed&&review.ok){
     const confirmButton=elt('button','','Marcar apresentação como conferida');
     confirmButton.type='button';confirmButton.style.cssText='padding:10px;background:#146180;color:white;border:1px solid #58bfe2;border-radius:8px;cursor:pointer';
     confirmButton.onclick=async()=>{
@@ -116,7 +117,7 @@ async function refresh(){
     elt('strong','',offendersReviewed?'Frentes ofensoras revalidadas':'Revalidação operacional das frentes pendente'),
     elt('p','',offendersReviewed?'Responsável: '+offenderReview.data.reviewer+' · '+date(offenderReview.data.reviewed_at)+' · Versão '+offenderReview.data.version_no:'Confirme somente após verificar operacionalmente as frentes. A confirmação não altera seus registros.')
   );
-  if(!offendersReviewed){
+  if(!offendersReviewed&&offenderReview.ok){
     const btn=elt('button','','Confirmar frentes ofensoras');
     btn.type='button';
     btn.style.cssText='padding:10px;background:#146180;color:white;border:1px solid #58bfe2;border-radius:8px;cursor:pointer';
