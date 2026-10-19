@@ -67,7 +67,27 @@ async function refresh(){
   if(!issues.some(i=>i.dataset.severity==='attention'))issues.unshift(issue('Sem alerta crítico nas verificações disponíveis','Conferências automatizadas básicas concluídas. Recomenda-se validação humana das informações.','ok'));
   fill('audit-issues',issues);
   const units=new Set(rows.map(x=>x.unit).filter(Boolean)),pastUnits=new Set(earlier.map(x=>x.unit).filter(Boolean));
-  fill('audit-diff',[label('Semana de referência','S-'+(week-1)),label('Registros anteriores',earlier.length||'Não encontrados'),label('Registros atuais',rows.length),label('Diferença',earlier.length?((rows.length-earlier.length)>0?'+':'')+(rows.length-earlier.length):'Sem base comparável'),label('Unidades com registros',units.size),label('Unidades na semana anterior',pastUnits.size),elt('p','audit-dim','A comparação indica volumes de registros, não evolução física; isso depende dos Excel publicados.')]);
+  const kinds=['Destaque','Pontos de Atenção','Próximas Ações'];
+  const ofKind=(items,kind)=>items.filter(x=>String(x.event||'').toLowerCase()===kind.toLowerCase()).length;
+  const delta=(now,old)=>(now-old>0?'+':'')+(now-old);
+  const output=[label('Comparação','S-'+(week-1)+' → S-'+week)];
+  for(const kind of kinds)output.push(label(kind,ofKind(earlier,kind)+' → '+ofKind(rows,kind)+' ('+delta(ofKind(rows,kind),ofKind(earlier,kind))+')'));
+  output.push(label('Eventos Gerenciais',earlier.length+' → '+rows.length+' ('+delta(rows.length,earlier.length)+')'));
+  output.push(label('Unidades com eventos',pastUnits.size+' → '+units.size));
+  const key=x=>[x.unit,x.event,x.phase,x.description].map(v=>String(v||'').trim().toLowerCase()).join('|');
+  const build=items=>{const m=new Map();for(const x of items){const k=key(x);m.set(k,[...(m.get(k)||[]),x])}return m};
+  const oldEvents=build(earlier),newEvents=build(rows),added=[],removed=[],kept=[];
+  for(const [k,items] of newEvents){const old=oldEvents.get(k)||[];kept.push(...items.slice(0,old.length));added.push(...items.slice(old.length))}
+  for(const [k,items] of oldEvents)removed.push(...items.slice((newEvents.get(k)||[]).length));
+  const details=elt('details','audit-differences');
+  details.append(elt('summary','','Ver diferenças: '+added.length+' novos, '+removed.length+' ausentes, '+kept.length+' mantidos'));
+  for(const [name,items] of [['Novos',added],['Ausentes nesta semana',removed],['Mantidos',kept]]){
+    const group=elt('div','audit-difference-group');group.append(elt('h4','',name+' ('+items.length+')'));
+    for(const x of items)group.append(label((x.unit||'Unidade não informada')+' · '+(x.event||''),x.description||'Sem descrição'));
+    details.append(group);
+  }
+  output.push(elt('p','audit-dim','Comparação textual: eventos com descrição alterada podem aparecer como novo e ausente. Ausência não significa conclusão da atividade.'),details);
+  fill('audit-diff',output);
   const wk=Array.isArray(history)?history.filter(x=>Number(x.week_no??x.weekNo??x.week)===week):[];
   fill('audit-history',[label('Arquivo atual',file||'Não identificado'),label('Versão',snap.version_no||snap.versionNo||'Não informada'),label('Salvo em',date(snap.saved_at||snap.savedAt)),label('Responsável',snap.saved_by||snap.savedBy||'Não informado'),label('Versões listadas',wk.length||'Não disponível'),elt('p','audit-dim','Cada publicação pode gerar uma nova versão. O relatório não restaura dados nem modifica publicações.')]);
   const grouping=new Map();for(const p of imgList){const k=p.unit_name||p.unitName||'Sem unidade';grouping.set(k,(grouping.get(k)||0)+1)}
