@@ -117,7 +117,15 @@
 .audit-versions{margin-top:12px;padding:12px;border:1px solid #31536d;border-radius:10px}
 .audit-versions select{background:#061827;color:#e5f5ff;border:1px solid #42708c;border-radius:8px;padding:8px;margin:4px 7px 12px 0}
 @media(max-width:700px){.audit-photo-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
-</style><style>.audit-description-details{margin-top:12px;padding:12px;border:1px solid #3f7189;border-radius:10px}.audit-description-details summary{cursor:pointer;color:#82def6;font-weight:700}.audit-description-details .audit-issue{margin-top:10px;overflow-wrap:anywhere}</style></head>
+</style><style>.audit-description-details{margin-top:12px;padding:12px;border:1px solid #3f7189;border-radius:10px}.audit-description-details summary{cursor:pointer;color:#82def6;font-weight:700}.audit-description-details .audit-issue{margin-top:10px;overflow-wrap:anywhere}</style><style>
+.control-tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:16px 0;padding:9px;border:1px solid #2c5873;border-radius:12px;background:#071b2d}
+.control-tabs button{background:transparent;color:#b6d2e4;border:1px solid transparent;border-radius:8px;padding:11px 13px;cursor:pointer;font-weight:700}
+.control-tabs button:hover{background:#123a54}.control-tabs button.active{background:#115b7b;color:white;border-color:#3ebbe5;box-shadow:0 0 18px #0798ce30}
+.control-secondary{padding:22px;border:1px solid #2b617d;border-radius:13px;background:linear-gradient(135deg,#0a2942,#071929);min-height:260px;margin:14px 0 30px;color:#d9ecfa}
+.control-secondary h3{font-size:21px;margin:0 0 12px}.control-secondary p{color:#a9c6da}
+.control-info{display:grid;gap:10px;margin-top:18px}.control-info .audit-line{padding:13px;background:#061a2d;border:1px solid #23445d;border-radius:9px}
+[data-control-panel][hidden]{display:none!important}
+</style></head>
 <body>
   <section id="upload-view" class="upload-view home" aria-label="Página inicial">
     <header class="site-topbar">
@@ -326,15 +334,26 @@
           </div>
           <p id="wh-detail" class="wh-detail">Selecione uma semana no filtro acima para conferir os dados publicados.</p>
         </section>
-<div class="audit-toolbar"><button id="audit-refresh" type="button">↻ Executar auditoria</button><button id="audit-export" type="button">↓ Exportar auditoria PDF</button><span id="audit-updated">Aguardando consulta</span></div>
-<div class="audit-layout">
+<nav class="control-tabs" aria-label="Áreas do Controle Semanal" role="tablist">
+<button type="button" class="active" data-control-tab="overview" aria-selected="true">Visão Geral</button>
+<button type="button" data-control-tab="offenders" aria-selected="false">Frentes Ofensoras</button>
+<button type="button" data-control-tab="publications" aria-selected="false">Publicações</button>
+<button type="button" data-control-tab="physical" aria-selected="false">Evolução Física</button>
+<button type="button" data-control-tab="risks" aria-selected="false">Inteligência de Riscos</button>
+<button type="button" data-control-tab="timeline" aria-selected="false">Linha do Tempo</button>
+</nav><div class="audit-toolbar" data-control-panel="overview"><button id="audit-refresh" type="button">↻ Executar auditoria</button><button id="audit-export" type="button">↓ Exportar auditoria PDF</button><span id="audit-updated">Aguardando consulta</span></div>
+<div class="audit-layout" data-control-panel="overview">
  <article class="audit-panel audit-span"><header><span>01 / DIAGNÓSTICO</span><h3>Verificações automáticas</h3></header><div id="audit-issues" class="audit-issue-list"><p>Selecione uma semana para iniciar.</p></div></article>
  <article class="audit-panel"><header><span>02 / EVOLUÇÃO</span><h3>Comparação com semana anterior</h3></header><div id="audit-diff"></div></article>
  <article class="audit-panel"><header><span>03 / HISTÓRICO</span><h3>Versões e publicações</h3></header><div id="audit-history"></div></article>
  <article class="audit-panel"><header><span>04 / EVIDÊNCIAS</span><h3>Auditoria fotográfica</h3></header><div id="audit-images"></div></article>
  <article class="audit-panel"><header><span>05 / GESTÃO</span><h3>Pendências detectadas</h3></header><div id="audit-pending"></div></article>
  <article class="audit-panel audit-span"><header><span>06 / PRÉ-REUNIÃO</span><h3>Checklist de validação</h3></header><div id="audit-checklist"></div></article>
-</div></section>
+</div><div class="control-secondary" data-control-panel="offenders" hidden><h3>Gestão de Frentes Ofensoras</h3><p>Consulta das frentes da semana e referência para acompanhamento operacional. Não altera o planejamento oficial.</p><div id="control-offenders-details" class="control-info"></div></div>
+<div class="control-secondary" data-control-panel="publications" hidden><h3>Controle de Publicações</h3><p>Versão vigente, arquivo de origem e histórico de publicações da semana.</p><div id="control-publications-details" class="control-info"></div></div>
+<div class="control-secondary" data-control-panel="physical" hidden><h3>Evolução Física</h3><div id="control-physical-details" class="control-info">Aguardando consulta.</div></div>
+<div class="control-secondary" data-control-panel="risks" hidden><h3>Inteligência de Riscos</h3><div id="control-risks-details" class="control-info">Aguardando consulta.</div></div>
+<div class="control-secondary" data-control-panel="timeline" hidden><h3>Linha do Tempo da Obra</h3><div id="control-timeline-details" class="control-info">Aguardando consulta.</div></div></section>
       <section id="page-executive" class="page active">
         <div id="dashboard-empty" class="dashboard-empty">
           <div>
