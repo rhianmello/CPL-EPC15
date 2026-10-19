@@ -27,13 +27,14 @@ async function refresh(){
  try{
   if(!window.CloudSync?.ready?.())throw Error('Conexão Supabase indisponível');
   const previous=week>1?CloudSync.loadCoordinationWeek(week-1).catch(()=>null):Promise.resolve(null);
-  const [cur,prev,photos,history,allPhotos,review]=await Promise.all([
+  const [cur,prev,photos,history,allPhotos,review,offenderReview]=await Promise.all([
     CloudSync.loadCoordinationWeek(week),
     previous,
     CloudSync.listCoordinationPhotos(week,'','').catch(()=>null),
     CloudSync.listCoordinationWeeks().catch(()=>[]),
     CloudSync.listCoordinationPhotoHistory('','','').catch(()=>null),
-    CloudSync.getPresentationReview(week).catch(()=>null)
+    CloudSync.getPresentationReview(week).catch(()=>null),
+    CloudSync.getOffenderReview(week).catch(()=>null)
   ]);
   if(token!==seq)return;
   const snap=asSnapshot(cur),before=asSnapshot(prev),rows=noteRows(snap),earlier=noteRows(before),offenders=carry(snap);
@@ -88,8 +89,31 @@ async function refresh(){
     };
     reviewPanel.append(confirmButton);
   }
-  const checks=[['Excel físico correspondente cadastrado',physical==='Excel salvo'],['Registros manuais encontrados',rows.length>0],['Consulta fotográfica concluída',count!==null],['Frentes ofensoras da semana anterior preservadas — '+offenders.length+' registros',offenders.length>0],['Revalidação operacional das frentes (não aferida automaticamente)',false],['Conferência humana da apresentação',Boolean(reviewed)]];
-  fill('audit-checklist',[...checks.map(([name,ok])=>{const e=elt('div','audit-check');e.append(elt('span','',ok?'✓':'○'),elt('span','',name));if(!ok)e.append(elt('em','','Pendente / não confirmado'));return e}),reviewPanel]);
+  const offendersReviewed=Boolean(offenderReview&&Number(offenderReview.version_no)===Number(snap.version_no));
+  const offenderPanel=elt('div','audit-issue');
+  offenderPanel.dataset.severity=offendersReviewed?'ok':'attention';
+  offenderPanel.append(
+    elt('strong','',offendersReviewed?'Frentes ofensoras revalidadas':'Revalidação operacional das frentes pendente'),
+    elt('p','',offendersReviewed?'Responsável: '+offenderReview.reviewer+' · '+date(offenderReview.reviewed_at)+' · Versão '+offenderReview.version_no:'Confirme somente após verificar operacionalmente as frentes. A confirmação não altera seus registros.')
+  );
+  if(!offendersReviewed){
+    const btn=elt('button','','Confirmar frentes ofensoras');
+    btn.type='button';
+    btn.style.cssText='padding:10px;background:#146180;color:white;border:1px solid #58bfe2;border-radius:8px;cursor:pointer';
+    btn.onclick=async()=>{
+      const reviewer=prompt('Nome do responsável que revalidou as frentes ofensoras:');
+      if(!reviewer||reviewer.trim().length<2)return;
+      const master=prompt('Senha master para confirmar a revalidação:');if(!master)return;
+      if(!confirm('Você confirma que as frentes ofensoras da S-'+week+', versão '+snap.version_no+', foram verificadas operacionalmente?'))return;
+      try{
+        await CloudSync.confirmOffenderReview({weekNo:week,versionNo:snap.version_no,reviewer:reviewer.trim(),masterPassword:master});
+        alert('Revalidação operacional registrada.');refresh();
+      }catch(err){alert('Não foi possível registrar: '+err.message)}
+    };
+    offenderPanel.append(btn);
+  }
+  const checks=[['Excel físico correspondente cadastrado',physical==='Excel salvo'],['Registros manuais encontrados',rows.length>0],['Consulta fotográfica concluída',count!==null],['Frentes ofensoras da semana anterior preservadas — '+offenders.length+' registros',offenders.length>0],['Revalidação operacional das frentes',offendersReviewed],['Conferência humana da apresentação',Boolean(reviewed)]];
+  fill('audit-checklist',[...checks.map(([name,ok])=>{const e=elt('div','audit-check');e.append(elt('span','',ok?'✓':'○'),elt('span','',name));if(!ok)e.append(elt('em','','Pendente / não confirmado'));return e}),offenderPanel,reviewPanel]);
   write('audit-updated','Auditoria consultada em '+new Date().toLocaleString('pt-BR'));
   lastReport=['CONTROLE SEMANAL — EPC-15','Semana S-'+week,'Arquivo: '+file,'Registros: '+rows.length,'Fotos: '+count,'Frentes preservadas: '+offenders.length,'','DIAGNÓSTICOS',...issues.map(x=>'- '+x.querySelector('strong').textContent+': '+x.querySelector('p').textContent),'','Somente relatório. Não foram alterados dados.'].join('\n');
  }catch(err){
