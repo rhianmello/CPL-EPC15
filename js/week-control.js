@@ -172,6 +172,11 @@ async function refresh(){
   const checks=[['Base física da S-'+week+' — '+(physical==='Excel identificado'?'Excel identificado; valores ainda não auditados':'Aguardando publicação do Excel atualizado'),physical==='Excel identificado'?null:false],['Registros manuais encontrados',rows.length>0],['Consulta fotográfica concluída',photos.ok],['Frentes ofensoras da semana anterior preservadas — '+offenders.length+' registros',offenders.length>0],['Revalidação operacional das frentes',offenderReview.ok?offendersReviewed:null],['Conferência humana da apresentação',review.ok?Boolean(reviewed):null]];
   fill('audit-checklist',[...checks.map(([name,ok])=>{const e=elt('div','audit-check');e.append(elt('span','',ok===null?'?':ok?'✓':'○'),elt('span','',name));if(ok!==true)e.append(elt('em','',ok===null?'Não verificado — consulta indisponível':'Pendente / não confirmado'));return e}),offenderPanel,reviewPanel]);
   write('audit-updated','Auditoria consultada em '+new Date().toLocaleString('pt-BR'));
+  fill('control-offenders-details',[label('Semana','S-'+week),label('Frentes cadastradas',offenders.length),label('Revalidação operacional',offendersReviewed?'Confirmada para esta versão':'Não confirmada'),elt('p','audit-dim','Gestão operacional e planos de ação serão adicionados sem modificar a base de frentes atual.')]);
+  fill('control-publications-details',[label('Semana','S-'+week),label('Versão vigente',snap.version_no||'Não informada'),label('Arquivo de origem',file||'Não informado'),label('Salvo em',date(snap.saved_at)),label('Versões disponíveis',Array.isArray(versions)?versions.length:'Consulta indisponível'),elt('p','audit-dim','Use a seção Histórico da Visão Geral para comparar versões. Homologação pré-publicação ainda não implementada.')]);
+  fill('control-physical-details',[label('Base física',physical),elt('p','audit-dim','Gráficos Real × Previsto × Projetado aguardam a publicação da base física correspondente. Nenhum número será extrapolado.')]);
+  fill('control-risks-details',[label('Alertas de auditoria',issues.filter(x=>x.dataset.severity==='attention').length),elt('p','audit-dim','Estes são alertas de qualidade de dados, não previsões de atraso. Análise de risco físico depende de histórico verificado.')]);
+  fill('control-timeline-details',[label('Semana selecionada','S-'+week),label('Eventos gerenciais',rows.length),elt('p','audit-dim','A linha do tempo de marcos dependerá de datas verificáveis e referências dos eventos. Nenhum marco será criado automaticamente.')]);
   lastAudit={week,rows,photos:imgList,offenders:offenders.length,issues:issues.map(x=>({title:x.querySelector('strong').textContent,description:x.querySelector('p').textContent})),file,reviewed,offendersReviewed};
   lastReport=['CONTROLE SEMANAL — EPC-15','Semana S-'+week,'Arquivo: '+file,'Registros: '+rows.length,'Fotos: '+count,'Frentes preservadas: '+offenders.length,'','DIAGNÓSTICOS',...issues.map(x=>'- '+x.querySelector('strong').textContent+': '+x.querySelector('p').textContent),'','Somente relatório. Não foram alterados dados.'].join('\n');
  }catch(err){
@@ -182,6 +187,13 @@ async function refresh(){
   lastReport='';lastAudit=null;write('audit-updated','Falha na consulta');
  }
 }
+const tabs=Array.from(document.querySelectorAll('[data-control-tab]'));
+function switchControlTab(name){
+ for(const btn of tabs){const active=btn.dataset.controlTab===name;btn.classList.toggle('active',active);btn.setAttribute('aria-selected',String(active))}
+ for(const panel of document.querySelectorAll('[data-control-panel]'))panel.hidden=panel.dataset.controlPanel!==name;
+}
+tabs.forEach(btn=>btn.addEventListener('click',()=>switchControlTab(btn.dataset.controlTab)));
+switchControlTab('overview');
 options();
 if(source)new MutationObserver(options).observe(source,{childList:true,subtree:true});
 document.querySelector('[data-page="week-health"]')?.addEventListener('click',()=>{options();refresh()});
