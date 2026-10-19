@@ -417,7 +417,21 @@
     });
     if(error)throw new Error(error.message);return data;
   }
+  async function getOffenderReview(weekNo) {
+    const client=getClient();if(!client)throw new Error('Supabase indisponível');
+    const {data,error}=await client.rpc('get_coordination_offender_review_public',{p_week_no:Number(weekNo)});
+    if(error)throw new Error(error.message);return data||{};
+  }
+  async function confirmOffenderReview({weekNo,versionNo,reviewer,masterPassword}) {
+    const client=getClient();if(!client)throw new Error('Supabase indisponível');
+    const {data,error}=await client.rpc('confirm_coordination_offender_review_public',{
+      p_week_no:Number(weekNo),p_version_no:Number(versionNo),p_reviewer:String(reviewer),p_master_password:String(masterPassword)
+    });
+    if(error)throw new Error(error.message);return data;
+  }
   window.CloudSync = {
+    getOffenderReview,
+    confirmOffenderReview,
     getPresentationReview,
     confirmPresentationReview,
     rpc,
