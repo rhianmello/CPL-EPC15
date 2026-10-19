@@ -49,7 +49,7 @@ async function refresh(){
   write('wh-offenders',offenders.length||'0');
   write('wh-physical',physical);
   const status=$('wh-status');status.dataset.tone=physical==='Excel identificado'?'warning':'warning';
-  write('wh-status',physical==='Excel salvo'?'Arquivo identificado':'Dados a conferir');
+  write('wh-status',physical==='Excel identificado'?'Arquivo identificado':'Dados a conferir');
   write('wh-detail','Fonte: '+(file||'não informada')+'. Publicação física só é confirmada quando o Excel correspondente for salvo. Contagens de fotos e frentes são registros existentes, não confirmação de integridade dos arquivos.');
   const issues=[];
   if(!file||physical!=='Excel salvo')issues.push(issue('Base física não confirmada','Não tratar os indicadores físicos como atualização oficial desta semana.','attention'));
@@ -73,7 +73,7 @@ async function refresh(){
   const delta=(now,old)=>(now-old>0?'+':'')+(now-old);
   const output=[label('Comparação','S-'+(week-1)+' → S-'+week)];
   for(const kind of kinds)output.push(label(kind,hasPrevious?ofKind(earlier,kind)+' → '+ofKind(rows,kind)+' ('+delta(ofKind(rows,kind),ofKind(earlier,kind))+')':'Semana anterior indisponível'));
-  output.push(label('Eventos Gerenciais',hasPrevious?earlier.length+' → '+rows.length+' ('+delta(rows.length,earlier.length)+')'):'Sem base de comparação'));
+  output.push(label('Eventos Gerenciais',hasPrevious?earlier.length+' → '+rows.length+' ('+delta(rows.length,earlier.length)+')':'Sem base de comparação'));
   output.push(label('Unidades com eventos',hasPrevious?pastUnits.size+' → '+units.size:units.size+' na semana atual'));
   const key=x=>[x.unit,x.event,x.phase,x.description].map(v=>String(v||'').trim().toLowerCase()).join('|');
   const build=items=>{const m=new Map();for(const x of items){const k=key(x);m.set(k,[...(m.get(k)||[]),x])}return m};
@@ -135,7 +135,7 @@ async function refresh(){
   }
   if(!review.ok)reviewPanel.append(elt('p','audit-dim','Consulta da validação indisponível: '+review.error));
   if(!offenderReview.ok)offenderPanel.append(elt('p','audit-dim','Consulta da revalidação indisponível: '+offenderReview.error));
-  const checks=[['Excel físico correspondente cadastrado',physical==='Excel salvo'],['Registros manuais encontrados',rows.length>0],['Consulta fotográfica concluída',photos.ok],['Frentes ofensoras da semana anterior preservadas — '+offenders.length+' registros',offenders.length>0],['Revalidação operacional das frentes',offendersReviewed],['Conferência humana da apresentação',Boolean(reviewed)]];
+  const checks=[['Arquivo físico identificado (valores ainda não auditados)',physical==='Excel identificado'],['Registros manuais encontrados',rows.length>0],['Consulta fotográfica concluída',photos.ok],['Frentes ofensoras da semana anterior preservadas — '+offenders.length+' registros',offenders.length>0],['Revalidação operacional das frentes',offendersReviewed],['Conferência humana da apresentação',Boolean(reviewed)]];
   fill('audit-checklist',[...checks.map(([name,ok])=>{const e=elt('div','audit-check');e.append(elt('span','',ok?'✓':'○'),elt('span','',name));if(!ok)e.append(elt('em','','Pendente / não confirmado'));return e}),offenderPanel,reviewPanel]);
   write('audit-updated','Auditoria consultada em '+new Date().toLocaleString('pt-BR'));
   lastReport=['CONTROLE SEMANAL — EPC-15','Semana S-'+week,'Arquivo: '+file,'Registros: '+rows.length,'Fotos: '+count,'Frentes preservadas: '+offenders.length,'','DIAGNÓSTICOS',...issues.map(x=>'- '+x.querySelector('strong').textContent+': '+x.querySelector('p').textContent),'','Somente relatório. Não foram alterados dados.'].join('\n');
