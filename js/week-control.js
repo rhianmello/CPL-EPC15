@@ -27,12 +27,11 @@ async function refresh(){
  try{
   if(!window.CloudSync?.ready?.())throw Error('Conexão Supabase indisponível');
   const previous=week>1?CloudSync.loadCoordinationWeek(week-1).catch(()=>null):Promise.resolve(null);
-  const [cur,prev,photos,history,allPhotos,review,offenderReview]=await Promise.all([
+  const [cur,prev,photos,history,review,offenderReview]=await Promise.all([
     CloudSync.loadCoordinationWeek(week),
     previous,
     CloudSync.listCoordinationPhotos(week,'','').then(data=>({ok:true,data})).catch(error=>({ok:false,error:String(error.message||error)})),
     CloudSync.listCoordinationWeeks().catch(()=>[]),
-    CloudSync.listCoordinationPhotoHistory('','','').then(data=>({ok:true,data})).catch(error=>({ok:false,error:String(error.message||error)})),
     CloudSync.getPresentationReview(week).then(data=>({ok:true,data})).catch(error=>({ok:false,error:String(error.message||error)})),
     CloudSync.getOffenderReview(week).then(data=>({ok:true,data})).catch(error=>({ok:false,error:String(error.message||error)}))
   ]);
@@ -41,9 +40,7 @@ async function refresh(){
   const file=snap.excel_file_name||snap.excelFileName||'';
   const physical=file&&!/^Destaques da semana/i.test(file)?'Excel identificado':'Não verificado';
   const count=photos.ok&&Array.isArray(photos.data)?photos.data.length:null;
-  const photosAll=allPhotos.ok&&Array.isArray(allPhotos.data)?allPhotos.data.filter(p=>Number(p.week_no||p.weekNo)===week):null;
-  const effectivePhotos=photosAll?.length>count?photosAll:photos.data;
-  const imgList=Array.isArray(effectivePhotos)?effectivePhotos:[];
+  const imgList=photos.ok&&Array.isArray(photos.data)?photos.data:[];
   write('wh-events',Array.isArray(rows)?rows.length:'—');
   write('wh-photos',count==null?'Indisponível':count);
   write('wh-offenders',offenders.length||'0');
