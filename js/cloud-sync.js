@@ -434,7 +434,21 @@
     const {data,error}=await client.rpc('list_coordination_version_audit_public',{p_week_no:Number(weekNo)});
     if(error)throw new Error(error.message);return Array.isArray(data)?data:[];
   }
+  async function listOffenderActions(weekNo) {
+    const client=getClient();if(!client)throw Error('Supabase indisponível');
+    const {data,error}=await client.rpc('list_coordination_offender_actions_public',{p_week_no:Number(weekNo)});
+    if(error)throw Error(error.message);return Array.isArray(data)?data:[];
+  }
+  async function saveOffenderAction(v) {
+    const client=getClient();if(!client)throw Error('Supabase indisponível');
+    const {data,error}=await client.rpc('save_coordination_offender_action_public',{
+      p_week_no:Number(v.weekNo),p_source_index:Number(v.sourceIndex),p_responsible:v.responsible,
+      p_due_date:v.dueDate||null,p_priority:v.priority,p_status:v.status,p_action_note:v.note||'',p_master_password:v.master
+    });if(error)throw Error(error.message);return data;
+  }
   window.CloudSync = {
+    listOffenderActions,
+    saveOffenderAction,
     listCoordinationVersionAudit,
     getOffenderReview,
     confirmOffenderReview,
