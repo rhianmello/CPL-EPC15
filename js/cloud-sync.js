@@ -439,6 +439,11 @@
     const {data,error}=await client.rpc('list_coordination_offender_actions_public',{p_week_no:Number(weekNo)});
     if(error)throw Error(error.message);return Array.isArray(data)?data:[];
   }
+  async function listOffenderActionHistory(weekNo) {
+    const client=getClient();if(!client)throw Error('Supabase indisponível');
+    const {data,error}=await client.rpc('list_coordination_offender_action_history_public',{p_week_no:Number(weekNo)});
+    if(error)throw Error(error.message);return Array.isArray(data)?data:[];
+  }
   async function saveOffenderAction(v) {
     const client=getClient();if(!client)throw Error('Supabase indisponível');
     const {data,error}=await client.rpc('save_coordination_offender_action_public',{
@@ -448,6 +453,7 @@
   }
   window.CloudSync = {
     listOffenderActions,
+    listOffenderActionHistory,
     saveOffenderAction,
     listCoordinationVersionAudit,
     getOffenderReview,
