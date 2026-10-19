@@ -108,6 +108,15 @@
 .audit-img-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.audit-img-grid img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px}
 .audit-check{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #24445b;font-size:12px}.audit-check em{font-style:normal;color:#f2c27e}
 @media(max-width:800px){.audit-layout{grid-template-columns:1fr}.audit-span{grid-column:auto}.audit-issue-list{grid-template-columns:1fr}.audit-img-grid{grid-template-columns:repeat(2,1fr)}}
+</style><style>
+.audit-photo-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:12px}
+.audit-photo-tile{margin:0;border:1px solid #33536b;border-radius:9px;overflow:hidden;background:#071727}
+.audit-photo-tile img{width:100%;height:130px;object-fit:cover;display:block}
+.audit-photo-tile figcaption{font-size:10px;line-height:1.5;padding:8px;color:#bbd8eb}
+.audit-photo-error{border-color:#c07b42}.audit-photo-error img{opacity:.25}
+.audit-versions{margin-top:12px;padding:12px;border:1px solid #31536d;border-radius:10px}
+.audit-versions select{background:#061827;color:#e5f5ff;border:1px solid #42708c;border-radius:8px;padding:8px;margin:4px 7px 12px 0}
+@media(max-width:700px){.audit-photo-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style></head>
 <body>
   <section id="upload-view" class="upload-view home" aria-label="Página inicial">
@@ -317,7 +326,7 @@
           </div>
           <p id="wh-detail" class="wh-detail">Selecione uma semana no filtro acima para conferir os dados publicados.</p>
         </section>
-<div class="audit-toolbar"><button id="audit-refresh" type="button">↻ Executar auditoria</button><button id="audit-export" type="button">↓ Exportar relatório</button><span id="audit-updated">Aguardando consulta</span></div>
+<div class="audit-toolbar"><button id="audit-refresh" type="button">↻ Executar auditoria</button><button id="audit-export" type="button">↓ Exportar auditoria PDF</button><span id="audit-updated">Aguardando consulta</span></div>
 <div class="audit-layout">
  <article class="audit-panel audit-span"><header><span>01 / DIAGNÓSTICO</span><h3>Verificações automáticas</h3></header><div id="audit-issues" class="audit-issue-list"><p>Selecione uma semana para iniciar.</p></div></article>
  <article class="audit-panel"><header><span>02 / EVOLUÇÃO</span><h3>Comparação com semana anterior</h3></header><div id="audit-diff"></div></article>
@@ -739,7 +748,7 @@
   <script src="vendor/jspdf.umd.min.js"></script>
   <script src="js/config.js?v=20260928-hierarchy2"></script>
   <script src="js/supabase-config.js?v=20261002-direct-supabase1"></script>
-  <script src="js/cloud-sync.js?v=20261018-offender-review2"></script>
+  <script src="js/cloud-sync.js?v=20261019-versions3"></script>
   <script src="js/portal-auth.js?v=20261006-auth1"></script>
   <script src="js/excel-reader.js"></script>
   <script src="js/data-model.js?v=20261005-presentation-curve1"></script>
@@ -770,6 +779,6 @@
     })();
   </script>
 
-  <script src="js/week-control.js?v=20261019-physical-label3"></script>
+  <script src="js/week-control.js?v=20261019-audit-suite5"></script>
 </body>
 </html>
