@@ -195,7 +195,18 @@ async function refresh(){
     if(filtered.length>100)items.append(elt('p','audit-dim','Exibindo 100 frentes. Use a pesquisa para localizar as demais.'));
   };
   filter.oninput=draw;draw();fill('control-offenders-details',[actionArea]);
-  fill('control-publications-details',[label('Semana','S-'+week),label('Versão vigente',snap.version_no||'Não informada'),label('Arquivo de origem',file||'Não informado'),label('Salvo em',date(snap.saved_at)),label('Versões disponíveis',Array.isArray(versions)?versions.length:'Consulta indisponível'),elt('p','audit-dim','Use a seção Histórico da Visão Geral para comparar versões. Homologação pré-publicação ainda não implementada.')]);
+  const publicationNodes=[label('Semana','S-'+week),label('Versão vigente',snap.version_no||'Não informada'),label('Arquivo de origem',file||'Não informado'),label('Salvo em',date(snap.saved_at)),label('Versões disponíveis',Array.isArray(versions)?versions.length:'Consulta indisponível')];
+  const validation=elt('div','audit-issue');validation.append(elt('strong','','Diagnóstico de publicação (somente leitura)'));
+  const checksToShow=[
+    ['Semana salva encontrada',Boolean(snap.id)],
+    ['Arquivo de origem informado',Boolean(file)],
+    ['Dataset do Excel presente',Boolean(snap.dataset?.model)],
+    ['Eventos gerenciais acessíveis',Array.isArray(rows)],
+    ['Frentes cadastradas preservadas',Array.isArray(offenders)]
+  ];
+  for(const [name,ok] of checksToShow)validation.append(label(name,ok?'Presente':'Não confirmado'));
+  validation.append(elt('p','audit-dim','Esta é uma análise da versão já salva, não uma homologação do novo Excel. O pré-teste do arquivo ainda dependerá de integração com a tela de importação; nenhuma publicação é realizada aqui.'));
+  publicationNodes.push(validation);fill('control-publications-details',publicationNodes);
   fill('control-physical-details',[label('Base física',physical),elt('p','audit-dim','Gráficos Real × Previsto × Projetado aguardam a publicação da base física correspondente. Nenhum número será extrapolado.')]);
   fill('control-risks-details',[label('Alertas de auditoria',issues.filter(x=>x.dataset.severity==='attention').length),elt('p','audit-dim','Estes são alertas de qualidade de dados, não previsões de atraso. Análise de risco físico depende de histórico verificado.')]);
   fill('control-timeline-details',[label('Semana selecionada','S-'+week),label('Eventos gerenciais',rows.length),elt('p','audit-dim','A linha do tempo de marcos dependerá de datas verificáveis e referências dos eventos. Nenhum marco será criado automaticamente.')]);
