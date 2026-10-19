@@ -429,7 +429,13 @@
     });
     if(error)throw new Error(error.message);return data;
   }
+  async function listCoordinationVersionAudit(weekNo) {
+    const client=getClient();if(!client)throw new Error('Supabase indisponível');
+    const {data,error}=await client.rpc('list_coordination_version_audit_public',{p_week_no:Number(weekNo)});
+    if(error)throw new Error(error.message);return Array.isArray(data)?data:[];
+  }
   window.CloudSync = {
+    listCoordinationVersionAudit,
     getOffenderReview,
     confirmOffenderReview,
     getPresentationReview,
