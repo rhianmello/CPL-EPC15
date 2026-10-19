@@ -1,7 +1,7 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id), sel=$('wh-week-select'),source=$('executive-week-filter');
 if(!sel)return;
-let seq=0,lastReport='',lastWeek=0;
+let seq=0,lastReport='',lastWeek=0,lastAudit=null;
 const clean=v=>String(v==null?'':v);
 const write=(id,val)=>{const x=$(id);if(x)x.textContent=clean(val)};
 const elt=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=clean(txt);return e};
@@ -27,13 +27,14 @@ async function refresh(){
  try{
   if(!window.CloudSync?.ready?.())throw Error('Conexão Supabase indisponível');
   const previous=week>1?CloudSync.loadCoordinationWeek(week-1).catch(()=>null):Promise.resolve(null);
-  const [cur,prev,photos,history,review,offenderReview]=await Promise.all([
+  const [cur,prev,photos,history,review,offenderReview,versions]=await Promise.all([
     CloudSync.loadCoordinationWeek(week),
     previous,
     CloudSync.listCoordinationPhotos(week,'','').then(data=>({ok:true,data})).catch(error=>({ok:false,error:String(error.message||error)})),
     CloudSync.listCoordinationWeeks().catch(()=>[]),
     CloudSync.getPresentationReview(week).then(data=>({ok:true,data})).catch(error=>({ok:false,error:String(error.message||error)})),
-    CloudSync.getOffenderReview(week).then(data=>({ok:true,data})).catch(error=>({ok:false,error:String(error.message||error)}))
+    CloudSync.getOffenderReview(week).then(data=>({ok:true,data})).catch(error=>({ok:false,error:String(error.message||error)})),
+    CloudSync.listCoordinationVersionAudit(week).catch(()=>null)
   ]);
   if(token!==seq)return;
   const snap=asSnapshot(cur),before=asSnapshot(prev),rows=noteRows(snap),earlier=noteRows(before),offenders=carry(snap);
@@ -87,9 +88,31 @@ async function refresh(){
   output.push(elt('p','audit-dim',hasPrevious?'Comparação textual: eventos com descrição alterada podem aparecer como novo e ausente. Ausência não significa conclusão da atividade.':'Semana anterior não disponível: eventos não podem ser classificados como novos ou ausentes.'),...(hasPrevious?[details]:[]));
   fill('audit-diff',output);
   const wk=Array.isArray(history)?history.filter(x=>Number(x.week_no??x.weekNo??x.week)===week):[];
-  fill('audit-history',[label('Arquivo atual',file||'Não identificado'),label('Versão',snap.version_no||snap.versionNo||'Não informada'),label('Salvo em',date(snap.saved_at||snap.savedAt)),label('Responsável',snap.saved_by||snap.savedBy||'Não informado'),label('Versões listadas',wk.length||'Não disponível'),elt('p','audit-dim','Cada publicação pode gerar uma nova versão. O relatório não restaura dados nem modifica publicações.')]);
+  const versionNodes=[label('Arquivo atual',file||'Não identificado'),label('Versão',snap.version_no||snap.versionNo||'Não informada'),label('Salvo em',date(snap.saved_at||snap.savedAt)),label('Responsável',snap.saved_by||snap.savedBy||'Não informado'),label('Versões listadas',wk.length||'Não disponível'),elt('p','audit-dim','Comparação somente leitura; nenhuma versão será restaurada.')];
+  if(Array.isArray(versions)&&versions.length){
+    const box=elt('div','audit-versions');const left=elt('select'),right=elt('select');
+    for(const v of versions){left.append(new Option('V'+v.version_no,v.version_no));right.append(new Option('V'+v.version_no,v.version_no))}
+    right.value=String(versions.length>1?versions[1].version_no:versions[0].version_no);
+    const result=elt('div','audit-version-result');
+    const compare=()=>{const a=versions.find(v=>String(v.version_no)===left.value),b=versions.find(v=>String(v.version_no)===right.value);if(!a||!b)return;
+      const signature=x=>[x.unit,x.event,x.phase,x.description].join('|').toLowerCase();
+      const A=(a.events||[]).map(signature),B=(b.events||[]).map(signature);
+      result.replaceChildren(label('Eventos por versão','V'+a.version_no+': '+A.length+' / V'+b.version_no+': '+B.length),label('Apenas na primeira',A.filter(x=>!B.includes(x)).length),label('Apenas na segunda',B.filter(x=>!A.includes(x)).length),elt('p','audit-dim','Comparação textual. Diferenças não indicam automaticamente erros.'));
+    };
+    left.onchange=compare;right.onchange=compare;box.append(elt('p','audit-dim','Comparar versões da mesma semana'),left,right,result);compare();versionNodes.push(box);
+  }else versionNodes.push(elt('p','audit-dim','Histórico detalhado indisponível nesta consulta.'));
+  fill('audit-history',versionNodes);
   const grouping=new Map();for(const p of imgList){const k=p.unit_name||p.unitName||'Sem unidade';grouping.set(k,(grouping.get(k)||0)+1)}
-  fill('audit-images',[label('Total de fotos',count==null?'Consulta indisponível':count),...Array.from(grouping,([k,v])=>label(k,v)),elt('p','audit-dim',sameCaptions.length?sameCaptions.length+' grupos com legendas repetidas. Conferir visualmente antes de classificar como duplicidade.':'Legendas repetidas não identificadas na resposta disponível.')]);
+  const photoNodes=[label('Total de fotos',count==null?'Consulta indisponível':count),...Array.from(grouping,([k,v])=>label(k,v))];
+  const gallery=elt('div','audit-photo-gallery');
+  for(const p of imgList){
+    const tile=elt('figure','audit-photo-tile'),img=elt('img'),cap=elt('figcaption','',((p.unit_name||'Unidade não informada')+' — '+(p.caption||'Sem legenda')));
+    img.loading='lazy';img.decoding='async';img.alt=cap.textContent;img.src=p.signed_url||'';
+    img.onerror=()=>{tile.classList.add('audit-photo-error');cap.textContent='Imagem indisponível — '+cap.textContent};
+    tile.append(img,cap);gallery.append(tile);
+  }
+  photoNodes.push(gallery,elt('p','audit-dim','Miniaturas somente para conferência. Fotos com legendas iguais podem representar registros distintos.'));
+  fill('audit-images',photoNodes);
   fill('audit-pending',[...issues.filter(x=>x.dataset.severity!=='ok').map(x=>{const e=elt('div','audit-line');e.append(elt('span','',x.querySelector('strong')?.textContent),elt('span','audit-tag',x.dataset.severity==='attention'?'REVISAR':'INFORMATIVO'));return e}),elt('p','audit-dim','Diagnósticos somente para consulta. Nenhuma ação automática de edição, exclusão ou correção.')]);
   const reviewed=Boolean(review.ok&&review.data&&Number(review.data.version_no)===Number(snap.version_no));
   const reviewPanel=elt('div','audit-issue');
@@ -135,13 +158,14 @@ async function refresh(){
   const checks=[['Base física da S-'+week+' — '+(physical==='Excel identificado'?'Excel identificado; valores ainda não auditados':'Aguardando publicação do Excel atualizado'),physical==='Excel identificado'?null:false],['Registros manuais encontrados',rows.length>0],['Consulta fotográfica concluída',photos.ok],['Frentes ofensoras da semana anterior preservadas — '+offenders.length+' registros',offenders.length>0],['Revalidação operacional das frentes',offenderReview.ok?offendersReviewed:null],['Conferência humana da apresentação',review.ok?Boolean(reviewed):null]];
   fill('audit-checklist',[...checks.map(([name,ok])=>{const e=elt('div','audit-check');e.append(elt('span','',ok===null?'?':ok?'✓':'○'),elt('span','',name));if(ok!==true)e.append(elt('em','',ok===null?'Não verificado — consulta indisponível':'Pendente / não confirmado'));return e}),offenderPanel,reviewPanel]);
   write('audit-updated','Auditoria consultada em '+new Date().toLocaleString('pt-BR'));
+  lastAudit={week,rows,photos:imgList,offenders:offenders.length,issues:issues.map(x=>({title:x.querySelector('strong').textContent,description:x.querySelector('p').textContent})),file,reviewed,offendersReviewed};
   lastReport=['CONTROLE SEMANAL — EPC-15','Semana S-'+week,'Arquivo: '+file,'Registros: '+rows.length,'Fotos: '+count,'Frentes preservadas: '+offenders.length,'','DIAGNÓSTICOS',...issues.map(x=>'- '+x.querySelector('strong').textContent+': '+x.querySelector('p').textContent),'','Somente relatório. Não foram alterados dados.'].join('\n');
  }catch(err){
   if(token!==seq)return;
   write('wh-status','Consulta indisponível');write('wh-detail',clean(err.message));
   fill('audit-issues',[issue('Falha na consulta','Nenhuma alteração realizada. '+clean(err.message),'attention')]);
   ['audit-diff','audit-history','audit-images','audit-pending','audit-checklist'].forEach(id=>fill(id,[elt('p','audit-dim','Dados indisponíveis nesta consulta.')]));
-  lastReport='';write('audit-updated','Falha na consulta');
+  lastReport='';lastAudit=null;write('audit-updated','Falha na consulta');
  }
 }
 options();
@@ -149,6 +173,6 @@ if(source)new MutationObserver(options).observe(source,{childList:true,subtree:t
 document.querySelector('[data-page="week-health"]')?.addEventListener('click',()=>{options();refresh()});
 sel.addEventListener('change',refresh);
 $('audit-refresh')?.addEventListener('click',refresh);
-$('audit-export')?.addEventListener('click',()=>{if(!lastReport){alert('Execute a auditoria antes de exportar.');return}const a=document.createElement('a'),blob=new Blob([lastReport],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);a.href=url;a.download='Auditoria-EPC15-S'+lastWeek+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)});
+$('audit-export')?.addEventListener('click',()=>{if(!lastReport){alert('Execute a auditoria antes de exportar.');return}const PDF=window.jspdf?.jsPDF;if(!PDF){alert('Gerador PDF indisponível.');return}const doc=new PDF();doc.setFontSize(17);doc.text('Auditoria interna EPC-15 — S-'+lastWeek,14,18);doc.setFontSize(10);const lines=doc.splitTextToSize(lastReport,175);let y=28;for(const line of lines){if(y>277){doc.addPage();y=18}doc.text(line,14,y);y+=6}doc.save('Auditoria-EPC15-S'+lastWeek+'.pdf')});
 setTimeout(()=>{if(document.getElementById('page-week-health')?.classList.contains('active'))refresh()},800);
 })();
