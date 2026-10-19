@@ -53,8 +53,8 @@ async function refresh(){
   if(!file||physical!=='Excel salvo')issues.push(issue('Base física não confirmada','Não tratar os indicadores físicos como atualização oficial desta semana.','attention'));
   if(!rows.length)issues.push(issue('Sem registros gerenciais','Não foram encontrados destaques ou notas manuais nesta versão.','attention'));
   const normalized=t=>[t.unit,t.event,t.phase,t.description].map(z=>clean(z).trim().toLowerCase().replace(/\s+/g,' ')).join('|');
-  const seen=new Set();let dupe=0,short=0;
-  for(const r of rows){const key=normalized(r);if(seen.has(key))dupe++;seen.add(key);if(clean(r.description).trim().length<14||/[-–—:]\s*$/.test(clean(r.description)))short++}
+  const seen=new Set();let dupe=0,short=0;const flaggedDescriptions=[];
+  for(const r of rows){const key=normalized(r);if(seen.has(key))dupe++;seen.add(key);if(clean(r.description).trim().length<14||/[-–—:]\s*$/.test(clean(r.description))){short++;flaggedDescriptions.push({...r,reason:clean(r.description).trim().length<14?'Texto muito curto':'Texto termina com sinal de continuação'})}}
   if(dupe)issues.push(issue('Possíveis eventos duplicados',dupe+' lançamentos com mesma unidade, categoria, fase e descrição. Revise antes de corrigir.','attention'));
   if(short)issues.push(issue('Descrições a revisar',short+' eventos curtos ou terminados em pontuação de continuação.','attention'));
   if(offenders.length)issues.push(issue('Frentes ofensoras preservadas',offenders.length+' registros identificados; a presença não confirma revalidação na semana.','info'));
@@ -113,7 +113,21 @@ async function refresh(){
   }
   photoNodes.push(gallery,elt('p','audit-dim','Miniaturas somente para conferência. Fotos com legendas iguais podem representar registros distintos.'));
   fill('audit-images',photoNodes);
-  fill('audit-pending',[...issues.filter(x=>x.dataset.severity!=='ok').map(x=>{const e=elt('div','audit-line');e.append(elt('span','',x.querySelector('strong')?.textContent),elt('span','audit-tag',x.dataset.severity==='attention'?'REVISAR':'INFORMATIVO'));return e}),elt('p','audit-dim','Diagnósticos somente para consulta. Nenhuma ação automática de edição, exclusão ou correção.')]);
+  const pendingNodes=issues.filter(x=>x.dataset.severity!=='ok').map(x=>{const e=elt('div','audit-line');e.append(elt('span','',x.querySelector('strong')?.textContent),elt('span','audit-tag',x.dataset.severity==='attention'?'REVISAR':'INFORMATIVO'));return e});
+  if(flaggedDescriptions.length){
+    const details=elt('details','audit-description-details');
+    details.append(elt('summary','','Ver '+flaggedDescriptions.length+' descrição(ões) sinalizada(s)'));
+    for(const r of flaggedDescriptions){
+      const box=elt('div','audit-issue');box.dataset.severity='attention';
+      box.append(elt('strong','',(r.unit||'Unidade não informada')+' · '+(r.event||'Evento não informado')),
+        elt('p','',(r.phase||'Fase não informada')+' · '+r.reason),
+        elt('p','',r.description||'Sem descrição'));
+      details.append(box);
+    }
+    pendingNodes.push(details);
+  }
+  pendingNodes.push(elt('p','audit-dim','Diagnósticos apenas para consulta. Nenhuma descrição será modificada automaticamente.'));
+  fill('audit-pending',pendingNodes);
   const reviewed=Boolean(review.ok&&review.data&&Number(review.data.version_no)===Number(snap.version_no));
   const reviewPanel=elt('div','audit-issue');
   reviewPanel.dataset.severity=reviewed?'ok':'attention';
