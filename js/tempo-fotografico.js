@@ -188,7 +188,7 @@
 
   function photoCard(photo){
     return '<figure class="tf-photo">'+
-      '<img src="'+esc(photo.signed_url||'')+'" alt="Registro fotográfico — clique para ampliar" style="cursor:zoom-in">'+
+      '<img loading="lazy" decoding="async" src="'+esc(photo.signed_url||'')+'" alt="Registro fotográfico — clique para ampliar" style="cursor:zoom-in">'+
       '<figcaption>'+
         '<strong>'+esc(photo.caption||'Registro fotográfico')+'</strong>'+
         '<small>'+esc(photo.unit_name||'Entrega não identificada')+'</small>'+
@@ -225,8 +225,8 @@
     host.innerHTML=gallerySummary+weekNos.map(no=>{
       const list=grouped.get(no)||[];
       const w=weekByNo(no);
-      const dateLabel=w.start_date
-        ? dmy(w.start_date)+(w.end_date?' a '+dmy(w.end_date):'')
+      const dateLabel=w?.start_date
+        ? dmy(w.start_date)+(w?.end_date?' a '+dmy(w.end_date):'')
         : 'registro histórico';
       return '<section class="tf-gallery-week">'+
         '<header class="tf-gallery-week-head">'+
@@ -268,7 +268,7 @@
       weekNos.map(no=>'<option value="'+no+'"'+(no===selected?' selected':'')+'>S-'+no+'</option>').join('')+'</select></label>';
     const card=(p,label)=>p?
       '<div class="tf-compare-card"><header><span>'+label+' • S-'+p._week+'</span></header>'+
-      '<img src="'+esc(p.signed_url||'')+'" alt="'+label+'">'+
+      '<img loading="lazy" decoding="async" src="'+esc(p.signed_url||'')+'" alt="'+label+'">'+
       '<footer><strong>'+esc(p.unit_name||'Entrega')+'</strong>'+esc(p.caption||photoContext(p)||'Registro fotográfico')+'</footer></div>':
       '<div class="tf-empty">Sem registro nesta semana.</div>';
     host.innerHTML='<div class="tf-compare-controls" style="grid-column:1/-1;display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px">'+
