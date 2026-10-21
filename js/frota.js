@@ -907,7 +907,7 @@
     // Defend against spreadsheet formula injection in free-text fields.
     const safeRows=rows.map(row=>Object.fromEntries(Object.entries(row).map(([key,value])=>{
       const textValue=value == null?'':String(value);
-      return [key,/^[\\s]*[=+@-]/.test(textValue)?"'"+textValue:textValue];
+      return [key,/^\s*[=+@-]/.test(textValue)?"'"+textValue:textValue];
     })));
     try {
       const workbook=XLSX.utils.book_new();
