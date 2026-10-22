@@ -900,6 +900,55 @@
     form.onsubmit=exportFuelReport;
   }
 
+  function exportActionWorkbook(rows, sheet, filename) {
+    if(!state.loaded){toast('Aguarde a consulta ao banco antes de exportar.','yellow');return;}
+    if(!rows.length){toast('Não há registros para exportar.','yellow');return;}
+    if(!window.XLSX?.utils){toast('Biblioteca de Excel indisponível. Atualize a página.','red');return;}
+    // Defend against spreadsheet formula injection in free-text fields.
+    const safeRows=rows.map(row=>Object.fromEntries(Object.entries(row).map(([key,value])=>{
+      const textValue=value == null?'':String(value);
+      return [key,/^\s*[=+@-]/.test(textValue)?"'"+textValue:textValue];
+    })));
+    try {
+      const workbook=XLSX.utils.book_new();
+      const worksheet=XLSX.utils.json_to_sheet(safeRows);
+      worksheet['!cols']=Object.keys(safeRows[0]).map(key=>({wch:Math.min(64,Math.max(16,key.length+3))}));
+      XLSX.utils.book_append_sheet(workbook,worksheet,sheet);
+      XLSX.writeFile(workbook,filename+'-'+core.todayISO()+'.xlsx');
+      toast(rows.length+' registro(s) exportado(s).');
+    }catch(error){toast('Não foi possível exportar: '+errorMessage(error),'red');}
+  }
+  function exportAlertsAction() {
+    const rows=state.alerts.map(alert=>({
+      'Prioridade':alert.tone==='red'?'Crítica':'Atenção',
+      'Código do ativo':alert.asset?.asset_code||'',
+      'Placa / identificador':alert.asset?.placa_identificador||'',
+      'Modelo':alert.asset?.modelo||'',
+      'Categoria':alert.asset?.categoria||'',
+      'Responsável CPL':alert.asset?.responsavel_cpl||'',
+      'Ocorrência':alert.message||'',
+      'Vencimento':alert.validade||'',
+      'Dias até vencimento':alert.days??'',
+      'Status operacional':alert.asset?.status_operacional||''
+    }));
+    exportActionWorkbook(rows,'Pendências','CPL-Frota-Pendencias');
+  }
+  function exportQualityAction() {
+    const byId=new Map(state.assets.map(asset=>[String(asset.id),asset]));
+    const rows=state.quality.map(issue=>{
+      const asset=byId.get(String(issue.asset_id))||{};
+      return {
+        'Tipo de inconsistência':issue.type||'',
+        'Código do ativo':asset.asset_code||'',
+        'Placa / identificador':asset.placa_identificador||'',
+        'Modelo':asset.modelo||'',
+        'Responsável CPL':asset.responsavel_cpl||'',
+        'Problema identificado':issue.message||'',
+        'Status operacional':asset.status_operacional||''
+      };
+    });
+    exportActionWorkbook(rows,'Revisão da base','CPL-Frota-Qualidade');
+  }
   function exportView() {
     if(!state.filtered.length)return;
     const rows=state.filtered.map(asset=>{const p=latest(asset,'ptrans'),s=core.situation(asset);return {'UUID':asset.id,'Código':asset.asset_code||'','Identificação':asset.placa_identificador||'','Modelo':asset.modelo||'','Tipo':asset.tipo||'','Categoria':asset.categoria||'','Empresa':asset.empresa||'','Gerência':asset.gerencia||'','Responsável CPL':asset.responsavel_cpl||'','No contrato':asset.ativo_no_contrato===true?'Sim':asset.ativo_no_contrato===false?'Não':'Não confirmado','Status operacional':asset.status_operacional||'','Número PTRAN':p?.numero_ptran||'','ISC':p?.numero_isc||'','Status PTRAN':p?.status||'','Validade PTRAN':p?.data_validade||'','Situação':s.label,'Motivos':s.reasons.join('; '),'Atualização':asset.updated_at||''};});
@@ -977,6 +1026,8 @@
   $('#pending-import-button').onclick=reviewPendingImport;
   $('#fleet-import-file').onchange=event=>{const file=event.target.files[0];event.target.value='';importFile(file);};
   $('#table-prev').onclick=()=>{state.page--;renderTable();icons();};$('#table-next').onclick=()=>{state.page++;renderTable();icons();};$('#export-button').onclick=exportView;
+  $('#export-alerts-button').onclick=exportAlertsAction;
+  $('#export-quality-button').onclick=exportQualityAction;
   $('#quality-type').onchange=renderQuality;$('#history-more').onclick=()=>loadHistory(true);
   $('#history-filters').onsubmit=event=>{event.preventDefault();state.historyFilters=formData(event.currentTarget);loadHistory();};
   $('#history-filters').onreset=()=>setTimeout(()=>{state.historyFilters={};loadHistory();},0);
