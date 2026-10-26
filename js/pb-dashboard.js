@@ -167,7 +167,7 @@
         values=[...new Set(candidates.map(row=>Number(row.level)).filter(Number.isFinite))]
           .sort((a,b)=>a-b);
       } else {
-        values=[...new Set(candidates.map(row=>fieldValue(row,def.field)).filter(Boolean))]
+        values=[...new Set(candidates.map(row=>fieldValue(row,def.field)).filter(value => value && (def.field !== 'component' || !/^0(?:[.,]0+)?$/.test(value))))]
           .sort((a,b)=>String(a).localeCompare(String(b),'pt-BR'));
       }
       el.innerHTML='<option value="">'+esc(def.all)+'</option>'+values.map(v=>'<option value="'+esc(v)+'">'+esc(def.field==='level'?'Nível '+v:v)+'</option>').join('');
