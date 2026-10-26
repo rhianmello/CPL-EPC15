@@ -125,7 +125,20 @@
 .control-secondary h3{font-size:21px;margin:0 0 12px}.control-secondary p{color:#a9c6da}
 .control-info{display:grid;gap:10px;margin-top:18px}.control-info .audit-line{padding:13px;background:#061a2d;border:1px solid #23445d;border-radius:9px}
 [data-control-panel][hidden]{display:none!important}
-</style><style>.audit-offender-list{display:grid;gap:8px;max-height:650px;overflow:auto;margin-top:14px}.audit-offender-list summary{cursor:pointer;padding:8px;color:#9deaff}.audit-action-form{padding:12px}.audit-action-form select{background:#08233b;color:white;padding:7px;margin:8px;border:1px solid #43728d;border-radius:6px}.audit-action-form button{display:block;margin-top:12px;padding:10px;border:1px solid #40bde9;border-radius:8px;background:#155b80;color:white;cursor:pointer}</style><style>.control-action-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:15px}.control-metric{background:#08243a;border:1px solid #285e78;padding:14px;border-radius:10px;display:flex;flex-direction:column;gap:7px}.control-metric span{font-size:12px;color:#9fbed2}.control-metric strong{font-size:24px}.control-action-filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}.control-action-filters>*{flex:1;min-width:170px;padding:11px;background:#071b30;border:1px solid #3b7592;border-radius:8px;color:white}.control-action-tools{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}.control-action-tools button{padding:10px 14px;background:#125b80;border:1px solid #4db9e2;color:white;border-radius:8px;cursor:pointer}.control-action-history{margin-top:17px;border:1px solid #366781;border-radius:9px;padding:12px}.control-action-history summary{cursor:pointer;color:#88dffc;font-weight:700}.control-history-list{max-height:350px;overflow:auto;margin-top:10px}</style></head>
+</style><style>.audit-offender-list{display:grid;gap:8px;max-height:650px;overflow:auto;margin-top:14px}.audit-offender-list summary{cursor:pointer;padding:8px;color:#9deaff}.audit-action-form{padding:12px}.audit-action-form select{background:#08233b;color:white;padding:7px;margin:8px;border:1px solid #43728d;border-radius:6px}.audit-action-form button{display:block;margin-top:12px;padding:10px;border:1px solid #40bde9;border-radius:8px;background:#155b80;color:white;cursor:pointer}</style><style>.control-action-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:15px}.control-metric{background:#08243a;border:1px solid #285e78;padding:14px;border-radius:10px;display:flex;flex-direction:column;gap:7px}.control-metric span{font-size:12px;color:#9fbed2}.control-metric strong{font-size:24px}.control-action-filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}.control-action-filters>*{flex:1;min-width:170px;padding:11px;background:#071b30;border:1px solid #3b7592;border-radius:8px;color:white}.control-action-tools{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}.control-action-tools button{padding:10px 14px;background:#125b80;border:1px solid #4db9e2;color:white;border-radius:8px;cursor:pointer}.control-action-history{margin-top:17px;border:1px solid #366781;border-radius:9px;padding:12px}.control-action-history summary{cursor:pointer;color:#88dffc;font-weight:700}.control-history-list{max-height:350px;overflow:auto;margin-top:10px}</style>  <style>
+    /* Menu de unidades recolhível, sem interferir nos botões dinâmicos existentes. */
+    #units-toggle{width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;margin:14px 0 5px;padding:12px;border:1px solid transparent;border-radius:9px;background:transparent;color:#738ca9;font-size:.69rem;font-weight:900;letter-spacing:.17em;text-align:left;cursor:pointer;transition:background .2s,color .2s,border-color .2s}
+    #units-toggle:hover,#units-toggle:focus-visible{background:rgba(59,130,246,.1);color:#d4efff;border-color:rgba(34,211,238,.23);outline:none}
+    #units-toggle[aria-expanded="true"]{background:rgba(59,130,246,.08);color:#8bdfff}
+    #units-toggle .units-toggle-arrow{font-size:1.1rem;line-height:1;transition:transform .24s ease;color:#67cdec}
+    #units-toggle[aria-expanded="true"] .units-toggle-arrow{transform:rotate(90deg)}
+    #unit-nav[hidden]{display:none!important}
+    #unit-nav.unit-nav-collapsible:not([hidden]){animation:units-reveal .22s ease-out}
+    #unit-nav .unit-nav-item{padding-left:19px}
+    @keyframes units-reveal{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+    @media(prefers-reduced-motion:reduce){#unit-nav.unit-nav-collapsible:not([hidden]){animation:none}#units-toggle .units-toggle-arrow{transition:none}}
+  </style>
+</head>
 <body>
   <section id="upload-view" class="upload-view home" aria-label="Página inicial">
     <header class="site-topbar">
@@ -280,8 +293,10 @@
       <div class="sidebar-brand"><img class="cpl-brand-image cpl-brand-image-sidebar" src="assets/logo-cpl-epc15.png?v=20260929" alt="CPL Construtora EPC-15"><span class="sidebar-brand-name"><span>BI</span> EPC-15</span></div>
       <nav class="main-nav" aria-label="Navegação principal">
         <button class="nav-item active" data-page="executive"><span>01</span> Painel Gerencial</button>
-        <div class="nav-group-label">UNIDADES</div>
-        <div id="unit-nav"></div>
+        <button id="units-toggle" class="units-toggle" type="button" aria-expanded="false" aria-controls="unit-nav">
+          <span>UNIDADES</span><span class="units-toggle-arrow" aria-hidden="true">▸</span>
+        </button>
+        <div id="unit-nav" class="unit-nav-collapsible" hidden></div>
         <button class="nav-item" data-page="analysis"><span>02</span> Análises</button>
         <button class="nav-item" data-action="presentation-executive"><span>03</span> Apresentação Gerencial</button>
         <button class="nav-item" data-action="presentation-coordination"><span>04</span> Apresentação de Coordenação</button>
@@ -798,6 +813,23 @@
     })();
   </script>
 
+  <script>
+    (function(){
+      const toggle=document.getElementById('units-toggle');
+      const nav=document.getElementById('unit-nav');
+      if(!toggle||!nav)return;
+      function expand(open){
+        toggle.setAttribute('aria-expanded',String(open));
+        nav.hidden=!open;
+      }
+      expand(false);
+      toggle.addEventListener('click',()=>expand(toggle.getAttribute('aria-expanded')!=='true'));
+      nav.addEventListener('click',event=>{
+        if(event.target.closest('[data-unit-index]')&&window.matchMedia('(max-width:760px)').matches)expand(false);
+      });
+      // Mantém os botões gerados pelo dashboard, sem reconstruir o menu.
+    })();
+  </script>
   <script src="js/week-control.js?v=20261019-monitor9"></script>
 </body>
 </html>
