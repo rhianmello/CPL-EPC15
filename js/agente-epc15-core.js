@@ -81,10 +81,10 @@
   }
   function help(question) {
     var q=normalize(question);
-    if (/planilha|excel|carregar|importar arquivo/.test(q)) {
+    if (/carregar|importar arquivo|selecionar excel/.test(q) || (/planilha|excel/.test(q) && /como|onde|preciso|quero|passo a passo/.test(q))) {
       return "Para carregar os indicadores, abra o Painel de Planejamento, clique em 'Selecionar Excel' e escolha o arquivo oficial .xlsb, .xlsx ou .xlsm. O arquivo deve estar recalculado e salvo. A leitura ocorre no navegador; a publicação é uma ação separada.";
     }
-    if (/publica|salvar semana|atualiz/.test(q)) {
+    if (/publica|salvar semana/.test(q) || (/atualiz/.test(q) && /como|onde|passo|fazer|quero/.test(q))) {
       return "Para publicar dados oficiais: carregue e confira o Excel, valide os indicadores e use 'Publicar atualização' com autorização de editor. A Reunião de Coordenação tem seu próprio controle de semana e salvamento. Eu não publico nem altero informações.";
     }
     if (/auditor|controle semanal|saude dos dados/.test(q)) {
@@ -99,7 +99,7 @@
     if (/relatorio|pdf|imprimir/.test(q)) {
       return "Para emitir o relatório, abra o Painel Gerencial, selecione semana/unidade e use 'Emitir PDF da semana'. Antes de distribuir, confira a data-base e os filtros aplicados.";
     }
-    if (/pareto|coluna ab|peso x desvio/.test(q)) {
+    if (/pareto|coluna ab|peso x desvio/.test(q) && /o que e|como funciona|como calcula|explique|significa|conceito|criterio/.test(q)) {
       return "O Pareto usa o desvio ponderado (coluna AB). Ele prioriza a contribuição dos itens ao atraso. O desvio simples indica a diferença entre realizado e previsto; o AB considera a ponderação. Para evitar dupla contagem, consultas do agente usam linhas-folha do primeiro bloco hierárquico.";
     }
     if (/frota/.test(q)) {
@@ -160,7 +160,7 @@
     if (/unidades|quantas/.test(q) && /total|quantas|numero|existem/.test(q)) {
       return result("A base contém " + model.units.length + " unidades consolidadas (nível 1) no primeiro bloco hierárquico.", context);
     }
-    if (/fonte|data.base|arquivo|versao|semana atual|atualizad/.test(q)) {
+    if (/fonte|data.base|arquivo|versao|semana atual|atualiz/.test(q)) {
       return result("Consulta realizada sobre a versão atualmente carregada no BI.\nData-base: " +
         dataDate(model.dataBase) + ".\nArquivo: " + (context.fileName || "não identificado") +
         ".\nNão assumo que a base carregada seja a mais recente do projeto.", context);
