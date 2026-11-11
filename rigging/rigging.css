@@ -62,3 +62,14 @@
 #capacityValue,#capacityPercent{font-variant-numeric:tabular-nums}
 #capacityFile[hidden]{display:none}
 @media print{.capacity-alert{background:#fff!important;color:#991b1b!important;border:2px solid #991b1b;break-inside:avoid}.capacity-danger{box-shadow:none}}
+
+.norm-chart{margin-top:13px;padding:10px;border:1px solid #496780;border-radius:9px;background:#0a1d2c;color:#d5eaf4;font-size:12px;line-height:1.45}
+.norm-chart strong{display:block;font-size:12px;color:#9fddf8}
+.norm-chart p{margin:7px 0}
+.norm-chart small{display:block;margin:9px 0;color:#b4cfdf;font-size:11px}
+.norm-chart button{font-size:12px;padding:8px 10px}
+.chart-table{overflow:auto;max-height:210px;max-width:100%;margin-top:10px}
+.chart-table table{border-collapse:collapse;width:100%;font-size:10px;white-space:nowrap}
+.chart-table th,.chart-table td{padding:6px;border:1px solid #49647c;text-align:left}
+.chart-table th{background:#173750;color:#dff4ff;position:sticky;top:0}
+@media print{.norm-chart{display:none!important}}
