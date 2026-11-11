@@ -46,3 +46,9 @@
 #threehost{touch-action:none;cursor:grab}
 #threehost:active{cursor:grabbing}
 @media print{.editor3d{display:none!important}}
+
+/* 3D editor: visual hints without changing mouse camera controls */
+.editor3d{row-gap:9px}
+.editor3d .editorhint{flex-basis:100%;line-height:1.45;color:#bde4f8}
+#threehost canvas{touch-action:none;outline:none}
+@media(max-width:750px){.editor3d select{max-width:100%;width:100%}.editor3d .editorhint{font-size:11px}}
