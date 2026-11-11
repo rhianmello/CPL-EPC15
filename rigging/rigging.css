@@ -37,3 +37,12 @@
   .stage #drawing{max-height:155mm!important;width:100%!important}
   .stage #threehost{max-height:none!important}
 }
+
+.editor3d{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:9px;margin-bottom:9px;border:1px solid #34536c;border-radius:10px;background:#132b40}
+.editor3d[hidden]{display:none}
+.editor3d label{margin:0;white-space:nowrap}.editor3d select{width:auto;max-width:210px}
+.editor3d button{font-size:11px;padding:8px}
+.editorhint{font-size:11px;color:#b3d2e7}
+#threehost{touch-action:none;cursor:grab}
+#threehost:active{cursor:grabbing}
+@media print{.editor3d{display:none!important}}
