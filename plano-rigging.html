@@ -1,43 +1,110 @@
 <!doctype html>
-<html lang="pt-BR">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#081426">
-<title>Plano de Rigging | CPL • EPC-15</title>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Plano de Rigging | Simulador CPL EPC-15</title>
 <style>
-:root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#081426;color:#eff7ff}*{box-sizing:border-box}
-body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 75% 0%,#102841 0,transparent 38%),#081426}
-a{color:#73d7ff;text-decoration:none}a:hover{text-decoration:underline}
-header{border-bottom:1px solid #21364e;background:#081426e8;padding:19px max(24px,calc((100vw - 1100px)/2));display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
-.brand{font-weight:900;letter-spacing:.1em}.back{border:1px solid #29445c;border-radius:9px;padding:10px 15px;font-size:14px}
-main{max-width:1100px;margin:auto;padding:62px 24px}.eyebrow{font-size:12px;letter-spacing:.15em;color:#60cffe;font-weight:800}
-h1{font-size:clamp(2rem,5vw,3.3rem);margin:8px 0 14px}.lead{color:#b2c7d9;line-height:1.7;max-width:710px}
-.panel{margin-top:30px;padding:30px;border-radius:18px;background:linear-gradient(140deg,#102842,#0c1b30);border:1px solid #264059}
-.status{display:inline-block;border:1px solid #b68c45;color:#ffe3ac;background:#6b4d172e;padding:7px 12px;border-radius:50px;font-size:12px;font-weight:800}
-h2{font-size:20px;margin:22px 0 10px}p{line-height:1.65}ul{color:#c0d4e4;line-height:1.9;padding-left:22px}
-.notice{margin-top:26px;border-left:3px solid #38bdf8;padding:12px 18px;background:#07243b;color:#b9dbef;line-height:1.65;border-radius:0 9px 9px 0}
-footer{max-width:1100px;margin:auto;padding:25px 24px;color:#789ab3;font-size:13px}
-@media(max-width:600px){main{padding-top:35px}.panel{padding:22px}}
-</style>
-</head>
-<body>
-<header><a class="brand" href="index.html">CPL • EPC-15</a><a class="back" href="modulos.html">← Central de Módulos</a></header>
-<main>
-<p class="eyebrow">OPERAÇÕES / MOVIMENTAÇÃO DE CARGAS</p>
-<h1>Plano de Rigging</h1>
-<p class="lead">Área exclusiva para a futura elaboração, revisão e acompanhamento de planos de içamento e movimentação de cargas.</p>
-<section class="panel" aria-labelledby="fase">
-<span class="status">ESTRUTURA INICIAL</span>
-<h2 id="fase">Módulo preparado para a próxima etapa</h2>
-<p>Assim que recebermos o arquivo editável de referência, vamos analisar o modelo e definir os campos, cálculos, desenhos e fluxos necessários para implementar as funcionalidades.</p>
-<ul>
-<li>Cadastro da operação, equipamento e carga</li>
-<li>Dados técnicos, croqui e documentação de apoio</li>
-<li>Verificações e registros de revisão</li>
-<li>Geração do plano final para análise e aprovação</li>
-</ul>
-<div class="notice"><strong>Atenção:</strong> este módulo ainda não realiza dimensionamentos nem libera operações de içamento. Os planos deverão ser conferidos e aprovados por profissional legalmente habilitado, conforme os requisitos aplicáveis.</div>
-</section>
-</main>
-<footer>CPL • EPC-15 — Plano de Rigging</footer>
-</body></html>
+:root{font-family:Inter,system-ui,Arial,sans-serif;color:#e9f3ff;background:#071321}*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(140deg,#071321,#10233b);min-height:100vh}
+header{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:17px 28px;background:#08192b;border-bottom:1px solid #24435c}
+a{color:#7bd9ff;text-decoration:none}.brand{font-weight:900;letter-spacing:.08em}.toolbar{display:flex;gap:10px;flex-wrap:wrap}
+button{background:#158cc0;border:1px solid #58cafa;color:white;border-radius:9px;padding:11px 16px;font-weight:750;cursor:pointer}
+button:hover{background:#126e9e}.secondary{background:#152b40;border-color:#3e607b}
+main{max-width:1600px;margin:0 auto;padding:25px}.eyebrow{color:#6fd3f8;font-weight:800;letter-spacing:.13em;font-size:12px}h1{margin:6px 0 8px;font-size:30px}
+.intro{color:#a8c0d4;margin:0 0 20px}.layout{display:grid;grid-template-columns:330px minmax(0,1fr);gap:18px}
+.panel{border:1px solid #28445e;border-radius:15px;padding:18px;background:#10263a}
+h2{font-size:16px;margin:0 0 16px}label{display:block;font-size:12px;color:#b5d2e4;font-weight:700;margin:14px 0 6px}
+input,select,textarea{width:100%;border:1px solid #41637e;border-radius:8px;background:#091a2b;color:#f0faff;padding:10px;font:inherit}input[type=range]{padding:4px;accent-color:#24bde8}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.small{font-size:12px;color:#a4bad0;line-height:1.5}
+.chart{background:#f7faff;border:1px solid #bdd1e3;border-radius:11px;overflow:hidden;color:#142b43;padding:15px}
+#scene{width:100%;height:auto;display:block}.chart-title{display:flex;justify-content:space-between;gap:10px;border-bottom:2px solid #1a334a;margin-bottom:8px;padding-bottom:10px;font-weight:900;font-size:14px}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}
+.metric{border:1px solid #32536a;background:#091d2e;padding:12px;border-radius:9px}.metric span{font-size:11px;color:#a6c7dc;display:block;margin-bottom:6px}.metric b{font-size:18px}
+.warning{background:#372b16;border:1px solid #ad8440;padding:12px 16px;border-radius:9px;color:#f6db9d;font-size:12px;line-height:1.6;margin:16px 0}
+.print-only{display:none}.doc-info{font-size:11px;font-weight:500}
+@media(max-width:1000px){.layout{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}header{padding:15px}.chart{padding:8px}}
+@page{size:A4 landscape;margin:10mm}
+@media print{
+:root{color:#152a3c;background:white}body{background:white}header,.intro,.eyebrow,.controls,.warning,.metrics,.screen-only{display:none!important}
+main{padding:0;max-width:none}h1{font-size:19px;color:black;margin:0 0 10px}.layout{display:block}
+.panel{border:0;padding:0;background:white}.chart{border:1px solid #888;padding:10px;break-inside:avoid}
+#scene{height:163mm;width:100%}.chart-title{font-size:12px}.print-only{display:block;color:#111;font-size:10px;margin-top:7px}
+}
+</style></head><body>
+<header><a class="brand" href="modulos.html">← CPL • EPC-15 / MÓDULOS</a><div class="toolbar"><button class="secondary" type="button" id="reset">Restaurar exemplo</button><button type="button" id="print">Imprimir / PDF</button></div></header>
+<main><div class="eyebrow">OPERAÇÕES • MOVIMENTAÇÃO DE CARGAS</div><h1>Plano de Rigging — Simulador 2D</h1>
+<p class="intro">Modelo visual interativo inspirado na estrutura do PR-5400.00-8000-950-XCO-801 (U-8224). Arraste os controles e veja a geometria do desenho atualizar imediatamente.</p>
+<div class="layout"><aside class="panel controls"><h2>Configuração do ensaio</h2>
+<label for="operacao">Operação / serviço</label><input id="operacao" value="Içamento ilustrativo — U-8224">
+<div class="two"><div><label for="equip">Guindaste (referência)</label><select id="equip"><option value="80">Classe 80 t</option><option value="130">Classe 130 t</option></select></div><div><label for="tipo">Peça</label><select id="tipo"><option value="pilar">Pilar pré-moldado</option><option value="viga">Viga pré-moldada</option><option value="bloco">Bloco / equipamento</option></select></div></div>
+<label for="boom">Comprimento da lança <strong id="boomV"></strong></label><input type="range" id="boom" min="15" max="60" step="0.5" value="32">
+<label for="ang">Ângulo da lança <strong id="angV"></strong></label><input type="range" id="ang" min="20" max="82" step="1" value="62">
+<label for="peso">Peso da peça <strong id="pesoV"></strong></label><input type="range" id="peso" min="0.5" max="30" step="0.5" value="7.5">
+<label for="cabos">Comprimento vertical de suspensão (m)</label><input type="number" id="cabos" min="1" max="20" step="0.5" value="4">
+<div class="two"><div><label for="w">Largura da peça (m)</label><input type="number" id="w" min="0.4" max="15" step=".1" value="2.5"></div><div><label for="h">Altura da peça (m)</label><input type="number" id="h" min=".4" max="18" step=".1" value="6"></div></div>
+<label for="obs">Observações do teste</label><textarea id="obs" rows="3" placeholder="Descreva a manobra..."></textarea>
+<p class="small">O peso altera a identificação da peça e o indicador de massa, mas <strong>não modifica automaticamente a geometria da lança</strong>. O comprimento e o ângulo controlam a posição da ponta, o raio e a altura. Isso evita representar uma relação física inexistente entre peso e alcance.</p></aside>
+<section><div class="chart" id="printarea"><div class="chart-title"><span>PLANO DE MOVIMENTAÇÃO DE CARGA · CORTE LATERAL</span><span class="doc-info">CPL · EPC-15 · ESTUDO ILUSTRATIVO · NÃO APROVADO</span></div>
+<svg id="scene" viewBox="0 0 1000 590" role="img" aria-label="Guindaste em corte lateral com lança e carga móveis">
+<defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#dce8f1" stroke-width="1"/></pattern>
+<marker id="arrow" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto"><path d="M0 0L6 3L0 6Z" fill="#2377a6"/></marker></defs>
+<rect width="1000" height="590" fill="#fff"/><rect x="20" y="20" width="960" height="525" fill="url(#grid)" opacity=".67"/>
+<line x1="35" y1="510" x2="960" y2="510" stroke="#3b5260" stroke-width="3"/>
+<g id="craneBody"><rect x="58" y="443" width="268" height="45" rx="8" fill="#e6bb2f" stroke="#273c48" stroke-width="3"/>
+<rect x="64" y="420" width="74" height="36" rx="5" fill="#edc341" stroke="#273c48" stroke-width="3"/>
+<path d="M68 422H123L138 452H58Z" fill="#ffdf72" stroke="#31455a" stroke-width="2"/>
+<rect x="156" y="425" width="94" height="20" rx="5" fill="#e2b32c" stroke="#2d4858" stroke-width="3"/>
+<rect x="239" y="416" width="54" height="32" rx="6" fill="#e6bf41" stroke="#364c5b" stroke-width="3"/>
+<circle cx="92" cy="488" r="18" fill="#283743" stroke="#152330" stroke-width="3"/><circle cx="92" cy="488" r="8" fill="#b8c6cf"/>
+<circle cx="172" cy="488" r="18" fill="#283743" stroke="#152330" stroke-width="3"/><circle cx="172" cy="488" r="8" fill="#b8c6cf"/>
+<circle cx="257" cy="488" r="18" fill="#283743" stroke="#152330" stroke-width="3"/><circle cx="257" cy="488" r="8" fill="#b8c6cf"/>
+<path d="M140 466H55M140 466V502M266 466H358M358 466V502" stroke="#445866" stroke-width="5"/>
+<rect x="119" y="500" width="46" height="8" fill="#455d6c"/><rect x="335" y="500" width="46" height="8" fill="#455d6c"/>
+<circle cx="245" cy="423" r="16" fill="#b38c1e" stroke="#1b3344" stroke-width="3"/></g>
+<g id="boomG"><line id="boomOuter" x1="245" y1="423" x2="480" y2="115" stroke="#263d48" stroke-width="26" stroke-linecap="round"/><line id="boomInner" x1="245" y1="423" x2="480" y2="115" stroke="#f3c62f" stroke-width="19" stroke-linecap="round"/><line id="boomStripe" x1="245" y1="423" x2="480" y2="115" stroke="#ffe873" stroke-width="3" stroke-linecap="round" stroke-dasharray="45 14"/>
+<circle id="tip" cx="480" cy="115" r="12" fill="#f3c62f" stroke="#273f4e" stroke-width="3"/></g>
+<line id="rope" x1="480" y1="115" x2="480" y2="230" stroke="#334455" stroke-width="3"/>
+<path id="hook" d="" fill="none" stroke="#2e4050" stroke-width="4" stroke-linecap="round"/>
+<g id="load"><rect id="loadRect" x="445" y="260" width="70" height="110" fill="#8fc8e6" stroke="#2b6b92" stroke-width="3"/><path id="loadPattern" d="" stroke="#2b6b92" stroke-width="1.5" fill="none"/>
+<text id="loadLabel" x="480" y="318" text-anchor="middle" font-size="16" font-weight="800" fill="#0e3c60">7,5 t</text></g>
+<g stroke="#2377a6" stroke-width="2" fill="none"><line id="radial" x1="245" y1="530" x2="480" y2="530" marker-end="url(#arrow)"/><line id="heightLine" x1="900" y1="510" x2="900" y2="110" marker-end="url(#arrow)"/><path id="angleArc" d=""/></g>
+<g fill="#175b82" font-size="16" font-weight="700"><text id="radiusTxt" x="450" y="548">Raio</text><text id="heightTxt" x="810" y="95">Altura</text><text id="boomTxt" x="460" y="100">Lança</text><text id="angleTxt" x="300" y="395">Ângulo</text></g>
+<rect x="32" y="27" width="365" height="96" fill="#fff" stroke="#cedbe5"/><text x="46" y="50" font-size="15" font-weight="800" fill="#12283e">SIMULAÇÃO GEOMÉTRICA (NÃO É PLANO APROVADO)</text>
+<text id="opSvg" x="46" y="72" font-size="13" fill="#324b63">U-8224</text>
+<text id="equipmentSvg" x="46" y="92" font-size="13" fill="#324b63">Guindaste — classe 80 t</text>
+<text x="43" y="576" font-size="12" fill="#6a7986">Geometria esquemática; sem escala certificada, tabela de carga, resistência do solo ou verificação de interferências.</text>
+</svg>
+<div class="print-only" id="printNotes"></div></div>
+<div class="metrics"><div class="metric"><span>Raio geométrico estimado</span><b id="radius">—</b></div><div class="metric"><span>Altura geométrica da ponta</span><b id="height">—</b></div><div class="metric"><span>Comprimento da lança</span><b id="boomMetric">—</b></div><div class="metric"><span>Peso informado</span><b id="weightMetric">—</b></div></div>
+<div class="warning"><strong>Somente para demonstração.</strong> A classe nominal do guindaste (80 t ou 130 t) não significa capacidade disponível no raio indicado. Não há verificação de tabela de carga, contrapeso, patolas, vento, pressão no solo, lingas, centro de gravidade ou distâncias de segurança. Valores e desenho não autorizam içamentos. Exige avaliação por responsável técnico habilitado.</div>
+</section></div></main>
+<script>
+const $=id=>document.getElementById(id);
+const ids=['operacao','equip','tipo','boom','ang','peso','cabos','w','h','obs'];
+const initial={operacao:'Içamento ilustrativo — U-8224',equip:'80',tipo:'pilar',boom:'32',ang:'62',peso:'7.5',cabos:'4',w:'2.5',h:'6',obs:''};
+const num=(id,def,min,max)=>{const v=Number($(id).value);return Number.isFinite(v)?Math.max(min,Math.min(max,v)):def};
+const fmt=(n,d=1)=>n.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+function update(){
+const L=num('boom',32,15,60),angle=num('ang',62,20,82),wt=num('peso',7.5,.5,30),cable=num('cabos',4,1,20),w=num('w',2.5,.4,15),h=num('h',6,.4,18);
+const a=angle*Math.PI/180,scale=7.8,ox=245,oy=423,tx=ox+L*Math.cos(a)*scale,ty=oy-L*Math.sin(a)*scale;
+const radius=L*Math.cos(a),top=11+L*Math.sin(a);
+$('boomV').textContent=fmt(L)+' m';$('angV').textContent=angle+'°';$('pesoV').textContent=fmt(wt)+' t';
+$('radius').textContent=fmt(radius)+' m';$('height').textContent=fmt(top)+' m';$('boomMetric').textContent=fmt(L)+' m';$('weightMetric').textContent=fmt(wt)+' t';
+for(const id of ['boomOuter','boomInner','boomStripe']){const e=$(id);e.setAttribute('x2',tx);e.setAttribute('y2',ty)}
+$('tip').setAttribute('cx',tx);$('tip').setAttribute('cy',ty);
+const loadWidth=Math.max(25,Math.min(108,w*12)),loadHeight=Math.max(25,Math.min(125,h*12));
+const ropeBottom=ty+cable*scale,loadY=ropeBottom+22;
+$('rope').setAttribute('x1',tx);$('rope').setAttribute('y1',ty);$('rope').setAttribute('x2',tx);$('rope').setAttribute('y2',ropeBottom);
+$('hook').setAttribute('d',`M ${tx} ${ropeBottom} q 13 0 13 9 q 0 13 -13 13 q -10 0 -10 -8`);
+$('loadRect').setAttribute('x',tx-loadWidth/2);$('loadRect').setAttribute('y',loadY);$('loadRect').setAttribute('width',loadWidth);$('loadRect').setAttribute('height',loadHeight);
+$('loadPattern').setAttribute('d',`M ${tx-loadWidth/2+5} ${loadY+12} L ${tx+loadWidth/2-5} ${loadY+12} M ${tx-loadWidth/2+5} ${loadY+loadHeight-12} L ${tx+loadWidth/2-5} ${loadY+loadHeight-12}`);
+$('loadLabel').setAttribute('x',tx);$('loadLabel').setAttribute('y',loadY+Math.min(loadHeight/2+5,45));$('loadLabel').textContent=fmt(wt)+' t';
+$('radial').setAttribute('x2',tx);$('radiusTxt').setAttribute('x',Math.max(240,tx-30));$('radiusTxt').textContent='Raio '+fmt(radius)+' m';
+$('heightLine').setAttribute('y2',ty);$('heightTxt').textContent='Altura da ponta '+fmt(top)+' m';
+$('boomTxt').setAttribute('x',(ox+tx)/2+15);$('boomTxt').setAttribute('y',(oy+ty)/2-15);$('boomTxt').textContent='Lança '+fmt(L)+' m';
+$('angleTxt').textContent=angle+'°';$('angleArc').setAttribute('d',`M ${ox+65} ${oy} A 65 65 0 0 0 ${ox+65*Math.cos(a)} ${oy-65*Math.sin(a)}`);
+$('opSvg').textContent=$('operacao').value.slice(0,55);$('equipmentSvg').textContent='Guindaste classe '+$('equip').value+' t • '+$('tipo').selectedOptions[0].text;
+$('printNotes').textContent='Operação: '+$('operacao').value+' | Peça: '+$('tipo').selectedOptions[0].text+' | Peso: '+fmt(wt)+' t | Lança: '+fmt(L)+' m | Ângulo: '+angle+'° | Raio: '+fmt(radius)+' m | Altura da ponta: '+fmt(top)+' m | Observações: '+$('obs').value;
+}
+ids.forEach(id=>$(id).addEventListener('input',update));
+$('reset').addEventListener('click',()=>{for(const [id,v] of Object.entries(initial))$(id).value=v;update()});
+$('print').addEventListener('click',()=>{update();window.print()});
+update();
+</script></body></html>
