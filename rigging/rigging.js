@@ -5,11 +5,11 @@ const fmt=(n,d=1)=>Number.isFinite(n)?n.toLocaleString('pt-BR',{minimumFractionD
 const n=(id,fallback=0)=>{const v=$(id).value.trim();return v===''?NaN:Number(v)};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=()=> 'RG-'+Date.now().toString(36).toUpperCase();
-let studyId=uid(),view='side',dirty=false,three=null,showSafetyVisual=true,sceneObjects=[],selectedObject=null,editorMode='insert';
+let studyId=uid(),view='side',dirty=false,three=null,showSafetyVisual=true,sceneObjects=[],selectedObject=null,editorMode='insert',previewRotation=0;
 const keys=inputs.map(el=>el.id);
 function data(){return Object.fromEntries(keys.map(id=>[id,$(id).type==='checkbox'?$(id).checked:$(id).value]))}
 function apply(d){for(const id of keys)if(Object.hasOwn(d,id)){if($(id).type==='checkbox')$(id).checked=d[id]===true||d[id]==='true';else $(id).value=String(d[id])}update()}
-function sample(){return {craneType:'mobile',isolationRadius:'12',isolationType:'barrier',safetyLead:'',safetyNotes:'',sIsolation:false,sBarrier:false,sLoadControl:false,sLevel:false,sPersonnel:false,sIdentity:false,sAccessories:false,sWind:false,sSignals:false,sPower:false,sEmergency:false,operation:'Içamento ilustrativo — U-8224',unit:'U-8224',revision:'0',contract:'',author:'',notes:'',maker:'',model:'',serial:'',boom:'32',angle:'62',cable:'4',slew:'0',pivot:'3.5',outrigger:'total',counterweight:'',loadtype:'pilar',weight:'7.5',riggingweight:'.2',width:'2.5',loadheight:'6',depth:'1.5',cog:'',loadchart:'',ground:'',weather:'',obstacles:'',targetradius:'14',targetazimuth:'45'}}
+function sample(){return {craneType:'mobile',isolationRadius:'12',isolationType:'barrier',safetyLead:'',safetyNotes:'',sIsolation:false,sBarrier:false,sLoadControl:false,sLevel:false,sPersonnel:false,sIdentity:false,sAccessories:false,sWind:false,sSignals:false,sPower:false,sEmergency:false,sDedicatedRadio:false,sTaskSignage:false,sMovementSigns:false,radioChannel:'',radioResponsible:'',taskSign:'',warningSign:'PERIGO — MOVIMENTAÇÃO DE CARGAS',operation:'Içamento ilustrativo — U-8224',unit:'U-8224',revision:'0',contract:'',author:'',notes:'',maker:'',model:'',serial:'',boom:'32',angle:'62',cable:'4',slew:'0',pivot:'3.5',outrigger:'total',counterweight:'',loadtype:'pilar',weight:'7.5',riggingweight:'.2',width:'2.5',loadheight:'6',depth:'1.5',cog:'',loadchart:'',ground:'',weather:'',obstacles:'',targetradius:'14',targetazimuth:'45'}}
 const equipment=()=>$('craneType').value;
 const nonLifting=()=>['standardTruck','flatbed'].includes(equipment());
 function calc(){
@@ -41,7 +41,7 @@ $('checks').innerHTML=check.map(([label,filled,note])=>'<li>'+esc(label)+' — '
 return check.map(([label,filled,note])=>({label,status:filled?'Informado — não validado':'Pendente',note}));
 }
 const safetyItems=[
-['sIsolation','Área de içamento isolada e sinalizada'],['sBarrier','Barreiras e acesso controlado'],['sLoadControl','Controle da carga'],['sLevel','Nivelamento e estabilidade do piso'],['sPersonnel','Pessoal autorizado'],['sIdentity','Identificação e comunicação'],['sAccessories','Certificação de acessórios'],['sWind','Condições climáticas'],['sSignals','Sinaleiro e comunicação'],['sPower','Interferências elétricas'],['sEmergency','Plano de emergência']
+['sIsolation','Área de içamento isolada e sinalizada'],['sBarrier','Barreiras e acesso controlado'],['sLoadControl','Controle da carga'],['sLevel','Nivelamento e estabilidade do piso'],['sPersonnel','Pessoal autorizado'],['sIdentity','Identificação e comunicação'],['sAccessories','Certificação de acessórios'],['sWind','Condições climáticas'],['sSignals','Sinaleiro e comunicação'],['sPower','Interferências elétricas'],['sEmergency','Plano de emergência'],['sDedicatedRadio','Canal dedicado à manobra definido e testado'],['sTaskSignage','Sinalização da tarefa posicionada'],['sMovementSigns','Placas de movimentação identificadas']
 ];
 function safetyDrawing(mode){
 if(!showSafetyVisual)return '';
@@ -77,7 +77,7 @@ return '<g transform="translate('+x+' '+y+')"><path d="M-70 0V-65M70 0V-65" stro
 }
 function validScene(value){
 if(!Array.isArray(value))return [];
-const allowed=new Set(['cone','barrier','tape','building','laboratory','house','shop','office','block','road','sidewalk','restricted']);
+const allowed=new Set(['cone','barrier','tape','building','laboratory','house','shop','office','block','road','sidewalk','restricted','taskSign3d','warningSign3d','radioPost']);
 return value.slice(0,300).filter(o=>o&&allowed.has(o.type)&&[o.x,o.z,o.rot].every(v=>typeof v==='number'&&Number.isFinite(v))).map(o=>({id:String(o.id||uid()).slice(0,70),type:o.type,x:Math.max(-400,Math.min(400,o.x)),z:Math.max(-400,Math.min(400,o.z)),rot:o.rot}));
 }
 const svghead='<defs><pattern id="gp" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" stroke="#e3eaf0" fill="none"/></pattern><marker id="arr" markerWidth="8" markerHeight="8" refX="4" refY="3" orient="auto-start-reverse"><path d="M0 0L6 3L0 6Z" fill="#206da3"/></marker></defs><rect width="1200" height="800" fill="white"/><rect x="32" y="35" width="1136" height="690" fill="url(#gp)"/>';
@@ -196,7 +196,7 @@ if(view!=='three'){
 $('drawing').style.display='block';$('threehost').style.display='none';
 $('drawing').innerHTML=(view==='side'?side(g):view==='top'?top(g):iso(g))+safetyDrawing(view);
 }else{$('drawing').style.display='none';$('threehost').style.display='block';render3D(g)}
-const rows=[['Identificador',studyId],['Operação',$('operation').value],['Contrato',$('contract').value||'Não informado'],['Unidade',$('unit').value],['Revisão',$('revision').value],['Tipo de equipamento',$('craneType').selectedOptions[0].text],['Fabricante / modelo',[$('maker').value,$('model').value].filter(Boolean).join(' / ')||'Não informado'],['Série',$('serial').value||'Não informada'],['Lança',fmt(g.L)+' m'],['Ângulo',fmt(g.a*180/Math.PI)+'°'],['Raio',fmt(g.tipX)+' m'],['Altura da ponta',fmt(g.tipY)+' m'],['Altura do gancho',fmt(g.hookY)+' m'],['Folga da carga',fmt(g.baseY)+' m'],['Carga',$('loadtype').selectedOptions[0].text],['Dimensões',fmt(g.w)+' × '+fmt(g.h)+' × '+fmt(g.depth)+' m'],['Massa total informada',fmt(g.wt+g.rig)+' t'],['Patolamento',$('outrigger').selectedOptions[0].text],['Tabela oficial',$('loadchart').value||'NÃO FORNECIDA'],['Centro de gravidade',$('cog').value||'Pendente'],['Solo',$('ground').value||'Pendente'],['Vento',$('weather').value||'Pendente'],['Interferências',$('obstacles').value||'Pendente'],['Observações',$('notes').value||'—'],['Responsável pela segurança',$('safetyLead').value||'Não informado'],['Isolamento informado',fmt(n('isolationRadius'))+' m — '+$('isolationType').selectedOptions[0].text],['Medidas adicionais de segurança',$('safetyNotes').value||'—']];
+const rows=[['Identificador',studyId],['Operação',$('operation').value],['Contrato',$('contract').value||'Não informado'],['Unidade',$('unit').value],['Revisão',$('revision').value],['Tipo de equipamento',$('craneType').selectedOptions[0].text],['Fabricante / modelo',[$('maker').value,$('model').value].filter(Boolean).join(' / ')||'Não informado'],['Série',$('serial').value||'Não informada'],['Lança',fmt(g.L)+' m'],['Ângulo',fmt(g.a*180/Math.PI)+'°'],['Raio',fmt(g.tipX)+' m'],['Altura da ponta',fmt(g.tipY)+' m'],['Altura do gancho',fmt(g.hookY)+' m'],['Folga da carga',fmt(g.baseY)+' m'],['Carga',$('loadtype').selectedOptions[0].text],['Dimensões',fmt(g.w)+' × '+fmt(g.h)+' × '+fmt(g.depth)+' m'],['Massa total informada',fmt(g.wt+g.rig)+' t'],['Patolamento',$('outrigger').selectedOptions[0].text],['Tabela oficial',$('loadchart').value||'NÃO FORNECIDA'],['Centro de gravidade',$('cog').value||'Pendente'],['Solo',$('ground').value||'Pendente'],['Vento',$('weather').value||'Pendente'],['Interferências',$('obstacles').value||'Pendente'],['Observações',$('notes').value||'—'],['Responsável pela segurança',$('safetyLead').value||'Não informado'],['Isolamento informado',fmt(n('isolationRadius'))+' m — '+$('isolationType').selectedOptions[0].text],['Medidas adicionais de segurança',$('safetyNotes').value||'—'],['Identificação da tarefa',$('taskSign').value||'Não informada'],['Texto das placas',$('warningSign').value||'Não informado'],['Canal de comunicação da manobra',$('radioChannel').value||'Pendente'],['Responsável pela comunicação',$('radioResponsible').value||'Não informado']];
 $('reportDetails').innerHTML='<table>'+rows.map(([k,v])=>'<tr><th>'+esc(k)+'</th><td>'+esc(v)+'</td></tr>').join('')+'</table>';
 $('reportChecks').innerHTML='<p><strong>CAPACIDADE NÃO VERIFICADA — PROIBIDA CLASSIFICAÇÃO COMO APROVADA.</strong></p><table>'+allChecks.map(x=>'<tr><th>'+esc(x.label)+'</th><td>'+esc(x.status)+' — '+esc(x.note)+'</td></tr>').join('')+'</table><p>Inconsistências geométricas: '+esc(g.issues.join('; ')||'Nenhuma detectada na modelagem simplificada')+'</p>';
 return g;
@@ -243,16 +243,17 @@ $('resetview').onclick=()=>{if(three){three.az=.65;three.el=.45;three.distance=9
 inputs.forEach(el=>el.addEventListener('input',()=>{dirty=true;update()}));
 try{const prev=JSON.parse(localStorage.getItem('cpl.rigging.current')||'null');if(prev?.schema==='cpl-rigging-v1'){studyId=prev.id;sceneObjects=validScene(prev.sceneObjects);showSafetyVisual=prev.showSafetyVisual!==false;syncSafetyButton();apply(prev.data)}else update()}catch{update()}
 
-const objectMap={cone:'Cone',barrier:'Barreira',tape:'Fita zebrada',building:'Prédio',laboratory:'Laboratório',house:'Casa',shop:'Loja',office:'Sala administrativa',block:'Bloco',road:'Rua',sidewalk:'Calçada',restricted:'Área restrita'};
+const objectMap={cone:'Cone',barrier:'Barreira',tape:'Fita zebrada',building:'Prédio',laboratory:'Laboratório',house:'Casa',shop:'Loja',office:'Sala administrativa',block:'Bloco',road:'Rua',sidewalk:'Calçada',restricted:'Área restrita',taskSign3d:'Placa da tarefa',warningSign3d:'Placa de movimentação',radioPost:'Posto de comunicação'};
 function newSceneObject(type,x,z,rot=0){return {id:uid()+'-'+Math.random().toString(36).slice(2,6),type,x,z,rot}}
-function editorSelectMode(mode){editorMode=mode;$('objectAdd').classList.toggle('active',mode==='insert');$('objectSelect').classList.toggle('active',mode==='select');notify(mode==='insert'?'Clique no chão para inserir '+$('objectType').selectedOptions[0].text+'.':'Clique em um objeto para selecionar e arrastar.');}
+function editorSelectMode(mode){editorMode=mode;$('objectAdd').classList.toggle('active',mode==='insert');$('objectSelect').classList.toggle('active',mode==='select');if(three)three.previewPoint=null;refreshPreview();notify(mode==='insert'?'Mova o cursor para ver a posição; clique para inserir. Arraste em área vazia para girar a câmera.':'Navegação livre: arraste em área vazia para girar; arraste um objeto para mover.');}
 $('objectAdd').onclick=()=>editorSelectMode('insert');
 $('objectSelect').onclick=()=>editorSelectMode('select');
 $('objectRotate').onclick=()=>{const obj=sceneObjects.find(o=>o.id===selectedObject);if(!obj){notify('Selecione um objeto para rotacionar.');return}obj.rot+=Math.PI/12;update();};
 $('objectDuplicate').onclick=()=>{const obj=sceneObjects.find(o=>o.id===selectedObject);if(!obj){notify('Selecione um objeto para duplicar.');return}const next=newSceneObject(obj.type,obj.x+2,obj.z+2,obj.rot);sceneObjects.push(next);selectedObject=next.id;update();};
 $('objectDelete').onclick=()=>{if(!selectedObject){notify('Selecione um objeto para excluir.');return}sceneObjects=sceneObjects.filter(o=>o.id!==selectedObject);selectedObject=null;update();};
 $('objectClear').onclick=()=>{if(!sceneObjects.length)return;if(!confirm('Remover os objetos adicionados ao cenário deste estudo?'))return;sceneObjects=[];selectedObject=null;update();};
-$('objectType').onchange=()=>editorSelectMode('insert');
+$('objectType').onchange=()=>{previewRotation=0;editorSelectMode('insert')};
+window.addEventListener('keydown',e=>{if(view!=='three'||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;if(e.key.toLowerCase()==='r'){e.preventDefault();const obj=sceneObjects.find(o=>o.id===selectedObject);if(editorMode==='insert'){previewRotation=(previewRotation+Math.PI/12)%(Math.PI*2);refreshPreview()}else if(obj){obj.rot+=Math.PI/12;update()}}if(e.key==='Escape'){editorSelectMode('select')}if(e.key==='Delete'&&selectedObject){$('objectDelete').click()}});
 function addModelObjects(){
 if(!three)return;
 const {T,group}=three;
@@ -274,6 +275,7 @@ const [w,h,d,color]=dims[o.type];cube(parent,0,h/2,0,w,h,d,color);
 for(let side of [-1,1])for(let k=-1;k<=1;k++)cube(parent,k*w/3,Math.max(2,h*.65),side*(d/2+.06),1.5,1.3,.1,0x5e97b9);
 cube(parent,0,1.5,d/2+.1,1.9,3,.14,0x4d718c);
 };
+const sign=(parent,text,color)=>{cube(parent,0,2.1,0,.14,3.9,.14,0x65798a);cube(parent,0,3.45,0,3.8,1.25,.15,color);const canvas=document.createElement('canvas');canvas.width=512;canvas.height=180;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,512,180);ctx.fillStyle='#222';ctx.font='bold 29px Arial';ctx.textAlign='center';const words=String(text||'AVISO').slice(0,90).split(/\s+/);let lines=[],line='';for(const word of words){if((line+' '+word).length>26){lines.push(line);line=word}else line+=(line?' ':'')+word}if(line)lines.push(line);lines.slice(0,3).forEach((l,i)=>ctx.fillText(l,256,50+i*46));const tex=new T.CanvasTexture(canvas);const face=new T.Mesh(new T.PlaneGeometry(3.7,1.2),new T.MeshBasicMaterial({map:tex,side:T.DoubleSide}));face.position.set(0,3.45,.10);parent.add(face)};
 const restrictions=$('isolationType').value;
 if(showSafetyVisual&&!nonLifting()){
 const rad=Math.max(4,Math.min(100,n('isolationRadius')||12));
@@ -284,18 +286,29 @@ if(restrictions==='barrier'||restrictions==='mixed')barrier(auto,0,0);
 if(restrictions==='tape'||restrictions==='mixed')tape(auto,0,0);
 }
 }
-for(const o of sceneObjects){
-const parent=new T.Group();parent.position.set(o.x,0,o.z);parent.rotation.y=o.rot;parent.userData.sceneId=o.id;group.add(parent);
+three.makeAsset=(o,ghost=false)=>{const parent=new T.Group();parent.position.set(o.x,0,o.z);parent.rotation.y=o.rot;if(!ghost)parent.userData.sceneId=o.id;group.add(parent);
 if(o.type==='cone')cone(parent,0,0);
 else if(o.type==='barrier')barrier(parent,0,0);
 else if(o.type==='tape')tape(parent,0,0);
+else if(o.type==='taskSign3d')sign(parent,$('taskSign').value||'ÁREA DE IÇAMENTO',0xe0a626);
+else if(o.type==='warningSign3d')sign(parent,$('warningSign').value||'MOVIMENTAÇÃO DE CARGAS',0xe9b633);
+else if(o.type==='radioPost'){cube(parent,0,.9,0,1.1,1.7,.8,0x436985);cube(parent,0,2.05,0,.55,.65,.3,0x253b50);cube(parent,.28,2.7,0,.04,.9,.04,0x253b50)}
 else if(['road','sidewalk','restricted'].includes(o.type)){
 cube(parent,0,.035,0,o.type==='road'?18:12,.07,o.type==='road'?5:4,o.type==='road'?0x4a5159:o.type==='sidewalk'?0xabb8c2:0xf3b3a1);
 if(o.type==='road')for(let k=-2;k<=2;k++)cube(parent,k*3,.08,0,1.4,.02,.13,0xf5e6af);
 }else building(parent,o);
-if(o.id===selectedObject){const bb=new T.Box3().setFromObject(parent),size=new T.Vector3();bb.getSize(size);const selected=new T.BoxHelper(parent,0x087fc1);selected.userData.decorative=true;group.add(selected)}
+if(ghost){parent.traverse(node=>{if(node.isMesh){node.material=node.material.clone();node.material.transparent=true;node.material.opacity=.42;node.material.depthWrite=false;node.material.color?.lerp(new T.Color(0x22d5ec),.42)}})}
+return parent};
+for(const o of sceneObjects){const parent=three.makeAsset(o);
+if(o.id===selectedObject){const selected=new T.BoxHelper(parent,0x087fc1);selected.userData.decorative=true;group.add(selected)}
 }
+refreshPreview();
 }
+function refreshPreview(){if(!three||view!=='three'||!three.makeAsset)return;
+if(three.preview){three.group.remove(three.preview);three.preview.traverse(n=>{n.geometry?.dispose();if(n.material){(Array.isArray(n.material)?n.material:[n.material]).forEach(m=>{m.map?.dispose?.();m.dispose()})}});three.preview=null}
+if(editorMode!=='insert'||!three.previewPoint)return;
+const p=three.previewPoint;three.preview=three.makeAsset({id:'preview',type:$('objectType').value,x:p.x,z:p.z,rot:previewRotation},true);
+draw3D()}
 function getGroundPoint(e){if(!three)return null;const {T,camera,renderer}=three;const rc=new T.Raycaster(),rect=renderer.domElement.getBoundingClientRect();rc.setFromCamera(new T.Vector2((e.clientX-rect.left)/rect.width*2-1,-((e.clientY-rect.top)/rect.height*2-1)),camera);const point=new T.Vector3();return rc.ray.intersectPlane(new T.Plane(new T.Vector3(0,1,0),0),point)?point:null}
 function hitObject(e){const z=three;if(!z)return null;const {T,camera,renderer,group}=z,rect=renderer.domElement.getBoundingClientRect(),rc=new T.Raycaster();
 rc.setFromCamera(new T.Vector2((e.clientX-rect.left)/rect.width*2-1,-((e.clientY-rect.top)/rect.height*2-1)),camera);
