@@ -331,21 +331,51 @@ if(!three){
 
  renderer.domElement.addEventListener('contextmenu',e=>e.preventDefault());
  renderer.domElement.addEventListener('pointerdown',e=>{
-   const z=three;z.x=e.clientX;z.y=e.clientY;z.drag=true;z.pointerAction=e.button===1||e.button===2?'pan':'orbit';
-   if(e.button===0&&editorMode==='select'){selectedObject=hitObject(e);z.pointerAction=selectedObject?'move':'orbit';update();}
-   if(e.button===0&&editorMode==='insert'){
-     const p=getGroundPoint(e);if(p){const item=newSceneObject($('objectType').value,Math.round(p.x*10)/10,Math.round(p.z*10)/10);sceneObjects.push(item);selectedObject=item.id;update();notify(objectMap[item.type]+' inserido. Salve o estudo para preservar o cenário.');}
-     z.pointerAction='insert';
-   }
-   renderer.domElement.setPointerCapture(e.pointerId);
+  if(e.button>2)return;
+  const z=three;z.drag=true;z.x=e.clientX;z.y=e.clientY;z.startX=e.clientX;z.startY=e.clientY;z.moved=false;
+  z.pointerAction=e.button===1||e.button===2?'pan':'potential';
+  if(e.button===0){const hit=hitObject(e);if(hit){selectedObject=hit;z.pointerAction='move';update()}}
+  renderer.domElement.setPointerCapture(e.pointerId);
  });
- renderer.domElement.addEventListener('pointerup',()=>{if(three){three.drag=false;three.pointerAction=null}});
+ renderer.domElement.addEventListener('pointerup',e=>{
+  const z=three;if(!z?.drag)return;
+  if(e.button===0&&!z.moved&&z.pointerAction==='potential'&&editorMode==='insert'){
+   const p=getGroundPoint(e);
+   if(p&&sceneObjects.length<300){
+    const item=newSceneObject($('objectType').value,Math.round(p.x*10)/10,Math.round(p.z*10)/10,previewRotation);
+    sceneObjects.push(item);selectedObject=item.id;
+    update();notify(objectMap[item.type]+' posicionado. Use o mouse para ver a próxima posição; salve para preservar.');
+   }else if(sceneObjects.length>=300)notify('Limite de 300 objetos por estudo.');
+  }
+  z.drag=false;z.pointerAction=null;z.moved=false;
+ });
  renderer.domElement.addEventListener('pointercancel',()=>{if(three){three.drag=false;three.pointerAction=null}});
+ renderer.domElement.addEventListener('pointerleave',()=>{if(three&&!three.drag){three.previewPoint=null;refreshPreview()}});
  renderer.domElement.addEventListener('pointermove',e=>{
-   const z=three;if(!z?.drag)return;const dx=e.clientX-z.x,dy=e.clientY-z.y;z.x=e.clientX;z.y=e.clientY;
-   if(z.pointerAction==='move'){const p=getGroundPoint(e),item=sceneObjects.find(o=>o.id===selectedObject);if(p&&item){item.x=p.x;item.z=p.z;update()}return}
-   if(z.pointerAction==='pan'){const right=new T.Vector3().setFromMatrixColumn(z.camera.matrix,0);const up=new T.Vector3().setFromMatrixColumn(z.camera.matrix,1);const speed=z.distance*.0016;z.target.addScaledVector(right,-dx*speed).addScaledVector(up,dy*speed);draw3D();return}
-   if(z.pointerAction==='orbit'){z.az+=dx*.007;z.el=Math.min(1.45,Math.max(.04,z.el+dy*.007));draw3D()}
+  const z=three;if(!z)return;
+  const p=getGroundPoint(e);
+  if(editorMode==='insert'&&p){
+    const x=Math.round(p.x*10)/10,zz=Math.round(p.z*10)/10;z.previewPoint={x,z:zz};
+    if(z.preview){z.preview.position.set(x,0,zz);z.preview.rotation.y=previewRotation;draw3D()}
+    else refreshPreview();
+  }
+  if(!z.drag)return;
+  const dx=e.clientX-z.x,dy=e.clientY-z.y;
+  if(Math.hypot(e.clientX-z.startX,e.clientY-z.startY)>5)z.moved=true;
+  z.x=e.clientX;z.y=e.clientY;
+  if(z.pointerAction==='move'){
+    const obj=sceneObjects.find(o=>o.id===selectedObject);
+    if(p&&obj&&z.moved){obj.x=Math.round(p.x*10)/10;obj.z=Math.round(p.z*10)/10;update()}
+    return;
+  }
+  if(z.pointerAction==='pan'){
+    const right=new T.Vector3().setFromMatrixColumn(z.camera.matrix,0);
+    const up=new T.Vector3().setFromMatrixColumn(z.camera.matrix,1);
+    const speed=z.distance*.0016;
+    z.target.addScaledVector(right,-dx*speed).addScaledVector(up,dy*speed);draw3D();return;
+  }
+  if(z.pointerAction==='potential'&&z.moved)z.pointerAction='orbit';
+  if(z.pointerAction==='orbit'){z.az+=dx*.007;z.el=Math.min(1.45,Math.max(.04,z.el+dy*.007));draw3D()}
  });
  renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();three.distance=Math.min(260,Math.max(12,three.distance*(e.deltaY>0?1.1:.9)));draw3D()},{passive:false});
  }catch{host.innerHTML='<div style="padding:35px;color:#5d3340">3D indisponível: biblioteca externa não carregada. As vistas 2D continuam operacionais.</div>';return}
