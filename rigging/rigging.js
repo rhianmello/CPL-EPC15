@@ -135,6 +135,16 @@ let lastSaved={};
 function notify(msg){$('toast').textContent=msg}
 function store(){const d={schema:'cpl-rigging-v1',id:studyId,savedAt:new Date().toISOString(),data:data()};localStorage.setItem('cpl.rigging.current',JSON.stringify(d));const history=JSON.parse(localStorage.getItem('cpl.rigging.history')||'[]');history.push(d);localStorage.setItem('cpl.rigging.history',JSON.stringify(history.slice(-50)));notify('Estudo salvo localmente com uma revisão histórica.');return d}
 $('save').onclick=store;
+$('revisions').onclick=()=>{
+let history=[];try{history=JSON.parse(localStorage.getItem('cpl.rigging.history')||'[]')}catch{}
+if(!history.length){notify('Nenhuma revisão histórica salva neste navegador.');return}
+const options=history.slice(-15).reverse();
+const lines=options.map((item,i)=> (i+1)+' — '+(item.data?.operation||'Estudo')+' | Rev. '+(item.data?.revision||'0')+' | '+new Date(item.savedAt).toLocaleString('pt-BR'));
+const chosen=prompt('Revisões locais (mais recente primeiro). Informe o número para reabrir:\n'+lines.join('\n'));
+if(chosen===null)return;const index=Number(chosen)-1;
+if(!Number.isInteger(index)||index<0||index>=options.length){notify('Número de revisão inválido.');return}
+const item=options[index];studyId=item.id||uid();apply(item.data);notify('Revisão histórica reaberta para edição. Salve para registrar outra versão.')
+};
 $('export').onclick=()=>{const d=store();const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download=studyId+'.json';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1500)};
 $('import').onclick=()=>$('importFile').click();
 $('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>1000000)throw Error('Arquivo muito grande');const d=JSON.parse(await f.text());if(d.schema!=='cpl-rigging-v1'||!d.data||typeof d.data!=='object')throw Error('Formato inválido');store();studyId=String(d.id||uid()).slice(0,80);apply(d.data);notify('Estudo importado. Salve para registrar uma nova revisão.')}catch(err){notify('Erro na importação: '+err.message)}e.target.value=''};
