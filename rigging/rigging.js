@@ -9,11 +9,15 @@ let studyId=uid(),view='side',dirty=false,three=null;
 const keys=inputs.map(el=>el.id);
 function data(){return Object.fromEntries(keys.map(id=>[id,$(id).value]))}
 function apply(d){for(const id of keys)if(Object.hasOwn(d,id))$(id).value=String(d[id]);update()}
-function sample(){return {operation:'Içamento ilustrativo — U-8224',unit:'U-8224',revision:'0',contract:'',author:'',notes:'',maker:'',model:'',serial:'',boom:'32',angle:'62',cable:'4',slew:'0',pivot:'3.5',outrigger:'total',counterweight:'',loadtype:'pilar',weight:'7.5',riggingweight:'.2',width:'2.5',loadheight:'6',depth:'1.5',cog:'',loadchart:'',ground:'',weather:'',obstacles:'',targetradius:'14',targetazimuth:'45'}}
+function sample(){return {craneType:'mobile',operation:'Içamento ilustrativo — U-8224',unit:'U-8224',revision:'0',contract:'',author:'',notes:'',maker:'',model:'',serial:'',boom:'32',angle:'62',cable:'4',slew:'0',pivot:'3.5',outrigger:'total',counterweight:'',loadtype:'pilar',weight:'7.5',riggingweight:'.2',width:'2.5',loadheight:'6',depth:'1.5',cog:'',loadchart:'',ground:'',weather:'',obstacles:'',targetradius:'14',targetazimuth:'45'}}
+const equipment=()=>$('craneType').value;
+const nonLifting=()=>['standardTruck','flatbed'].includes(equipment());
 function calc(){
 const L=n('boom'),a=n('angle')*Math.PI/180,p=n('pivot'),c=n('cable'),h=n('loadheight'),w=n('width'),depth=n('depth'),wt=n('weight'),rig=n('riggingweight');
 const tipX=L*Math.cos(a),tipY=p+L*Math.sin(a),hookY=tipY-c,baseY=hookY-h;
 const issues=[];
+if(nonLifting())issues.push('Este veículo não possui equipamento de içamento integrado');
+if(equipment()==='knuckle')issues.push('Articulação do guindauto ilustrativa: geometria e tabela oficiais do fabricante necessárias');
 for(const [id,title,lo,hi] of [['boom','Lança',.1,200],['angle','Ângulo',0,90],['pivot','Pino',0,20],['cable','Cabo',.1,200],['loadheight','Altura da carga',.1,80],['width','Largura da carga',.1,80],['depth','Profundidade',.1,80],['weight','Massa',.001,1000],['riggingweight','Massa dos acessórios',0,1000]]){
 const v=n(id);if(!Number.isFinite(v)||v<lo||v>hi)issues.push(title+' inválido(a)')}
 if(Number.isFinite(baseY)&&baseY<0)issues.push('Carga intersecta o solo (altura negativa)');
@@ -60,6 +64,32 @@ const X=x=>125+(x-minX)*sc,Y=y=>660-(y-minY)*sc;
 const bx=X(0),by=Y(g.p),tx=X(g.tipX),ty=Y(g.tipY),hy=Y(g.hookY),ly=Y(g.baseY+g.h),ground=Y(0);
 const ow=Math.min(320,g.w*sc),oh=Math.min(340,g.h*sc),lx=tx,loadTop=hy,loadBottom=loadTop+oh;
 let s=svghead+line(40,ground,1155,ground,'#637482',3)+txt(50,ground-9,'NÍVEL DO SOLO ±0,00',13);
+if(nonLifting()){
+const truckY=ground-58,base=bx-110;
+s+=rect(base-125,truckY,285,32,'#d4b038')+rect(base-125,truckY-68,90,69,'#e4bd3a')+rect(base-112,truckY-58,58,35,'#b0d9e7');
+s+=rect(base-20,truckY-38,160,39,equipment()==='flatbed'?'#a4aeb6':'#c9b087');
+for(let i=0;i<4;i++)s+='<circle cx="'+(base-90+i*75)+'" cy="'+(ground-12)+'" r="19" fill="#2e3f4e" stroke="#6d7b86" stroke-width="4"/>';
+s+=txt(55,65,equipment()==='flatbed'?'CAMINHÃO PRANCHA · SEM ELEVAÇÃO':'CAMINHÃO PADRÃO · SEM ELEVAÇÃO',18);
+s+=txt(55,100,'Nenhum guindaste instalado: parâmetros de içamento não se aplicam.',15);
+return s;
+}
+if(equipment()==='knuckle'){
+const cabinX=bx-140,cabinY=ground-105;
+s+=rect(cabinX-80,cabinY,88,78,'#e4b932')+rect(cabinX-69,cabinY+8,57,36,'#acd4e5')+rect(cabinX+8,cabinY+48,250,35,'#e3b42c');
+for(let i=0;i<4;i++)s+='<circle cx="'+(cabinX-40+i*76)+'" cy="'+(ground-15)+'" r="19" fill="#293a49" stroke="#607383" stroke-width="4"/>';
+for(const x of [cabinX+23,cabinX+240])s+=line(x,cabinY+75,x,ground-5,'#617889',7)+rect(x-27,ground-9,54,9,'#667987');
+const elbowX=bx+(tx-bx)*.29,elbowY=by+(ty-by)*.51;
+s+=line(bx,by,elbowX,elbowY,'#344c5e',22)+line(bx,by,elbowX,elbowY,'#e9bc33',16);
+s+=line(elbowX,elbowY,tx,ty,'#314858',18)+line(elbowX,elbowY,tx,ty,'#f1ce52',12);
+s+='<circle cx="'+elbowX+'" cy="'+elbowY+'" r="12" fill="#b88c22" stroke="#344c5e" stroke-width="3"/>';
+s+=line(tx,ty,tx,hy,'#344c5d',3)+rect(tx-10,hy-6,20,15,'#667987');
+s+=loadShape(tx,hy,ow,oh,$('loadtype').value,fmt(g.wt)+' t');
+s+=txt(55,65,'CAMINHÃO MUNCK · BRAÇO ARTICULADO ILUSTRATIVO',17);
+s+=txt(55,95,'A posição intermediária da articulação NÃO é cinemática validada.',14);
+s+=dimensions(bx,ground+25,tx,ground+25,'Raio geométrico '+fmt(g.tipX)+' m');
+s+=txt(55,745,'Capacidade, articulações e hidráulica dependem do modelo e tabela oficial.',14);
+return s;
+}
 s+='<g>'+rect(bx-160,by+12,220,35,'#e6b937')+rect(bx-158,by-26,65,43,'#edc74c')+rect(bx-143,by-20,37,24,'#cbe5ec')+rect(bx-35,by-22,105,39,'#d6a929');
 for(let i=0;i<4;i++)s+='<circle cx="'+(bx-132+i*52)+'" cy="'+(by+51)+'" r="19" fill="#283b49" stroke="#536979" stroke-width="5"/><circle cx="'+(bx-132+i*52)+'" cy="'+(by+51)+'" r="8" fill="#b7cbd4"/>';
 s+=line(bx-175,by+30,bx-175,ground-6,'#576879',7)+rect(bx-204,ground-8,58,8,'#536576');
@@ -77,7 +107,7 @@ s+=dimensions(1050,ground,1050,hy,'Gancho '+fmt(g.hookY)+' m',-70);
 s+=dimensions(980,ground,980,loadBottom,'Base '+fmt(g.baseY)+' m',-50);
 s+=txt((bx+tx)/2-25,(by+ty)/2-30,'Lança '+fmt(g.L)+' m',16,'middle');
 s+=txt(bx+68,by-12,fmt(g.a*180/Math.PI,0)+'°',17);
-s+=txt(56,65,'VISTA LATERAL | GEOMETRIA EM METROS',17);
+s+=txt(56,65,(equipment()==='truckCrane'?'CAMINHÃO-GUINDASTE TELESCÓPICO':'GUINDASTE TELESCÓPICO MÓVEL')+' | GEOMETRIA ILUSTRATIVA',17);
 if(g.issues.length)s+=txt(50,700,'ATENÇÃO: '+g.issues.join('; ').slice(0,115),14,'start','#ac351e');
 return s;
 }
@@ -92,10 +122,10 @@ let s=svghead;
 for(let rad=Math.ceil(r/5)*5;rad>0;rad-=5){s+='<circle cx="'+cx+'" cy="'+cy+'" r="'+rad*sc+'" fill="none" stroke="#b4cadb" stroke-dasharray="7 5"/>'+txt(cx+rad*sc+4,cy-5,rad+' m',12)}
 s+=rect(cx-3.7*sc,cy-1.25*sc,7.4*sc,2.5*sc,'#e9bc36')+rect(cx-2*sc,cy-spread*sc/2,4*sc,spread*sc,'none','#64788a');
 for(const dx of [-2.8,2.8])for(const dy of [-spread/2,spread/2])s+=rect(cx+dx*sc-5,cy+dy*sc-5,10,10,'#526d7f');
-s+=line(cx,cy,tip[0],tip[1],'#b88719',Math.max(6,sc*.8))+'<circle cx="'+tip[0]+'" cy="'+tip[1]+'" r="7" fill="#266889"/>';
+if(!nonLifting())s+=line(cx,cy,tip[0],tip[1],'#b88719',Math.max(6,sc*.8))+'<circle cx="'+tip[0]+'" cy="'+tip[1]+'" r="7" fill="#266889"/>';
 s+=line(cx,cy,dest[0],dest[1],'#488f73',2,'8 5')+'<circle cx="'+dest[0]+'" cy="'+dest[1]+'" r="9" fill="none" stroke="#16885d" stroke-width="3"/>';
 s+=txt(tip[0]+10,tip[1]-8,'PONTO DE IÇAMENTO',14)+txt(dest[0]+10,dest[1]-8,'DESTINO',14);
-s+=txt(55,65,'VISTA SUPERIOR · ALCANCE GEOMÉTRICO (NÃO É CAPACIDADE)',17);
+s+=txt(55,65,'VISTA SUPERIOR · '+$('craneType').selectedOptions[0].text.toUpperCase(),17);
 s+=txt(55,93,'Patolamento: '+$('outrigger').selectedOptions[0].text+' · Giro '+fmt(n('slew'),0)+'° · Raio '+fmt(g.tipX)+' m',13);
 s+=txt(55,750,'Círculos representam distâncias geométricas e NÃO limites de operação.',14);
 return s;
@@ -108,10 +138,10 @@ let s=svghead+txt(55,65,'VISTA ISOMÉTRICA · PROJEÇÃO ESQUEMÁTICA',17);
 const a=project(-4,-2,0),b=project(4,-2,0),c=project(4,2,0),d=project(-4,2,0);
 s+='<polygon points="'+[a,b,c,d].map(q=>q.join(',')).join(' ')+'" fill="#e5b730" stroke="#45586a" stroke-width="3"/>';
 for(const y of [-3,3])for(const x of [-3.5,3.5]){const q=project(x,y,0);s+=line(q[0],q[1],q[0],q[1]-25,'#536879',5)+rect(q[0]-17,q[1]-2,34,8,'#647a89')}
-s+=line(p[0],p[1],t[0],t[1],'#364b5e',21)+line(p[0],p[1],t[0],t[1],'#f0c738',15);
+if(!nonLifting()){s+=line(p[0],p[1],t[0],t[1],'#364b5e',21)+line(p[0],p[1],t[0],t[1],'#f0c738',15);}
 const hook=project(g.tipX*Math.cos(n('slew')*Math.PI/180),g.tipX*Math.sin(n('slew')*Math.PI/180),g.hookY);
-s+=line(t[0],t[1],hook[0],hook[1],'#34495c',3);
-s+=loadShape(hook[0],hook[1],Math.min(120,g.w*sc),Math.min(200,g.h*sc),$('loadtype').value,fmt(g.wt)+' t');
+if(!nonLifting())s+=line(t[0],t[1],hook[0],hook[1],'#34495c',3);
+if(!nonLifting())s+=loadShape(hook[0],hook[1],Math.min(120,g.w*sc),Math.min(200,g.h*sc),$('loadtype').value,fmt(g.wt)+' t');
 s+=txt(55,100,'Representação 2.5D ilustrativa; não contém validação dimensional do fabricante.',14);
 return s;
 }
@@ -126,7 +156,7 @@ if(view!=='three'){
 $('drawing').style.display='block';$('threehost').style.display='none';
 $('drawing').innerHTML=(view==='side'?side(g):view==='top'?top(g):iso(g));
 }else{$('drawing').style.display='none';$('threehost').style.display='block';render3D(g)}
-const rows=[['Identificador',studyId],['Operação',$('operation').value],['Contrato',$('contract').value||'Não informado'],['Unidade',$('unit').value],['Revisão',$('revision').value],['Fabricante / modelo',[$('maker').value,$('model').value].filter(Boolean).join(' / ')||'Não informado'],['Série',$('serial').value||'Não informada'],['Lança',fmt(g.L)+' m'],['Ângulo',fmt(g.a*180/Math.PI)+'°'],['Raio',fmt(g.tipX)+' m'],['Altura da ponta',fmt(g.tipY)+' m'],['Altura do gancho',fmt(g.hookY)+' m'],['Folga da carga',fmt(g.baseY)+' m'],['Carga',$('loadtype').selectedOptions[0].text],['Dimensões',fmt(g.w)+' × '+fmt(g.h)+' × '+fmt(g.depth)+' m'],['Massa total informada',fmt(g.wt+g.rig)+' t'],['Patolamento',$('outrigger').selectedOptions[0].text],['Tabela oficial',$('loadchart').value||'NÃO FORNECIDA'],['Centro de gravidade',$('cog').value||'Pendente'],['Solo',$('ground').value||'Pendente'],['Vento',$('weather').value||'Pendente'],['Interferências',$('obstacles').value||'Pendente'],['Observações',$('notes').value||'—']];
+const rows=[['Identificador',studyId],['Operação',$('operation').value],['Contrato',$('contract').value||'Não informado'],['Unidade',$('unit').value],['Revisão',$('revision').value],['Tipo de equipamento',$('craneType').selectedOptions[0].text],['Fabricante / modelo',[$('maker').value,$('model').value].filter(Boolean).join(' / ')||'Não informado'],['Série',$('serial').value||'Não informada'],['Lança',fmt(g.L)+' m'],['Ângulo',fmt(g.a*180/Math.PI)+'°'],['Raio',fmt(g.tipX)+' m'],['Altura da ponta',fmt(g.tipY)+' m'],['Altura do gancho',fmt(g.hookY)+' m'],['Folga da carga',fmt(g.baseY)+' m'],['Carga',$('loadtype').selectedOptions[0].text],['Dimensões',fmt(g.w)+' × '+fmt(g.h)+' × '+fmt(g.depth)+' m'],['Massa total informada',fmt(g.wt+g.rig)+' t'],['Patolamento',$('outrigger').selectedOptions[0].text],['Tabela oficial',$('loadchart').value||'NÃO FORNECIDA'],['Centro de gravidade',$('cog').value||'Pendente'],['Solo',$('ground').value||'Pendente'],['Vento',$('weather').value||'Pendente'],['Interferências',$('obstacles').value||'Pendente'],['Observações',$('notes').value||'—']];
 $('reportDetails').innerHTML='<table>'+rows.map(([k,v])=>'<tr><th>'+esc(k)+'</th><td>'+esc(v)+'</td></tr>').join('')+'</table>';
 $('reportChecks').innerHTML='<p><strong>CAPACIDADE NÃO VERIFICADA — PROIBIDA CLASSIFICAÇÃO COMO APROVADA.</strong></p><table>'+allChecks.map(x=>'<tr><th>'+esc(x.label)+'</th><td>'+esc(x.status)+' — '+esc(x.note)+'</td></tr>').join('')+'</table><p>Inconsistências geométricas: '+esc(g.issues.join('; ')||'Nenhuma detectada na modelagem simplificada')+'</p>';
 return g;
@@ -198,10 +228,11 @@ for(const x of [-3.3,3.3])for(const z of [-spread,spread]){box(x,.25,z,1,.35,1,0
 const turntable=new T.Group();turntable.rotation.y=-n('slew')*Math.PI/180;group.add(turntable);
 const upper=new T.Mesh(new T.BoxGeometry(4,1.2,2.7),new T.MeshStandardMaterial({color:0xe5b838}));upper.position.set(1,3.5,0);turntable.add(upper);
 const pivot=new T.Vector3(0,g.p,0),tip=new T.Vector3(g.tipX,g.tipY,0);
-for(let k=0;k<4;k++){const a=pivot.clone().lerp(tip,k/4),b=pivot.clone().lerp(tip,(k+1)/4),dir=b.clone().sub(a);const mesh=new T.Mesh(new T.BoxGeometry(dir.length()+.2,.9-k*.13,1.2-k*.16),new T.MeshStandardMaterial({color:[0xe0ad25,0xedbe34,0xf4cd4b,0xffde6e][k]}));mesh.position.copy(a.add(b).multiplyScalar(.5));mesh.rotation.z=g.a;turntable.add(mesh)}
-const cableLength=Math.max(.1,g.c);const rope=new T.Mesh(new T.CylinderGeometry(.045,.045,cableLength,8),new T.MeshStandardMaterial({color:0x3a4b58}));rope.position.set(g.tipX,g.tipY-cableLength/2,0);turntable.add(rope);
-const hook=new T.Mesh(new T.TorusGeometry(.3,.09,8,16,Math.PI*1.5),new T.MeshStandardMaterial({color:0x34475a}));hook.position.set(g.tipX,g.hookY,0);turntable.add(hook);
-const load=new T.Mesh(new T.BoxGeometry(g.w,g.h,g.depth),new T.MeshStandardMaterial({color:0x86c1dc,transparent:true,opacity:.85}));load.position.set(g.tipX,g.hookY-g.h/2,0);turntable.add(load);
+for(let k=0;k<(nonLifting()?0:4);k++){const a=pivot.clone().lerp(tip,k/4),b=pivot.clone().lerp(tip,(k+1)/4),dir=b.clone().sub(a);const mesh=new T.Mesh(new T.BoxGeometry(dir.length()+.2,.9-k*.13,1.2-k*.16),new T.MeshStandardMaterial({color:[0xe0ad25,0xedbe34,0xf4cd4b,0xffde6e][k]}));mesh.position.copy(a.add(b).multiplyScalar(.5));mesh.rotation.z=g.a;turntable.add(mesh)}
+const cableLength=Math.max(.1,g.c);const rope=new T.Mesh(new T.CylinderGeometry(.045,.045,cableLength,8),new T.MeshStandardMaterial({color:0x3a4b58}));rope.position.set(g.tipX,g.tipY-cableLength/2,0);if(!nonLifting())turntable.add(rope);
+const hook=new T.Mesh(new T.TorusGeometry(.3,.09,8,16,Math.PI*1.5),new T.MeshStandardMaterial({color:0x34475a}));hook.position.set(g.tipX,g.hookY,0);if(!nonLifting())turntable.add(hook);
+const load=new T.Mesh(new T.BoxGeometry(g.w,g.h,g.depth),new T.MeshStandardMaterial({color:0x86c1dc,transparent:true,opacity:.85}));load.position.set(g.tipX,g.hookY-g.h/2,0);if(!nonLifting())turntable.add(load);
+if(equipment()==='knuckle')notify('3D do guindauto é esquemático: cinemática articulada específica ainda pendente.');
 draw3D();
 }
 function draw3D(){if(!three||view!=='three')return;const z=three,host=$('threehost'),w=host.clientWidth,h=host.clientHeight;z.renderer.setSize(w,h,false);z.camera.aspect=w/h;z.camera.position.set(Math.cos(z.el)*Math.cos(z.az)*z.distance,Math.sin(z.el)*z.distance,Math.cos(z.el)*Math.sin(z.az)*z.distance);z.camera.lookAt(12,17,0);z.camera.updateProjectionMatrix();z.renderer.render(z.scene,z.camera)}
