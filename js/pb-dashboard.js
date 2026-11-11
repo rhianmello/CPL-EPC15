@@ -787,7 +787,18 @@
     const itemUnit=String(item?.unit || '').trim();
     const itemPhase=String(item?.phase || '').trim();
     if(sel.unit && itemUnit!==sel.unit) return false;
-    if(sel.phase && itemPhase && itemPhase!==sel.phase) return false;
+    if(sel.phase && itemPhase && itemPhase!==sel.phase) {
+      // A planilha de eventos usa a disciplina agregada C&M,
+      // enquanto o cronograma distingue Construção Civil e Montagem Eletromecânica.
+      const normalizePhase = value => String(value || '').normalize('NFD')
+        .replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
+      const expected=normalizePhase(itemPhase);
+      const selected=normalizePhase(sel.phase);
+      const isConstructionAndAssembly=expected==='SERVICOS DE CONSTRUCAO E MONTAGEM';
+      if(!(isConstructionAndAssembly &&
+        (selected==='SERVICOS DE CONSTRUCAO CIVIL' ||
+         selected==='MONTAGEM ELETROMECANICA'))) return false;
+    }
     return true;
   }
 
