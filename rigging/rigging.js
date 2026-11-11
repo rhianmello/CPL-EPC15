@@ -139,7 +139,21 @@ $('export').onclick=()=>{const d=store();const blob=new Blob([JSON.stringify(d,n
 $('import').onclick=()=>$('importFile').click();
 $('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>1000000)throw Error('Arquivo muito grande');const d=JSON.parse(await f.text());if(d.schema!=='cpl-rigging-v1'||!d.data||typeof d.data!=='object')throw Error('Formato inválido');store();studyId=String(d.id||uid()).slice(0,80);apply(d.data);notify('Estudo importado. Salve para registrar uma nova revisão.')}catch(err){notify('Erro na importação: '+err.message)}e.target.value=''};
 $('new').onclick=()=>{if(!confirm('Criar novo estudo? O anterior será salvo no histórico local.'))return;store();studyId=uid();apply(sample());notify('Novo estudo iniciado')};
-$('pdf').onclick=()=>{update();const old=view;setView('side');document.body.dataset.sheet=$('sheet').value;window.print();setView(old)};
+$('pdf').onclick=()=>{
+ const g=update(),old=view;
+ const report=$('report'),existing=$('printCroquis');if(existing)existing.remove();
+ const pages=document.createElement('div');pages.id='printCroquis';
+ for(const [title,art] of [['Croqui — vista lateral',side(g)],['Croqui — vista superior',top(g)],['Croqui — vista isométrica ilustrativa',iso(g)]]){
+  const section=document.createElement('section');section.className='print-croqui';
+  section.innerHTML='<h2>'+title+'</h2><p>ESTUDO PRELIMINAR — NÃO APROVADO PARA EXECUÇÃO</p><svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:160mm">'+art+'</svg>';
+  pages.appendChild(section)
+ }
+ report.appendChild(pages);
+ const size=$('sheet').value;
+ const prior=$('dynamicPage');if(prior)prior.remove();
+ const style=document.createElement('style');style.id='dynamicPage';style.textContent='@page{size:'+size+' landscape;margin:12mm} .print-croqui{break-before:page;break-inside:avoid}';document.head.appendChild(style);
+ document.body.dataset.sheet=size;setView('side');window.print();setView(old)
+};
 $('sheet').onchange=()=>document.body.dataset.sheet=$('sheet').value;
 function setView(v){view=v;document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));$('sceneTitle').textContent={'side':'CROQUI TÉCNICO · VISTA LATERAL','top':'CROQUI TÉCNICO · VISTA SUPERIOR','iso':'CROQUI TÉCNICO · VISTA ISOMÉTRICA','three':'MODELO 3D ILUSTRATIVO · NÃO VALIDADO'}[v];update()}
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
