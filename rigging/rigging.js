@@ -226,9 +226,10 @@ for(const x of [-3,0,3])for(const z of [-1.7,1.7]){const wheel=new T.Mesh(new T.
 const spread=$('outrigger').value==='total'?6:$('outrigger').value==='parcial'?4:1.5;
 for(const x of [-3.3,3.3])for(const z of [-spread,spread]){box(x,.25,z,1,.35,1,0x627587);box(x,1.2,z,.25,2,.25,0x778c99);box(x,2,z/2,.4,.35,Math.abs(z),0x8799a7)}
 const turntable=new T.Group();turntable.rotation.y=-n('slew')*Math.PI/180;group.add(turntable);
-const upper=new T.Mesh(new T.BoxGeometry(4,1.2,2.7),new T.MeshStandardMaterial({color:0xe5b838}));upper.position.set(1,3.5,0);turntable.add(upper);
+if(!nonLifting()){const upper=new T.Mesh(new T.BoxGeometry(4,1.2,2.7),new T.MeshStandardMaterial({color:0xe5b838}));upper.position.set(1,3.5,0);turntable.add(upper)}
+if(nonLifting()){box(1.4,3.0,0,5.5,equipment()==='flatbed'?.25:1.4,2.6,equipment()==='flatbed'?0x879aab:0xc2b08a)}
 const pivot=new T.Vector3(0,g.p,0),tip=new T.Vector3(g.tipX,g.tipY,0);
-for(let k=0;k<(nonLifting()?0:4);k++){const a=pivot.clone().lerp(tip,k/4),b=pivot.clone().lerp(tip,(k+1)/4),dir=b.clone().sub(a);const mesh=new T.Mesh(new T.BoxGeometry(dir.length()+.2,.9-k*.13,1.2-k*.16),new T.MeshStandardMaterial({color:[0xe0ad25,0xedbe34,0xf4cd4b,0xffde6e][k]}));mesh.position.copy(a.add(b).multiplyScalar(.5));mesh.rotation.z=g.a;turntable.add(mesh)}
+for(let k=0;k<(nonLifting()?0:4);k++){let a=pivot.clone().lerp(tip,k/4),b=pivot.clone().lerp(tip,(k+1)/4);if(equipment()==='knuckle'){const elbow=pivot.clone().lerp(tip,.45);elbow.y+=g.L*.15;a=k<2?pivot.clone().lerp(elbow,k/2):elbow.clone().lerp(tip,(k-2)/2);b=k<2?pivot.clone().lerp(elbow,(k+1)/2):elbow.clone().lerp(tip,(k-1)/2)}const dir=b.clone().sub(a);const mesh=new T.Mesh(new T.BoxGeometry(dir.length()+.2,.9-k*.13,1.2-k*.16),new T.MeshStandardMaterial({color:[0xe0ad25,0xedbe34,0xf4cd4b,0xffde6e][k]}));mesh.position.copy(a.add(b).multiplyScalar(.5));mesh.rotation.z=Math.atan2(dir.y,dir.x);turntable.add(mesh)}
 const cableLength=Math.max(.1,g.c);const rope=new T.Mesh(new T.CylinderGeometry(.045,.045,cableLength,8),new T.MeshStandardMaterial({color:0x3a4b58}));rope.position.set(g.tipX,g.tipY-cableLength/2,0);if(!nonLifting())turntable.add(rope);
 const hook=new T.Mesh(new T.TorusGeometry(.3,.09,8,16,Math.PI*1.5),new T.MeshStandardMaterial({color:0x34475a}));hook.position.set(g.tipX,g.hookY,0);if(!nonLifting())turntable.add(hook);
 const load=new T.Mesh(new T.BoxGeometry(g.w,g.h,g.depth),new T.MeshStandardMaterial({color:0x86c1dc,transparent:true,opacity:.85}));load.position.set(g.tipX,g.hookY-g.h/2,0);if(!nonLifting())turntable.add(load);
