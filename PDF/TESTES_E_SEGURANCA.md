@@ -30,9 +30,9 @@ Os testes exigem navegador Chromium e acesso às bibliotecas externas. Não há 
 
 | Cenário | Resultado esperado | Resultado real |
 |---|---|---|
-| Dois PDFs sem assinatura | Anexos idênticos após extração, SHA-256 igual | Automatizado, execução pendente de ambiente com CDN |
-| Dois PDFs com orientações diferentes | União com 2 páginas e tamanhos preservados | Automatizado, execução pendente |
-| PDF criptografado | Pode anexar intacto; união deve rejeitar | Automatizado, execução pendente |
+| Dois PDFs sem assinatura | Anexos idênticos após extração, SHA-256 igual | PASSOU no GitHub Actions (Chromium, 11/11/2026) |
+| Dois PDFs com orientações diferentes | União com 2 páginas e tamanhos preservados | PASSOU no GitHub Actions (Chromium, 11/11/2026) |
+| PDF criptografado | Pode anexar intacto; união deve rejeitar | PASSOU no GitHub Actions (Chromium, 11/11/2026) |
 | Assinatura manuscrita digitalizada | Não classificar imagem como assinatura criptográfica validada | Amostra e teste manual pendentes |
 | PDF assinado com Adobe Acrobat | Anexar bytes intactos; validar assinatura no extraído | Amostra autorizada e teste manual pendentes |
 | PDF PAdES / ICP-Brasil | Anexar bytes intactos; validar no ITI/Acrobat | Amostra autorizada e teste manual pendentes |
@@ -42,7 +42,7 @@ Os testes exigem navegador Chromium e acesso às bibliotecas externas. Não há 
 | Arquivo PDF corrompido ou não PDF | Tratar erro sem afetar originais | Teste manual pendente |
 | PDF muito grande | Mensagem de erro, sem alterar os originais | Teste de carga pendente |
 
-**Não confundir código de teste entregue com teste executado.** Nenhuma aprovação de assinaturas reais é reivindicada antes de verificação independente.
+**Execução real:** 3 testes passaram em 4,58 s no GitHub Actions em 11/11/2026. Log: https://github.com/rhianmello/CPL-EPC15/actions/runs/43019046405 . Esta evidência cobre somente os PDFs sintéticos dos testes, não assinaturas reais. Nenhuma aprovação de assinaturas reais é reivindicada antes de verificação independente.
 
 ## Referências
 
