@@ -51,7 +51,7 @@ let out='<g id="safetyLayer" pointer-events="none">';
 if(mode==='top'){
  const cx=600,cy=380,rad=Math.max(85,Math.min(285,Number.isFinite(r)?r*12:145));
  out+='<circle cx="'+cx+'" cy="'+cy+'" r="'+rad+'" stroke="#e77e20" fill="#f59d2320" stroke-width="4" stroke-dasharray="12 8"/>';
- for(let i=0;i<12;i++){const a=i*Math.PI/6,x=cx+rad*Math.cos(a),y=cy+rad*Math.sin(a);out+=coneSvg(x,y,1)}
+ for(let i=0;i<12;i++){const a=i*Math.PI/6,x=cx+rad*Math.cos(a),y=cy+rad*Math.sin(a);if(t==='mixed')out+=coneSvg(x,y,1);if(t==='barrier'||t==='mixed')out+=barrierSvg(x,y,.45);if(t==='tape'||t==='mixed')out+=tapeSvg(x,y)}
  out+=txt(55,700,'ISOLAMENTO ILUSTRATIVO — '+fmt(r)+' m informados; verificar perímetro real.',15);
 }else{
  const y=690;
@@ -279,7 +279,7 @@ if(showSafetyVisual&&!nonLifting()){
 const rad=Math.max(4,Math.min(100,n('isolationRadius')||12));
 for(let i=0;i<12;i++){const a=i*Math.PI/6,x=rad*Math.cos(a),z=rad*Math.sin(a);
 const auto=new T.Group();auto.position.set(x,0,z);auto.rotation.y=-a;group.add(auto);
-if(restrictions==='mixed'||restrictions==='barrier'&&i%3===0)cone(auto,0,0);
+if(restrictions==='mixed')cone(auto,0,0);
 if(restrictions==='barrier'||restrictions==='mixed')barrier(auto,0,0);
 if(restrictions==='tape'||restrictions==='mixed')tape(auto,0,0);
 }
