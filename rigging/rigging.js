@@ -5,11 +5,11 @@ const fmt=(n,d=1)=>Number.isFinite(n)?n.toLocaleString('pt-BR',{minimumFractionD
 const n=(id,fallback=0)=>{const v=$(id).value.trim();return v===''?NaN:Number(v)};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=()=> 'RG-'+Date.now().toString(36).toUpperCase();
-let studyId=uid(),view='side',dirty=false,three=null;
+let studyId=uid(),view='side',dirty=false,three=null,showSafetyVisual=true;
 const keys=inputs.map(el=>el.id);
-function data(){return Object.fromEntries(keys.map(id=>[id,$(id).value]))}
-function apply(d){for(const id of keys)if(Object.hasOwn(d,id))$(id).value=String(d[id]);update()}
-function sample(){return {craneType:'mobile',operation:'Içamento ilustrativo — U-8224',unit:'U-8224',revision:'0',contract:'',author:'',notes:'',maker:'',model:'',serial:'',boom:'32',angle:'62',cable:'4',slew:'0',pivot:'3.5',outrigger:'total',counterweight:'',loadtype:'pilar',weight:'7.5',riggingweight:'.2',width:'2.5',loadheight:'6',depth:'1.5',cog:'',loadchart:'',ground:'',weather:'',obstacles:'',targetradius:'14',targetazimuth:'45'}}
+function data(){return Object.fromEntries(keys.map(id=>[id,$(id).type==='checkbox'?$(id).checked:$(id).value]))}
+function apply(d){for(const id of keys)if(Object.hasOwn(d,id)){if($(id).type==='checkbox')$(id).checked=d[id]===true||d[id]==='true';else $(id).value=String(d[id])}update()}
+function sample(){return {craneType:'mobile',isolationRadius:'12',isolationType:'barrier',safetyLead:'',safetyNotes:'',sIsolation:false,sBarrier:false,sLoadControl:false,sLevel:false,sPersonnel:false,sIdentity:false,sAccessories:false,sWind:false,sSignals:false,sPower:false,sEmergency:false,operation:'Içamento ilustrativo — U-8224',unit:'U-8224',revision:'0',contract:'',author:'',notes:'',maker:'',model:'',serial:'',boom:'32',angle:'62',cable:'4',slew:'0',pivot:'3.5',outrigger:'total',counterweight:'',loadtype:'pilar',weight:'7.5',riggingweight:'.2',width:'2.5',loadheight:'6',depth:'1.5',cog:'',loadchart:'',ground:'',weather:'',obstacles:'',targetradius:'14',targetazimuth:'45'}}
 const equipment=()=>$('craneType').value;
 const nonLifting=()=>['standardTruck','flatbed'].includes(equipment());
 function calc(){
@@ -36,9 +36,44 @@ const check=[
 ['Centro de gravidade, pontos de pega e lingas',Boolean($('cog').value.trim()),'Informação cadastrada; sem cálculo validado'],
 ['Interferências e distâncias de segurança',Boolean($('obstacles').value.trim()),'Levantamento informado; sem verificação'],
 ['Vento e condições ambientais',Boolean($('weather').value.trim()),'Informação cadastrada; sem validação'],
-['Aprovação e responsabilidade técnica',false,'Responsável habilitado e documentos não verificados']];
+['Aprovação e responsabilidade técnica',false,'Responsável habilitado e documentos não verificados'],...safetyItems.map(([id,label])=>[label,$(id).checked,'Declaração do usuário; exige comprovação e verificação em campo'])];
 $('checks').innerHTML=check.map(([label,filled,note])=>'<li>'+esc(label)+' — '+(filled?'documentação informada, verificação pendente':'pendente')+'</li>').join('');
 return check.map(([label,filled,note])=>({label,status:filled?'Informado — não validado':'Pendente',note}));
+}
+const safetyItems=[
+['sIsolation','Área de içamento isolada e sinalizada'],['sBarrier','Barreiras e acesso controlado'],['sLoadControl','Controle da carga'],['sLevel','Nivelamento e estabilidade do piso'],['sPersonnel','Pessoal autorizado'],['sIdentity','Identificação e comunicação'],['sAccessories','Certificação de acessórios'],['sWind','Condições climáticas'],['sSignals','Sinaleiro e comunicação'],['sPower','Interferências elétricas'],['sEmergency','Plano de emergência']
+];
+function safetyDrawing(mode){
+if(!showSafetyVisual)return '';
+const t=$('isolationType').value;
+const r=Number($('isolationRadius').value);
+let out='<g id="safetyLayer" pointer-events="none">';
+if(mode==='top'){
+ const cx=600,cy=380,rad=Math.max(85,Math.min(285,Number.isFinite(r)?r*12:145));
+ out+='<circle cx="'+cx+'" cy="'+cy+'" r="'+rad+'" stroke="#e77e20" fill="#f59d2320" stroke-width="4" stroke-dasharray="12 8"/>';
+ for(let i=0;i<12;i++){const a=i*Math.PI/6,x=cx+rad*Math.cos(a),y=cy+rad*Math.sin(a);out+=coneSvg(x,y,1)}
+ out+=txt(55,700,'ISOLAMENTO ILUSTRATIVO — '+fmt(r)+' m informados; verificar perímetro real.',15);
+}else{
+ const y=690;
+ if(t==='barrier'||t==='mixed'){
+ for(let x=130;x<1100;x+=170)out+=barrierSvg(x,y,1);
+ }
+ if(t==='tape'){
+ for(let x=130;x<1100;x+=170)out+=tapeSvg(x,y);
+ }
+ for(let x=100;x<1140;x+=140)out+=coneSvg(x,y+20,1.15);
+ out+=txt(55,750,'Cones e barreiras esquemáticos — localização e quantidade sujeitas à avaliação de campo.',14);
+}
+return out+'</g>';
+}
+function coneSvg(x,y,k=1){
+return '<g transform="translate('+x+' '+y+') scale('+k+')"><rect x="-17" y="-3" width="34" height="6" rx="2" fill="#303f49"/><path d="M-11 -3L-3 -40H3L11 -3Z" fill="#f17919" stroke="#a7440d" stroke-width="2"/><path d="M-7 -18H7L5 -24H-5Z" fill="white"/></g>'
+}
+function barrierSvg(x,y,k=1){
+return '<g transform="translate('+x+' '+y+') scale('+k+')"><path d="M-58 0V-45M58 0V-45" stroke="#586b76" stroke-width="7"/><rect x="-66" y="-52" width="132" height="22" fill="#f6b73f" stroke="#ae6b1b"/><path d="M-53 -52L-30 -30M-15 -52L8 -30M23 -52L46 -30" stroke="#343b40" stroke-width="10"/></g>'
+}
+function tapeSvg(x,y){
+return '<g transform="translate('+x+' '+y+')"><path d="M-70 0V-65M70 0V-65" stroke="#6f7f89" stroke-width="4"/><path d="M-70 -60H70" stroke="#edb139" stroke-width="12"/><path d="M-50 -66l12 12m23-12l12 12m23-12l12 12" stroke="#333f49" stroke-width="9"/></g>'
 }
 const svghead='<defs><pattern id="gp" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" stroke="#e3eaf0" fill="none"/></pattern><marker id="arr" markerWidth="8" markerHeight="8" refX="4" refY="3" orient="auto-start-reverse"><path d="M0 0L6 3L0 6Z" fill="#206da3"/></marker></defs><rect width="1200" height="800" fill="white"/><rect x="32" y="35" width="1136" height="690" fill="url(#gp)"/>';
 const line=(x1,y1,x2,y2,color='#294c62',width=2,dash='')=>'<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+color+'" stroke-width="'+width+'" '+(dash?'stroke-dasharray="'+dash+'"':'')+'/>';
@@ -154,9 +189,9 @@ $('footrev').textContent=$('revision').value;$('studyid').textContent=studyId;
 const allChecks=checks(g);
 if(view!=='three'){
 $('drawing').style.display='block';$('threehost').style.display='none';
-$('drawing').innerHTML=(view==='side'?side(g):view==='top'?top(g):iso(g));
+$('drawing').innerHTML=(view==='side'?side(g):view==='top'?top(g):iso(g))+safetyDrawing(view);
 }else{$('drawing').style.display='none';$('threehost').style.display='block';render3D(g)}
-const rows=[['Identificador',studyId],['Operação',$('operation').value],['Contrato',$('contract').value||'Não informado'],['Unidade',$('unit').value],['Revisão',$('revision').value],['Tipo de equipamento',$('craneType').selectedOptions[0].text],['Fabricante / modelo',[$('maker').value,$('model').value].filter(Boolean).join(' / ')||'Não informado'],['Série',$('serial').value||'Não informada'],['Lança',fmt(g.L)+' m'],['Ângulo',fmt(g.a*180/Math.PI)+'°'],['Raio',fmt(g.tipX)+' m'],['Altura da ponta',fmt(g.tipY)+' m'],['Altura do gancho',fmt(g.hookY)+' m'],['Folga da carga',fmt(g.baseY)+' m'],['Carga',$('loadtype').selectedOptions[0].text],['Dimensões',fmt(g.w)+' × '+fmt(g.h)+' × '+fmt(g.depth)+' m'],['Massa total informada',fmt(g.wt+g.rig)+' t'],['Patolamento',$('outrigger').selectedOptions[0].text],['Tabela oficial',$('loadchart').value||'NÃO FORNECIDA'],['Centro de gravidade',$('cog').value||'Pendente'],['Solo',$('ground').value||'Pendente'],['Vento',$('weather').value||'Pendente'],['Interferências',$('obstacles').value||'Pendente'],['Observações',$('notes').value||'—']];
+const rows=[['Identificador',studyId],['Operação',$('operation').value],['Contrato',$('contract').value||'Não informado'],['Unidade',$('unit').value],['Revisão',$('revision').value],['Tipo de equipamento',$('craneType').selectedOptions[0].text],['Fabricante / modelo',[$('maker').value,$('model').value].filter(Boolean).join(' / ')||'Não informado'],['Série',$('serial').value||'Não informada'],['Lança',fmt(g.L)+' m'],['Ângulo',fmt(g.a*180/Math.PI)+'°'],['Raio',fmt(g.tipX)+' m'],['Altura da ponta',fmt(g.tipY)+' m'],['Altura do gancho',fmt(g.hookY)+' m'],['Folga da carga',fmt(g.baseY)+' m'],['Carga',$('loadtype').selectedOptions[0].text],['Dimensões',fmt(g.w)+' × '+fmt(g.h)+' × '+fmt(g.depth)+' m'],['Massa total informada',fmt(g.wt+g.rig)+' t'],['Patolamento',$('outrigger').selectedOptions[0].text],['Tabela oficial',$('loadchart').value||'NÃO FORNECIDA'],['Centro de gravidade',$('cog').value||'Pendente'],['Solo',$('ground').value||'Pendente'],['Vento',$('weather').value||'Pendente'],['Interferências',$('obstacles').value||'Pendente'],['Observações',$('notes').value||'—'],['Responsável pela segurança',$('safetyLead').value||'Não informado'],['Isolamento informado',fmt(n('isolationRadius'))+' m — '+$('isolationType').selectedOptions[0].text],['Medidas adicionais de segurança',$('safetyNotes').value||'—']];
 $('reportDetails').innerHTML='<table>'+rows.map(([k,v])=>'<tr><th>'+esc(k)+'</th><td>'+esc(v)+'</td></tr>').join('')+'</table>';
 $('reportChecks').innerHTML='<p><strong>CAPACIDADE NÃO VERIFICADA — PROIBIDA CLASSIFICAÇÃO COMO APROVADA.</strong></p><table>'+allChecks.map(x=>'<tr><th>'+esc(x.label)+'</th><td>'+esc(x.status)+' — '+esc(x.note)+'</td></tr>').join('')+'</table><p>Inconsistências geométricas: '+esc(g.issues.join('; ')||'Nenhuma detectada na modelagem simplificada')+'</p>';
 return g;
@@ -183,7 +218,7 @@ $('pdf').onclick=()=>{
  const g=update(),old=view;
  const report=$('report'),existing=$('printCroquis');if(existing)existing.remove();
  const pages=document.createElement('div');pages.id='printCroquis';
- for(const [title,art] of [['Croqui — vista lateral',side(g)],['Croqui — vista superior',top(g)],['Croqui — vista isométrica ilustrativa',iso(g)]]){
+ for(const [title,art] of [['Croqui — vista lateral',side(g)+safetyDrawing('side')],['Croqui — vista superior',top(g)+safetyDrawing('top')],['Croqui — vista isométrica ilustrativa',iso(g)+safetyDrawing('iso')]]){
   const section=document.createElement('section');section.className='print-croqui';
   section.innerHTML='<h2>'+title+'</h2><p>ESTUDO PRELIMINAR — NÃO APROVADO PARA EXECUÇÃO</p><svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:160mm">'+art+'</svg>';
   pages.appendChild(section)
@@ -197,6 +232,7 @@ $('pdf').onclick=()=>{
 $('sheet').onchange=()=>document.body.dataset.sheet=$('sheet').value;
 function setView(v){view=v;document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));$('sceneTitle').textContent={'side':'CROQUI TÉCNICO · VISTA LATERAL','top':'CROQUI TÉCNICO · VISTA SUPERIOR','iso':'CROQUI TÉCNICO · VISTA ISOMÉTRICA','three':'MODELO 3D ILUSTRATIVO · NÃO VALIDADO'}[v];update()}
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+$('safetyVisual').onclick=()=>{showSafetyVisual=!showSafetyVisual;$('safetyVisual').classList.toggle('active',showSafetyVisual);$('safetyVisual').setAttribute('aria-pressed',String(showSafetyVisual));$('safetyVisual').textContent=showSafetyVisual?'🚧 Cones e barreiras: visíveis':'🚧 Cones e barreiras: ocultos';update()};
 $('resetview').onclick=()=>{if(three){three.az=.65;three.el=.45;three.distance=95}update()};
 inputs.forEach(el=>el.addEventListener('input',()=>{dirty=true;update()}));
 try{const prev=JSON.parse(localStorage.getItem('cpl.rigging.current')||'null');if(prev?.schema==='cpl-rigging-v1'){studyId=prev.id;apply(prev.data)}else update()}catch{update()}
