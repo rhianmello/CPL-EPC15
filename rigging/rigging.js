@@ -26,6 +26,99 @@ if($('outrigger').value==='recolhido')issues.push('Patolas recolhidas; configura
 if(tipX< w/2)issues.push('Carga pode interferir na região do equipamento');
 return {L,a,p,c,h,w,depth,wt,rig,tipX,tipY,hookY,baseY,issues,valid:issues.length===0};
 }
+
+/* Capacity records are user-supplied, not certified by this software.
+   Never extrapolate, interpolate, use nominal capacity as radius capacity,
+   or mark any lift as operationally approved. */
+const CAPACITY_STORE='cpl.rigging.capacityProfiles.v1';
+let capacityProfiles=[];
+try{const x=JSON.parse(localStorage.getItem(CAPACITY_STORE)||'[]');if(Array.isArray(x))capacityProfiles=x.slice(0,40)}catch{}
+const near=(a,b)=>Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a-b)<1e-6;
+const capacityText=(v)=>Number.isFinite(v)?fmt(v,2)+' t':'—';
+function refreshCapacityChoices(){
+ const sel=$('capacityProfile'),old=sel.value;
+ sel.replaceChildren(new Option('Nenhuma tabela técnica cadastrada',''));
+ for(const p of capacityProfiles)sel.add(new Option(p.manufacturer+' '+p.model+' | '+p.configuration+' | '+p.sourceRevision,p.id));
+ sel.value=capacityProfiles.some(x=>x.id===old)?old:'';
+}
+function validateCapacityProfile(p){
+ if(!p||p.schema!=='cpl-rigging-chart-v1'||!p.manufacturer||!p.model||!p.configuration||!p.sourceUrl||!p.sourceRevision||!Array.isArray(p.cells)||!p.cells.length||p.cells.length>10000)throw Error('Formato, identificação ou fonte da tabela inválidos');
+ const safeText=x=>String(x||'').trim().slice(0,180);
+ const url=String(p.sourceUrl);if(!/^https:\/\/[^ ]+$/i.test(url))throw Error('URL de fonte HTTPS obrigatória');
+ const cells=p.cells.map(c=>{
+  const row={boom:Number(c.boom),radius:Number(c.radius),capacity:Number(c.capacity),counterweight:safeText(c.counterweight),outrigger:safeText(c.outrigger),sector:safeText(c.sector||'360')};
+  if(![row.boom,row.radius,row.capacity].every(Number.isFinite)||row.boom<=0||row.radius<0||row.capacity<=0||!row.counterweight||!['total','parcial','recolhido'].includes(row.outrigger))throw Error('Célula de capacidade sem parâmetros válidos');
+  return row
+ });
+ const unique=new Set(cells.map(c=>[c.boom,c.radius,c.counterweight,c.outrigger,c.sector].join('|')));
+ if(unique.size!==cells.length)throw Error('Células duplicadas para a mesma configuração');
+ return {id:String(p.id||uid()).slice(0,70),manufacturer:safeText(p.manufacturer),model:safeText(p.model),configuration:safeText(p.configuration),sourceRevision:safeText(p.sourceRevision),sourceUrl:url.slice(0,600),cells}
+}
+function capacityAssessment(g){
+ const notes=[],danger=[],profile=capacityProfiles.find(p=>p.id===$('capacityProfile').value);
+ const total=g.wt+g.rig,nominal=n('nominalCapacity');
+ if(Number.isFinite(nominal)&&nominal>0&&Number.isFinite(total)&&total>nominal){
+  danger.push('Massa informada ('+capacityText(total)+') excede a capacidade NOMINAL declarada ('+capacityText(nominal)+').');
+ }
+ if(nonLifting())danger.push('O veículo escolhido não possui dispositivo de elevação integrado.');
+ if(!Number.isFinite(total)||total<=0)danger.push('Peso total suspenso inválido ou incompleto.');
+ if(g.issues.some(x=>/inválid|solo|interferir|recolhidas/i.test(x)))danger.push('Inconsistências geométricas ou de patolamento: '+g.issues.join('; '));
+ if(!profile){
+  notes.push('CAPACIDADE NÃO VERIFICADA: nenhuma tabela oficial identificada para a configuração.');
+  return {profile:null,capacity:NaN,percent:NaN,danger,notes,status:'unverified'};
+ }
+ if(profile.manufacturer.toLocaleLowerCase('pt-BR')!==$('maker').value.trim().toLocaleLowerCase('pt-BR')||profile.model.toLocaleLowerCase('pt-BR')!==$('model').value.trim().toLocaleLowerCase('pt-BR')){
+  notes.push('FABRICANTE/MODELO DIVERGENTES da tabela importada.');return {profile,capacity:NaN,percent:NaN,danger,notes,status:'unverified'}
+ }
+ const cw=$('counterweight').value.trim();
+ if(!cw){notes.push('Informe o contrapeso EXATAMENTE como identificado na tabela.');return {profile,capacity:NaN,percent:NaN,danger,notes,status:'unverified'}}
+ // A generic 360-degree table can only match the same declared 360 sector.
+ const found=profile.cells.filter(c=>near(c.boom,g.L)&&near(c.radius,g.tipX)&&c.counterweight===cw&&c.outrigger===$('outrigger').value&&c.sector==='360');
+ if(found.length!==1){notes.push('Sem célula EXATA para lança, raio, contrapeso, patolamento e setor de giro. Não foi feita interpolação.');return {profile,capacity:NaN,percent:NaN,danger,notes,status:'unverified'}}
+ const capacity=found[0].capacity,percent=100*total/capacity;
+ if(total>capacity)danger.push('EXCESSO NA TABELA IMPORTADA: massa suspensa '+capacityText(total)+' > limite '+capacityText(capacity)+'.');
+ else notes.push('A massa não excede a célula importada, mas a autenticidade da tabela, a configuração e as demais verificações NÃO estão validadas.');
+ return {profile,capacity,percent,danger,notes,status:danger.length?'exceeded':'pending'};
+}
+function renderCapacityStatus(g){
+ const assessment=capacityAssessment(g),alert=$('capacityAlert');
+ const hard=assessment.danger.length>0;
+ alert.className='capacity-alert '+(hard?'capacity-danger':'capacity-pending');
+ const header=hard?'ALERTA CRÍTICO — NÃO EXECUTAR':'CAPACIDADE NÃO VERIFICADA — NÃO LIBERADO';
+ const paragraphs=[...assessment.danger,...assessment.notes];
+ alert.replaceChildren();
+ const strong=document.createElement('strong');strong.textContent=header;alert.append(strong);
+ for(const message of paragraphs){const p=document.createElement('p');p.textContent=message;alert.append(p)}
+ $('capacityValue').textContent=capacityText(assessment.capacity);
+ $('capacityPercent').textContent=Number.isFinite(assessment.percent)?fmt(assessment.percent,1)+'% · REFERÊNCIA IMPORTADA':'Não calculável';
+ return assessment;
+}
+$('importCapacity').onclick=()=>$('capacityFile').click();
+$('capacityFile').onchange=async e=>{
+ const file=e.target.files?.[0];if(!file)return;
+ try{
+  if(file.size>1500000)throw Error('Limite de 1,5 MB por tabela');
+  const profile=validateCapacityProfile(JSON.parse(await file.text()));
+  capacityProfiles=capacityProfiles.filter(p=>p.id!==profile.id);
+  capacityProfiles.push(profile);localStorage.setItem(CAPACITY_STORE,JSON.stringify(capacityProfiles));
+  refreshCapacityChoices();$('capacityProfile').value=profile.id;
+  notify('Tabela importada como REFERÊNCIA NÃO AUDITADA. Confira cada célula com a fonte original.');update();
+ }catch(err){notify('Erro na tabela: '+err.message)}finally{e.target.value=''}
+};
+$('capacityHelp').onclick=()=>{
+ const template={
+  schema:'cpl-rigging-chart-v1',id:'fabricante-modelo-config-revisao',
+  manufacturer:'FABRICANTE EXATO',model:'MODELO EXATO',configuration:'Patolas + contrapeso + setor conforme fabricante',
+  sourceUrl:'https://fabricante.example/tabela-oficial.pdf',sourceRevision:'Revisão e data do fabricante',
+  cells:[{boom:32,radius:15,capacity:1,counterweight:'CONTRAPESO EXATO',outrigger:'total',sector:'360'}]
+ };
+ const blob=new Blob([JSON.stringify(template,null,2)],{type:'application/json'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='modelo_tabela_capacidade_EXEMPLO_NAO_VALIDO.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+ notify('Baixado MODELO DE FORMATO com valores fictícios. NÃO o utilize em cálculos ou operações.');
+};
+$('capacityProfile').onchange=update;
+refreshCapacityChoices();
+
 function checks(g){
 const check=[
 ['Tabela de capacidade oficial por raio e configuração',Boolean($('loadchart').value.trim()),'Documento citado; valores e autenticidade ainda exigem conferência por engenheiro'],
@@ -192,11 +285,12 @@ $('resgeometry').textContent=g.valid?'Coerente*':g.issues.length+' alerta(s)';
 $('resgeometry').style.color=g.valid?'#b3ebc7':'#ffae9c';
 $('footrev').textContent=$('revision').value;$('studyid').textContent=studyId;
 const allChecks=checks(g);
+const capacityCheck=renderCapacityStatus(g);
 if(view!=='three'){
 $('drawing').style.display='block';$('threehost').style.display='none';
 $('drawing').innerHTML=(view==='side'?side(g):view==='top'?top(g):iso(g))+safetyDrawing(view);
 }else{$('drawing').style.display='none';$('threehost').style.display='block';render3D(g)}
-const rows=[['Identificador',studyId],['Operação',$('operation').value],['Contrato',$('contract').value||'Não informado'],['Unidade',$('unit').value],['Revisão',$('revision').value],['Tipo de equipamento',$('craneType').selectedOptions[0].text],['Fabricante / modelo',[$('maker').value,$('model').value].filter(Boolean).join(' / ')||'Não informado'],['Série',$('serial').value||'Não informada'],['Lança',fmt(g.L)+' m'],['Ângulo',fmt(g.a*180/Math.PI)+'°'],['Raio',fmt(g.tipX)+' m'],['Altura da ponta',fmt(g.tipY)+' m'],['Altura do gancho',fmt(g.hookY)+' m'],['Folga da carga',fmt(g.baseY)+' m'],['Carga',$('loadtype').selectedOptions[0].text],['Dimensões',fmt(g.w)+' × '+fmt(g.h)+' × '+fmt(g.depth)+' m'],['Massa total informada',fmt(g.wt+g.rig)+' t'],['Patolamento',$('outrigger').selectedOptions[0].text],['Tabela oficial',$('loadchart').value||'NÃO FORNECIDA'],['Centro de gravidade',$('cog').value||'Pendente'],['Solo',$('ground').value||'Pendente'],['Vento',$('weather').value||'Pendente'],['Interferências',$('obstacles').value||'Pendente'],['Observações',$('notes').value||'—'],['Responsável pela segurança',$('safetyLead').value||'Não informado'],['Isolamento informado',fmt(n('isolationRadius'))+' m — '+$('isolationType').selectedOptions[0].text],['Medidas adicionais de segurança',$('safetyNotes').value||'—'],['Identificação da tarefa',$('taskSign').value||'Não informada'],['Texto das placas',$('warningSign').value||'Não informado'],['Canal de comunicação da manobra',$('radioChannel').value||'Pendente'],['Responsável pela comunicação',$('radioResponsible').value||'Não informado']];
+const rows=[['Identificador',studyId],['Operação',$('operation').value],['Contrato',$('contract').value||'Não informado'],['Unidade',$('unit').value],['Revisão',$('revision').value],['Tipo de equipamento',$('craneType').selectedOptions[0].text],['Fabricante / modelo',[$('maker').value,$('model').value].filter(Boolean).join(' / ')||'Não informado'],['Série',$('serial').value||'Não informada'],['Lança',fmt(g.L)+' m'],['Ângulo',fmt(g.a*180/Math.PI)+'°'],['Raio',fmt(g.tipX)+' m'],['Altura da ponta',fmt(g.tipY)+' m'],['Altura do gancho',fmt(g.hookY)+' m'],['Folga da carga',fmt(g.baseY)+' m'],['Carga',$('loadtype').selectedOptions[0].text],['Dimensões',fmt(g.w)+' × '+fmt(g.h)+' × '+fmt(g.depth)+' m'],['Massa total informada',fmt(g.wt+g.rig)+' t'],['Capacidade da célula importada',capacityText(capacityCheck.capacity)],['Utilização de célula importada',Number.isFinite(capacityCheck.percent)?fmt(capacityCheck.percent,1)+'%':'Não verificada'],['Alertas críticos',capacityCheck.danger.join('; ')||'Nenhum excedente identificado; outras verificações permanecem pendentes'],['Fonte da tabela',capacityCheck.profile?.sourceUrl||'Não fornecida'],['Revisão da tabela',capacityCheck.profile?.sourceRevision||'Não fornecida'],['Patolamento',$('outrigger').selectedOptions[0].text],['Tabela oficial',$('loadchart').value||'NÃO FORNECIDA'],['Centro de gravidade',$('cog').value||'Pendente'],['Solo',$('ground').value||'Pendente'],['Vento',$('weather').value||'Pendente'],['Interferências',$('obstacles').value||'Pendente'],['Observações',$('notes').value||'—'],['Responsável pela segurança',$('safetyLead').value||'Não informado'],['Isolamento informado',fmt(n('isolationRadius'))+' m — '+$('isolationType').selectedOptions[0].text],['Medidas adicionais de segurança',$('safetyNotes').value||'—'],['Identificação da tarefa',$('taskSign').value||'Não informada'],['Texto das placas',$('warningSign').value||'Não informado'],['Canal de comunicação da manobra',$('radioChannel').value||'Pendente'],['Responsável pela comunicação',$('radioResponsible').value||'Não informado']];
 $('reportDetails').innerHTML='<table>'+rows.map(([k,v])=>'<tr><th>'+esc(k)+'</th><td>'+esc(v)+'</td></tr>').join('')+'</table>';
 $('reportChecks').innerHTML='<p><strong>CAPACIDADE NÃO VERIFICADA — PROIBIDA CLASSIFICAÇÃO COMO APROVADA.</strong></p><table>'+allChecks.map(x=>'<tr><th>'+esc(x.label)+'</th><td>'+esc(x.status)+' — '+esc(x.note)+'</td></tr>').join('')+'</table><p>Inconsistências geométricas: '+esc(g.issues.join('; ')||'Nenhuma detectada na modelagem simplificada')+'</p>';
 return g;
