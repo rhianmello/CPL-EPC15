@@ -40,6 +40,20 @@ function refreshCapacityChoices(){
  sel.replaceChildren(new Option('Nenhuma tabela técnica cadastrada',''));
  for(const p of capacityProfiles)sel.add(new Option(p.manufacturer+' '+p.model+' | '+p.configuration+' | '+p.sourceRevision,p.id));
  sel.value=capacityProfiles.some(x=>x.id===old)?old:'';
+ refreshChartPreview();
+}
+function refreshChartPreview(){
+ const body=document.querySelector('.chart-table tbody');
+ if(!body)return;
+ body.replaceChildren();
+ const profile=capacityProfiles.find(p=>p.id===$('capacityProfile').value);
+ if(!profile){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=6;td.textContent='Aguardando tabela oficial do fabricante. Nenhum valor de carga foi presumido.';tr.append(td);body.append(tr);return}
+ for(const c of profile.cells.slice(0,60)){
+  const tr=document.createElement('tr');
+  for(const value of [c.boom,c.radius,c.capacity,c.counterweight,c.outrigger,c.sector]){const td=document.createElement('td');td.textContent=String(value);tr.append(td)}
+  body.append(tr)
+ }
+ if(profile.cells.length>60){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=6;td.textContent='Exibindo 60 de '+profile.cells.length+' registros. Todos continuam disponíveis para correspondência exata.';tr.append(td);body.append(tr)}
 }
 function validateCapacityProfile(p){
  if(!p||p.schema!=='cpl-rigging-chart-v1'||!p.manufacturer||!p.model||!p.configuration||!p.sourceUrl||!p.sourceRevision||!Array.isArray(p.cells)||!p.cells.length||p.cells.length>10000)throw Error('Formato, identificação ou fonte da tabela inválidos');
@@ -101,22 +115,29 @@ $('capacityFile').onchange=async e=>{
   const profile=validateCapacityProfile(JSON.parse(await file.text()));
   capacityProfiles=capacityProfiles.filter(p=>p.id!==profile.id);
   capacityProfiles.push(profile);localStorage.setItem(CAPACITY_STORE,JSON.stringify(capacityProfiles));
-  refreshCapacityChoices();$('capacityProfile').value=profile.id;
+  refreshCapacityChoices();$('capacityProfile').value=profile.id;refreshChartPreview();
   notify('Tabela importada como REFERÊNCIA NÃO AUDITADA. Confira cada célula com a fonte original.');update();
  }catch(err){notify('Erro na tabela: '+err.message)}finally{e.target.value=''}
+};
+$('downloadCapacityStandard').onclick=()=>{
+ const headers=['manufacturer','model','configuration','sourceUrl','sourceRevision','boom_m','radius_m','capacity_t','counterweight','outrigger','sector'];
+ const csv='\uFEFF'+headers.join(';')+'\r\n';
+ const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+ const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='modelo_padrao_tabela_cargas_SEM_VALORES.csv';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1500);
+ notify('Modelo técnico CSV baixado, sem valores de capacidade. Preencha exclusivamente com dados do fabricante e importe em JSON após revisão.');
 };
 $('capacityHelp').onclick=()=>{
  const template={
   schema:'cpl-rigging-chart-v1',id:'fabricante-modelo-config-revisao',
   manufacturer:'FABRICANTE EXATO',model:'MODELO EXATO',configuration:'Patolas + contrapeso + setor conforme fabricante',
   sourceUrl:'https://fabricante.example/tabela-oficial.pdf',sourceRevision:'Revisão e data do fabricante',
-  cells:[{boom:32,radius:15,capacity:1,counterweight:'CONTRAPESO EXATO',outrigger:'total',sector:'360'}]
+  cells:[]
  };
  const blob=new Blob([JSON.stringify(template,null,2)],{type:'application/json'});
  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='modelo_tabela_capacidade_EXEMPLO_NAO_VALIDO.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
- notify('Baixado MODELO DE FORMATO com valores fictícios. NÃO o utilize em cálculos ou operações.');
+ notify('Baixado modelo JSON VAZIO, sem valores fictícios. Preencha com dados oficiais verificáveis antes de importar.');
 };
-$('capacityProfile').onchange=update;
+$('capacityProfile').onchange=()=>{refreshChartPreview();update()};
 refreshCapacityChoices();
 
 function checks(g){
