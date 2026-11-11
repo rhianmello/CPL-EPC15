@@ -52,3 +52,13 @@
 .editor3d .editorhint{flex-basis:100%;line-height:1.45;color:#bde4f8}
 #threehost canvas{touch-action:none;outline:none}
 @media(max-width:750px){.editor3d select{max-width:100%;width:100%}.editor3d .editorhint{font-size:11px}}
+
+/* Real-time technical capacity protection */
+.capacity-alert{margin:12px 0;padding:14px;border-radius:10px;font-size:13px;line-height:1.55;border:2px solid #c08a35;background:#423018;color:#ffdfab}
+.capacity-alert strong{display:block;font-size:14px;letter-spacing:.025em}
+.capacity-alert p{margin:7px 0 0}
+.capacity-danger{border-color:#ef6554;background:#581e20;color:#ffe5de;box-shadow:inset 5px 0 0 #ff5f54}
+.capacity-pending{border-color:#f0ac49;background:#4a351b;color:#ffe5b3}
+#capacityValue,#capacityPercent{font-variant-numeric:tabular-nums}
+#capacityFile[hidden]{display:none}
+@media print{.capacity-alert{background:#fff!important;color:#991b1b!important;border:2px solid #991b1b;break-inside:avoid}.capacity-danger{box-shadow:none}}
