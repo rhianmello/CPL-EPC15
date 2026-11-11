@@ -108,7 +108,7 @@ def test_merge_continuous_pages(browser, url, tmp_path):
     load(page, url)
     add(page, originals)
     page.locator("input[value='merge']").check()
-    assert "não conserva as assinaturas" in page.locator("#notice").inner_text()
+    assert "NÃO conserva assinaturas criptográficas" in page.locator("#notice").inner_text()
     result = download(page, tmp_path)
     reader = PdfReader(str(result))
     assert len(reader.pages) == 2
