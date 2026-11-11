@@ -1,0 +1,26 @@
+name: PDF - testes de integridade
+on:
+  push:
+    paths:
+      - 'PDF/**'
+      - '.github/workflows/pdf-integridade.yml'
+  pull_request:
+    paths:
+      - 'PDF/**'
+      - '.github/workflows/pdf-integridade.yml'
+  workflow_dispatch:
+jobs:
+  pdf-integridade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar dependencias
+        run: |
+          python -m pip install pytest playwright pypdf
+          python -m playwright install --with-deps chromium
+      - name: Executar testes de PDF
+        run: pytest -q PDF/test_e2e.py
