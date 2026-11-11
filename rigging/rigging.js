@@ -82,9 +82,9 @@ function capacityAssessment(g){
 }
 function renderCapacityStatus(g){
  const assessment=capacityAssessment(g),alert=$('capacityAlert');
- const hard=assessment.danger.length>0;
+ const hard=assessment.danger.length>0||assessment.status==='unverified';
  alert.className='capacity-alert '+(hard?'capacity-danger':'capacity-pending');
- const header=hard?'ALERTA CRÍTICO — NÃO EXECUTAR':'CAPACIDADE NÃO VERIFICADA — NÃO LIBERADO';
+ const header=assessment.danger.length?'ALERTA CRÍTICO — NÃO EXECUTAR':assessment.status==='unverified'?'ALERTA — CAPACIDADE NÃO VERIFICADA; NÃO EXECUTAR':'TABELA IMPORTADA — VERIFICAÇÃO TÉCNICA PENDENTE';
  const paragraphs=[...assessment.danger,...assessment.notes];
  alert.replaceChildren();
  const strong=document.createElement('strong');strong.textContent=header;alert.append(strong);
