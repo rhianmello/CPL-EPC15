@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Unificador de PDF | CPL EPC-15</title>
+<meta name="description" content="Una PDFs no navegador e preserve arquivos originais assinados como anexos.">
+<style>
+:root{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:#eaf4ff;background:#071321}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top,#133656,#071321 65%)}.wrap{max-width:990px;margin:auto;padding:24px 18px 65px}
+header{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:42px}a{color:#75d7f5;text-decoration:none}a:hover{text-decoration:underline}.brand{font-weight:850;letter-spacing:.08em}.brand small{display:block;font-weight:500;color:#9eb8d0;letter-spacing:0;margin-top:3px}
+.hero{max-width:760px;margin-bottom:25px}h1{font-size:clamp(30px,5vw,48px);line-height:1.12;margin:0 0 12px}.hero p{color:#a9bed2;line-height:1.6;margin:0}
+.panel{background:#102438;border:1px solid #294760;border-radius:20px;padding:24px;box-shadow:0 18px 50px #0003}.drop{display:block;text-align:center;border:2px dashed #3b708d;border-radius:16px;padding:33px 16px;background:#0a1b2c;cursor:pointer;transition:.15s}.drop:hover,.drop.over{border-color:#38d6ff;background:#0e2e42}.drop strong{display:block;font-size:18px;margin:8px 0}.drop span{color:#a8bfd0;font-size:13px}.drop svg{width:43px;height:43px;stroke:#46d8ff;fill:none;stroke-width:1.8}.hidden{display:none!important}
+.section{margin-top:26px}h2{font-size:16px;margin:0 0 12px}.tip{font-size:12px;color:#a8bfd0;line-height:1.5}.files{display:grid;gap:9px}.file{display:flex;align-items:center;gap:10px;background:#071c2b;border:1px solid #294357;border-radius:12px;padding:12px 13px}.fname{flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px}.fname small{display:block;color:#abc2d2;margin-top:5px}.mini{background:#1e3c51;color:#effaff;border:1px solid #38627c;border-radius:8px;padding:7px 9px;cursor:pointer}.mini:disabled{opacity:.35;cursor:not-allowed}.modes{display:grid;grid-template-columns:1fr 1fr;gap:12px}.mode{display:block;background:#081c2d;border:1px solid #355369;border-radius:13px;padding:16px;cursor:pointer}.mode:has(input:checked){border-color:#34d4fa;box-shadow:inset 0 0 0 1px #34d4fa}.mode input{accent-color:#25bddd}.mode strong{font-size:15px}.mode p{margin:8px 0 0;font-size:12px;color:#b7cddd;line-height:1.55}.warning{border:1px solid #967338;background:#40331c77;color:#f9deb1;border-radius:12px;padding:14px;font-size:13px;line-height:1.55;margin-top:14px}.row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.actions{margin-top:24px}.primary{background:#23bfe6;color:#03212b;border:0;padding:13px 19px;font-size:15px;font-weight:800;border-radius:11px;cursor:pointer}.primary:disabled{background:#537482;cursor:not-allowed}.result{margin-top:17px;padding:14px;border:1px solid #2b766a;color:#b5f7e5;background:#10372f;border-radius:12px;font-size:13px;line-height:1.6}.err{border-color:#ac5762;background:#4f2429;color:#ffd7de}footer{font-size:12px;color:#86a7bd;margin-top:22px;line-height:1.6}
+@media(max-width:650px){.modes{grid-template-columns:1fr}.panel{padding:15px}.file{gap:6px}.mini{padding:6px}.wrap{padding:19px 12px 40px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><div class="brand">CPL <span style="color:#35cef1">EPC-15</span><small>Ferramentas • PDF</small></div><a href="../index.html">← Voltar ao painel</a></header>
+<section class="hero"><h1>Unificador inteligente de PDFs</h1><p>Selecione documentos, ajuste a ordem e baixe tudo em um arquivo. O processamento acontece no seu navegador, sem enviar os PDFs para um servidor.</p></section>
+<main class="panel">
+<label class="drop" id="drop" for="input">
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m0 0-5 5m5-5 5 5M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/></svg>
+<strong>Selecionar arquivos PDF</strong><span>Ou arraste os arquivos aqui • vários PDFs de uma vez</span>
+</label><input class="hidden" id="input" type="file" accept=".pdf,application/pdf" multiple>
+<div class="section hidden" id="fileSection"><div class="row"><h2 id="count">Documentos</h2><button class="mini" id="clear" type="button">Limpar todos</button></div><div id="files" class="files"></div><p class="tip">Use ↑ e ↓ para alterar a ordem das páginas ou dos anexos.</p></div>
+<section class="section"><h2>Como deseja gerar o arquivo?</h2>
+<div class="modes">
+<label class="mode"><input type="radio" name="mode" value="merge" checked> <strong>Unir páginas</strong><p>Cria um PDF contínuo. Preserva imagens e assinaturas visíveis, mas invalida assinaturas digitais criptográficas no arquivo gerado.</p></label>
+<label class="mode"><input type="radio" name="mode" value="archive"> <strong>Preservar PDFs assinados</strong><p>Cria um PDF de apresentação com cada PDF original anexado sem modificações, para extração e validação individual.</p></label>
+</div></section>
+<div class="warning" id="notice">Atenção: PDFs assinados digitalmente perdem a validade criptográfica ao ter suas páginas mescladas. Use “Preservar PDFs assinados” para manter os arquivos originais intactos como anexos.</div>
+<div class="row actions"><span class="tip" id="status" role="status">Adicione dois ou mais arquivos para começar.</span><button class="primary" id="generate" disabled>Gerar PDF</button></div>
+<div id="result" class="result hidden" role="status"></div>
+</main>
+<footer>Privacidade: o conteúdo dos arquivos é processado localmente no navegador. O programa usa a biblioteca pdf-lib carregada da internet. Para verificar assinaturas digitais dos originais, extraia os anexos e utilize um validador apropriado. Alguns leitores de PDF não exibem anexos claramente; o Adobe Acrobat costuma oferecer um painel de anexos.</footer>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script>
+(()=>{'use strict';
+const $=id=>document.getElementById(id),list=[],fmt=n=>n<1024*1024?(n/1024).toFixed(1)+' KB':(n/1024/1024).toFixed(2)+' MB';
+let busy=false;
+const mode=()=>document.querySelector('input[name="mode"]:checked').value;
+const safe=s=>s.replace(/[^a-zA-Z0-9._-]/g,'_').slice(0,100)||'documento.pdf';
+function render(){
+$('fileSection').classList.toggle('hidden',!list.length);
+$('count').textContent=list.length+' documento(s)';
+$('files').replaceChildren();
+list.forEach((x,i)=>{
+const div=document.createElement('div');div.className='file';
+const name=document.createElement('div');name.className='fname';name.textContent=x.file.name;
+const info=document.createElement('small');info.textContent=fmt(x.file.size)+(x.signed?' • ⚠ Assinatura digital possivelmente detectada':' • Sem assinatura digital detectada');
+name.append(info);div.append(name);
+for(const [txt,act,disabled,title] of [['↑',()=>move(i,-1),i===0,'Mover para cima'],['↓',()=>move(i,1),i===list.length-1,'Mover para baixo'],['✕',()=>{list.splice(i,1);render()},false,'Remover']]){
+const b=document.createElement('button');b.className='mini';b.type='button';b.textContent=txt;b.title=title;b.disabled=busy||disabled;b.onclick=act;div.append(b)}
+$('files').append(div);
+});
+$('generate').disabled=busy||list.length<2;
+$('status').textContent=busy?'Processando...':list.length<2?'Adicione dois ou mais arquivos para começar.':list.length+' arquivos prontos para processar.';
+$('notice').textContent=mode()==='merge'
+?'Atenção: unir páginas NÃO preserva a validade criptográfica das assinaturas digitais. Mesmo que a assinatura apareça na página, o documento gerado não será o documento originalmente assinado.'
+:'Neste modo, os PDFs originais são anexados sem alterações ao PDF de apresentação. As assinaturas devem ser verificadas abrindo cada arquivo original extraído; a assinatura não se aplica ao PDF de apresentação.';
+}
+function move(i,step){const j=i+step;if(j<0||j>=list.length)return;[list[i],list[j]]=[list[j],list[i]];render()}
+async function addFiles(input){
+if(busy)return;const files=[...input].filter(f=>f.name.toLowerCase().endsWith('.pdf')||f.type==='application/pdf');
+for(const file of files){
+try{const buf=await file.arrayBuffer();const bytes=new Uint8Array(buf);
+if(bytes.length<5||String.fromCharCode(...bytes.slice(0,5))!=='%PDF-')throw Error('Não é um PDF válido.');
+const snippet=new TextDecoder('latin1').decode(bytes);
+const signed=/\/ByteRange\s*\[/.test(snippet)||/\/Type\s*\/Sig\b/.test(snippet);
+list.push({file,bytes,signed});
+}catch(e){alert('Não foi possível adicionar '+file.name+': '+e.message)}}
+render();
+}
+$('input').onchange=e=>{addFiles(e.target.files);e.target.value=''};
+$('clear').onclick=()=>{if(busy)return;list.length=0;render();$('result').classList.add('hidden')};
+document.querySelectorAll('input[name="mode"]').forEach(el=>el.onchange=render);
+const drop=$('drop');drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('over')});drop.addEventListener('dragleave',()=>drop.classList.remove('over'));drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');addFiles(e.dataTransfer.files)});
+function latin(s){return s.normalize('NFKD').replace(/[^\x20-\x7e]/g,'?')}
+async function generate(){
+if(busy||list.length<2)return;
+if(!window.PDFLib){show('Não foi possível carregar o motor de PDF. Verifique a internet e recarregue a página.',true);return}
+busy=true;render();$('result').classList.add('hidden');
+try{
+const {PDFDocument,StandardFonts,rgb}=PDFLib,doc=await PDFDocument.create(),chosen=mode(),date=new Date();
+doc.setTitle(chosen==='merge'?'Documentos unificados':'Pacote de PDFs originais');
+doc.setCreator('CPL EPC-15 • Unificador PDF');
+if(chosen==='merge'){
+for(const item of list){
+const src=await PDFDocument.load(item.bytes,{ignoreEncryption:false,updateMetadata:false});
+const pages=await doc.copyPages(src,src.getPageIndices());pages.forEach(p=>doc.addPage(p));
+}
+}else{
+const page=doc.addPage([595,842]),font=await doc.embedFont(StandardFonts.Helvetica),bold=await doc.embedFont(StandardFonts.HelveticaBold);
+page.drawText('PACOTE DE DOCUMENTOS ORIGINAIS',{x:42,y:786,font:bold,size:17,color:rgb(.06,.20,.31)});
+page.drawText('Os PDFs abaixo estao anexados a este arquivo.',{x:42,y:754,font,size:11});
+page.drawText('Extraia cada original para validar sua assinatura digital.',{x:42,y:735,font,size:11});
+let y=694;
+for(let i=0;i<list.length;i++){
+const item=list[i],filename=String(i+1).padStart(2,'0')+'_'+safe(item.file.name);
+await doc.attach(item.bytes,filename,{mimeType:'application/pdf',description:'Documento PDF original sem alteracoes',creationDate:date,modificationDate:date});
+if(y>62){const label=(i+1)+'. '+latin(filename);page.drawText(label.slice(0,80),{x:42,y,font,size:10});y-=20}
+}
+page.drawText('Arquivos anexados: '+list.length,{x:42,y:45,font:bold,size:11,color:rgb(.06,.32,.45)});
+}
+const out=await doc.save(),blob=new Blob([out],{type:'application/pdf'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+a.href=url;a.download=(chosen==='merge'?'PDF_UNIFICADO':'PDF_ORIGINAIS_ASSINADOS')+'_'+new Date().toISOString().slice(0,10)+'.pdf';
+document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+show(chosen==='merge'?'PDF gerado e baixado. Atenção: assinaturas digitais dos documentos de origem NÃO são válidas na versão unificada.':'Pacote gerado e baixado. Os PDFs originais estão anexados sem alteração; extraia-os e valide suas assinaturas individualmente.');
+}catch(e){show('Erro ao processar: '+(e&&e.message||e)+'. PDFs protegidos por senha, danificados ou muito grandes podem não ser suportados.',true)}
+finally{busy=false;render()}
+}
+function show(message,error=false){const r=$('result');r.classList.remove('hidden');r.classList.toggle('err',error);r.textContent=message}
+$('generate').onclick=generate;render();
+})();
+</script>
+</body></html>
