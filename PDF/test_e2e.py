@@ -133,3 +133,25 @@ def test_encrypted_pdf_archived_without_decryption(browser, url, tmp_path):
     page.wait_for_function("document.querySelector('#result').classList.contains('error')")
     assert "protegido" in page.locator("#result").inner_text().lower()
     page.close()
+
+def test_signed_pdf_visual_mode(browser, url, tmp_path):
+    """Exercita o caminho visual de um PDF com dicionario de assinatura de teste."""
+    from pypdf.generic import DictionaryObject, NameObject
+    signed = tmp_path / "signed_structure.pdf"
+    writer = PdfWriter()
+    writer.add_blank_page(width=595, height=842)
+    writer._root_object[NameObject("/TestSignature")] = writer._add_object(
+        DictionaryObject({NameObject("/Type"): NameObject("/Sig")})
+    )
+    with signed.open("wb") as output:
+        writer.write(output)
+    normal = fixture_pdf(tmp_path / "normal_visual.pdf")
+    page = browser.new_page(accept_downloads=True)
+    load(page, url)
+    add(page, [signed, normal])
+    page.locator("input[value='merge']").check()
+    assert page.locator("#visual").is_checked()
+    result = download(page, tmp_path)
+    assert len(PdfReader(str(result)).pages) == 2
+    assert "páginas-imagem" in page.locator("#result").inner_text()
+    page.close()
