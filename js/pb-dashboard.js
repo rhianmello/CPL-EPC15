@@ -1771,12 +1771,15 @@
       ...(carryover?.notes?.[String(row.sourceIndex)] || {}),
       ...noteFor(row)
     });
-    // A prioridade é calculada em toda a semana, não reiniciada por unidade/fase/filtro.
-    const candidates=(snapshotRows || allRows().filter(row=>Number(row.level)===5 && hasPhysicalData(row)))
+    // Primeiro aplica os filtros da semana/entrega/fase; depois escolhe o top 5.
+    // Assim uma seleção específica não fica vazia por causa do ranking global.
+    const scopedRows=(snapshotRows || allRows().filter(row=>Number(row.level)===5 && hasPhysicalData(row)))
+      .filter(row=>matches(row,sel))
+      .filter(row=>metricRowMatchesSelection(row,keySet,contextBySource))
       .filter(row=>hasDeviation(row) && row.variance<0)
       .sort((a,b)=>a.variance-b.variance);
-    // Top 5 automático da semana. Ocultações manuais fazem entrar o próximo maior desvio.
-    const automaticTopFive=new Set(candidates
+    // A curadoria é por semana: ocultar um item abre vaga para o próximo desvio.
+    const automaticTopFive=new Set(scopedRows
       .filter(row=>{
         const note=offenderNote(row);
         return note.offenderVisible!==false && !note.hidden;
@@ -1788,9 +1791,6 @@
       return note.offenderVisible===true ||
         (note.offenderVisible!==false && automaticTopFive.has(String(row.sourceIndex)));
     };
-    const scopedRows=candidates
-      .filter(row=>matches(row,sel))
-      .filter(row=>metricRowMatchesSelection(row,keySet,contextBySource));
     const rows=curationMode ? scopedRows : scopedRows.filter(offenderVisible);
     const info=paged(rows,'offenders');
     const host=document.getElementById('pb-offenders-list');
@@ -1801,7 +1801,7 @@
       : visibleCount+(visibleCount===1?' Ofensor':' Ofensores');
     document.getElementById('pb-cpm-note').textContent=curationMode
       ? 'Edição da semana • Ocultar/Reexibir frentes • senha master'
-      : 'Top 5 desvios críticos da semana • edite pelo lápis';
+      : 'Top 5 desvios da seleção e semana • edite pelo lápis';
     renderPager('pb-offenders-pager','offenders',info);
     if(!rows.length){
       host.innerHTML='<div class="pb-empty-light">'+
