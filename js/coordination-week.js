@@ -175,8 +175,13 @@
         window.PBDashboard?.importWeekData?.(snapshot.pb_manual || {}, selectedWeek);
         await window.PBDashboard?.loadPhotos?.(selectedWeek);
       } else {
+        // Sem Excel semanal salvo: mantenha os eventos oficiais já importados
+        // sem reutilizar os indicadores de outra semana.
         window.PBDashboard?.useLive?.();
-        window.PBDashboard?.importWeekData?.({},selectedWeek);
+        window.PBDashboard?.importWeekData?.(snapshot?.pb_manual || {},selectedWeek);
+        if(snapshot?.pb_manual){
+          lastManualSyncVersion=(Number(snapshot.version_no)||'')+'|'+String(snapshot.saved_at||'');
+        }
         await window.PBDashboard?.loadPhotos?.(selectedWeek);
       }
     } catch(error) {
