@@ -98,11 +98,48 @@
     portalLoginError?.classList.add('hidden');
   }
 
-  function setSource(text, tone = 'neutral') {
-    if (!sourceStatus) return;
-    sourceStatus.textContent = text;
-    sourceStatus.dataset.tone = tone;
+  let baseSourceLabel = sourceStatus?.textContent || 'Fonte atual: nenhum dado';
+  let baseSourceTone = sourceStatus?.dataset.tone || 'neutral';
+  let executiveSource = null;
+
+  function formatExecutiveSourceDate(value) {
+    if (!value) return '';
+    const iso = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) return iso[3]+'/'+iso[2]+'/'+iso[1];
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.valueOf()) ? '' :
+      new Intl.DateTimeFormat('pt-BR',{timeZone:'UTC'}).format(parsed);
   }
+
+  function renderSourceStatus() {
+    if (!sourceStatus) return;
+    if (activeDashboardPage()==='executive' && executiveSource?.week) {
+      const baseDate=formatExecutiveSourceDate(executiveSource.dataBase);
+      sourceStatus.textContent=[
+        'Fonte atual: Semana '+executiveSource.week,
+        executiveSource.version ? 'V'+executiveSource.version : '',
+        baseDate ? 'Data-base '+baseDate : ''
+      ].filter(Boolean).join(' • ');
+      sourceStatus.dataset.tone='cloud';
+      sourceStatus.title='Publicação geral do BI: '+baseSourceLabel;
+    } else {
+      sourceStatus.textContent=baseSourceLabel;
+      sourceStatus.dataset.tone=baseSourceTone;
+      sourceStatus.title='';
+    }
+  }
+
+  function setSource(text, tone = 'neutral') {
+    baseSourceLabel=text;
+    baseSourceTone=tone;
+    renderSourceStatus();
+  }
+
+  window.addEventListener('epc15:executive-source-changed',event=>{
+    executiveSource=event.detail?.week ? event.detail : null;
+    renderSourceStatus();
+  });
+  window.addEventListener('epc15:page-changed',renderSourceStatus);
 
   function setLoading(title, detail) {
     if (loadingTitle) loadingTitle.textContent = title;
