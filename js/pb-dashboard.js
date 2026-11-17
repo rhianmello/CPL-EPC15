@@ -409,6 +409,26 @@
     }
   }
 
+
+  // Controle exclusivo das Frentes Ofensoras; não oculta linhas dos demais painéis.
+  function setOffenderVisible(sourceIndex, visible) {
+    if(!curationMode || !Number.isFinite(Number(sourceIndex))) return;
+    const all=notes();
+    const id=String(Number(sourceIndex));
+    all[id]=all[id] || {};
+    all[id].offenderVisible=Boolean(visible);
+    all[id].offenderVisibilityUpdatedAt=new Date().toISOString();
+    writeJson(notesKey(),all);
+    pageState.offenders=0;
+    renderOffenders();
+    saveManualOnly().catch(console.error);
+    const feedback=document.getElementById('pb-save-feedback');
+    if(feedback){
+      feedback.textContent=visible ? 'Frente reexibida nesta semana' : 'Frente ocultada nesta semana';
+      feedback.dataset.tone='ok';
+    }
+  }
+
   function normalizePbLayout(layout) {
     const known=new Set(PB_LAYOUT_CARDS.map(item=>item.id));
     const seen=new Set();
@@ -1739,38 +1759,64 @@
     host.innerHTML=html;
   }
   function renderOffenders() {
+    const sel=selection();
     const keySet=metricSelectedGroupKeys();
     const contextBySource=keySet ? metricContextBySource() : null;
-    // Carryover histórico aprovado: mantém os ofensores da S-27 na S-28,
-    // sem alterar os valores do cronograma, indicadores ou demais semanas.
-    const carryover=Number(selection().week)===28 && importedWeekPayload?.offenderCarryover?.sourceWeek===27
+    // Preserva o carryover aprovado S-27 → S-28 sem modificar os indicadores originais.
+    const carryover=Number(sel.week)===28 && importedWeekPayload?.offenderCarryover?.sourceWeek===27
       ? importedWeekPayload.offenderCarryover : null;
     const snapshotRows=Array.isArray(carryover?.rows) ? carryover.rows : null;
-    const offenderNote=row=>carryover?.notes?.[String(row.sourceIndex)] || noteFor(row);
-    const offenderHidden=row=>Boolean(offenderNote(row).hidden);
-    const rows=(snapshotRows
-      ? snapshotRows.filter(row=>matches(row,selection())).filter(row=>curationMode || !offenderHidden(row))
-      : presentationVisibleRows(presentationRows()))
-      .filter(row=>metricRowMatchesSelection(row,keySet,contextBySource))
-      .filter(r=>hasDeviation(r)&&r.variance<0)
+    // As decisões de visibilidade desta semana têm prioridade sobre notas herdadas.
+    const offenderNote=row=>({
+      ...(carryover?.notes?.[String(row.sourceIndex)] || {}),
+      ...noteFor(row)
+    });
+    // A prioridade é calculada em toda a semana, não reiniciada por unidade/fase/filtro.
+    const candidates=(snapshotRows || allRows().filter(row=>Number(row.level)===5 && hasPhysicalData(row)))
+      .filter(row=>hasDeviation(row) && row.variance<0)
       .sort((a,b)=>a.variance-b.variance);
+    // Top 5 automático da semana. Ocultações manuais fazem entrar o próximo maior desvio.
+    const automaticTopFive=new Set(candidates
+      .filter(row=>{
+        const note=offenderNote(row);
+        return note.offenderVisible!==false && !note.hidden;
+      })
+      .slice(0,5)
+      .map(row=>String(row.sourceIndex)));
+    const offenderVisible=row=>{
+      const note=offenderNote(row);
+      return note.offenderVisible===true ||
+        (note.offenderVisible!==false && automaticTopFive.has(String(row.sourceIndex)));
+    };
+    const scopedRows=candidates
+      .filter(row=>matches(row,sel))
+      .filter(row=>metricRowMatchesSelection(row,keySet,contextBySource));
+    const rows=curationMode ? scopedRows : scopedRows.filter(offenderVisible);
     const info=paged(rows,'offenders');
     const host=document.getElementById('pb-offenders-list');
-    const visibleCount=rows.filter(row=>!offenderHidden(row)).length;
-    const hiddenCount=rows.length-visibleCount;
-    document.getElementById('pb-offender-count').textContent=curationMode && hiddenCount
+    const visibleCount=scopedRows.filter(offenderVisible).length;
+    const hiddenCount=scopedRows.length-visibleCount;
+    document.getElementById('pb-offender-count').textContent=hiddenCount
       ? visibleCount+' visíveis • '+hiddenCount+' ocultos'
       : visibleCount+(visibleCount===1?' Ofensor':' Ofensores');
-    document.getElementById('pb-cpm-note').textContent=curationMode ? 'Modo edição • use Ocultar/Reexibir • senha master' : 'Somente Etapas de Nível 5 • ordenado pelo desvio da aba Avanço PLATAQ';
+    document.getElementById('pb-cpm-note').textContent=curationMode
+      ? 'Edição da semana • Ocultar/Reexibir frentes • senha master'
+      : 'Top 5 desvios críticos da semana • edite pelo lápis';
     renderPager('pb-offenders-pager','offenders',info);
-    if(!rows.length){host.innerHTML='<div class="pb-empty-light">Nenhuma Etapa de Nível 5 com desvio negativo nesta seleção.</div>';return;}
+    if(!rows.length){
+      host.innerHTML='<div class="pb-empty-light">'+
+        (curationMode ? 'Nenhuma Etapa de Nível 5 com desvio negativo nesta seleção.' :
+          'Nenhuma frente priorizada nesta seleção. Use o lápis para consultar e reexibir frentes ocultas.')+
+      '</div>';
+      return;
+    }
 
     host.innerHTML=info.items.map((row,index)=>{
       const note=offenderNote(row);
       const cause=note.cause?'<div><span>CAUSA</span><p>'+esc(note.cause)+'</p></div>':'';
       const mitigation=note.mitigation?'<div><span>MITIGAÇÃO</span><p>'+esc(note.mitigation)+'</p></div>':'';
       const isFocused=Number(focusedSourceIndex)===Number(row.sourceIndex);
-      const hidden=offenderHidden(row);
+      const hidden=!offenderVisible(row);
       const curationButton=curationMode
         ? '<button type="button" class="pb-hide-row-button' + (hidden?' restore':'') + '" data-hide-row="'+esc(row.sourceIndex)+'" data-hidden="'+(hidden?'1':'0')+'">' + (hidden?'Reexibir':'Ocultar') + '</button>'
         : '';
@@ -1786,7 +1832,6 @@
       '</article>';
     }).join('');
   }
-
   function syncMetricCheckboxDom(host,groups,steps,filterLocked) {
     const activeKeys=metricSelectedGroupKeys();
     const groupActive=key=>metricGroupAll || Boolean(activeKeys?.has(key));
@@ -2250,8 +2295,7 @@
 
       const hide=event.target.closest('[data-hide-row]');
       if(hide){
-        const row=allRows().find(r=>Number(r.sourceIndex)===Number(hide.dataset.hideRow));
-        if(row) setHidden(row,hide.dataset.hidden!=='1');
+        setOffenderVisible(hide.dataset.hideRow,hide.dataset.hidden==='1');
         return;
       }
 
