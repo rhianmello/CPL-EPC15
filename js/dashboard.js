@@ -4,6 +4,7 @@
   let executiveModel;
   let executiveUnitCode = '';
   let executiveWeek = '';
+  let executiveSnapshotMeta = null;
   let executiveFilterBusy = false;
   let currentUnit;
   let currentPhase = '';
@@ -32,6 +33,8 @@
     executiveModel = data;
     executiveUnitCode = '';
     executiveWeek = '';
+    executiveSnapshotMeta = null;
+    window.dispatchEvent(new CustomEvent('epc15:executive-source-changed',{detail:null}));
     document.getElementById('file-name').textContent = fileName;
     document.getElementById('header-date').textContent = date(model.dataBase);
     renderUnitNavigation();
@@ -106,7 +109,9 @@
       return;
     }
     const source=executiveModel || executiveBaseModel || model;
-    const weekText=executiveWeek ? 'Semana '+executiveWeek : 'Versão atual';
+    const weekText=executiveWeek
+      ? 'Semana '+executiveWeek+(executiveSnapshotMeta?.version ? ' • V'+executiveSnapshotMeta.version : '')
+      : 'Versão atual';
     const unitText=executiveUnitCode ? executiveUnitLabel() : 'Todas as unidades';
     el.textContent=weekText+' • '+unitText+' • Data-base '+date(source?.dataBase);
     el.dataset.tone='ok';
@@ -159,6 +164,7 @@
     try{
       if(!value || !Number.isFinite(week)){
         executiveWeek='';
+        executiveSnapshotMeta=null;
         executiveModel=executiveBaseModel || model;
       }else{
         const result=await window.CloudSync?.loadCoordinationWeek?.(week);
@@ -166,12 +172,18 @@
         if(!snapshot?.dataset?.model) throw new Error('A Semana '+week+' não possui snapshot do Excel.');
         executiveWeek=week;
         executiveModel=snapshot.dataset.model;
+        executiveSnapshotMeta={
+          week,
+          version:Number(snapshot.version_no)||null,
+          dataBase:snapshot.excel_data_base || snapshot.dataset.model.dataBase || null
+        };
       }
       populateExecutiveUnitFilter();
       renderExecutive();
     }catch(error){
       console.error('Falha ao carregar semana no Painel Gerencial',error);
       executiveWeek='';
+      executiveSnapshotMeta=null;
       executiveModel=executiveBaseModel || model;
       if(weekSelect) weekSelect.value='';
       populateExecutiveUnitFilter();
@@ -182,6 +194,7 @@
       if(weekSelect) weekSelect.disabled=false;
       if(unitSelect) unitSelect.disabled=false;
       executiveFilterStatus();
+      window.dispatchEvent(new CustomEvent('epc15:executive-source-changed',{detail:executiveSnapshotMeta}));
     }
   }
 
@@ -269,6 +282,7 @@
       buildAnalysisPhaseFilter();
       renderAnalyses();
     }
+    window.dispatchEvent(new Event('epc15:page-changed'));
   }
 
   function unitScope(unit) {
