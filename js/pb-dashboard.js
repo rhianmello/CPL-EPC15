@@ -1796,17 +1796,24 @@
     const host=document.getElementById('pb-offenders-list');
     const visibleCount=scopedRows.filter(offenderVisible).length;
     const hiddenCount=scopedRows.length-visibleCount;
-    document.getElementById('pb-offender-count').textContent=hiddenCount
-      ? visibleCount+' visíveis • '+hiddenCount+' ocultos'
-      : visibleCount+(visibleCount===1?' Ofensor':' Ofensores');
+    // A fiscalização não vê contadores ou avisos sobre itens ocultos.
+    // Apenas o responsável autenticado no modo de edição vê estes totais.
+    const countEl=document.getElementById('pb-offender-count');
+    if(countEl){
+      countEl.textContent=curationMode
+        ? visibleCount+' visíveis • '+hiddenCount+' ocultos'
+        : '';
+      countEl.hidden=!curationMode;
+      countEl.classList.toggle('hidden',!curationMode);
+    }
     document.getElementById('pb-cpm-note').textContent=curationMode
       ? 'Edição da semana • Ocultar/Reexibir frentes • senha master'
-      : 'Top 5 desvios da seleção e semana • edite pelo lápis';
+      : 'Etapas de Nível 5 • ordenadas pelo maior desvio';
     renderPager('pb-offenders-pager','offenders',info);
     if(!rows.length){
       host.innerHTML='<div class="pb-empty-light">'+
         (curationMode ? 'Nenhuma Etapa de Nível 5 com desvio negativo nesta seleção.' :
-          'Nenhuma frente priorizada nesta seleção. Use o lápis para consultar e reexibir frentes ocultas.')+
+          'Nenhuma frente crítica exibida nesta seleção.')+
       '</div>';
       return;
     }
